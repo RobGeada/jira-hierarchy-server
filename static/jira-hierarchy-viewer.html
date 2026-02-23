@@ -1,0 +1,2886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Safety JIRA Hierarchy Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f4f5f7;
+            padding: 20px;
+            color: #172B4D;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        }
+
+        .header {
+            padding: 24px;
+            border-bottom: 2px solid #DFE1E6;
+            background: linear-gradient(135deg, #0052CC 0%, #0747A6 100%);
+            color: white;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .controls {
+            padding: 16px 24px;
+            background: #F4F5F7;
+            border-bottom: 1px solid #DFE1E6;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            background: #0052CC;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: #0747A6;
+        }
+
+        .btn-secondary {
+            background: #F4F5F7;
+            color: #172B4D;
+            border: 1px solid #DFE1E6;
+        }
+
+        .btn-secondary:hover {
+            background: #E4E5E7;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6B778C;
+        }
+
+        .tree {
+            padding: 24px;
+        }
+
+        .tree-item {
+            margin-bottom: 4px;
+        }
+
+        .tree-node {
+            padding: 12px;
+            border-left: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid transparent;
+        }
+
+        .tree-node:hover {
+            background: #F4F5F7;
+        }
+
+        /* When expanded, make the tree-node the title bar of a card */
+        .tree-item:has(.issue-details[style*="display: block"]) > .tree-node {
+            border-radius: 4px 4px 0 0;
+            border: 1px solid #DFE1E6;
+            border-bottom: none;
+        }
+
+        .tree-node.rfe {
+            border-left-color: #6554C0;
+            background: #EAE6FF;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .tree-node.rfe.empty {
+            background: #F4F5F7;
+            border-left-color: #DFE1E6;
+        }
+
+        .tree-node.rfe.empty .tree-content {
+            opacity: 0.6;
+        }
+
+        .tree-node.strat {
+            border-left-color: #0052CC;
+            background: #DEEBFF;
+            font-weight: 600;
+            margin-left: 24px;
+        }
+
+        .tree-node.strat.empty {
+            background: #F4F5F7;
+            border-left-color: #DFE1E6;
+        }
+
+        .tree-node.strat.empty .tree-content {
+            opacity: 0.6;
+        }
+
+        .tree-node.epic {
+            border-left-color: #00875A;
+            background: #E3FCEF;
+            margin-left: 48px;
+        }
+
+        .tree-node.task {
+            border-left-color: #FF991F;
+            background: #FFF0B3;
+            margin-left: 72px;
+        }
+
+        .tree-node.subtask {
+            border-left-color: #FFAB00;
+            background: #FFF7D6;
+            margin-left: 96px;
+            font-size: 14px;
+        }
+
+        .expand-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #6B778C;
+            user-select: none;
+        }
+
+        .tree-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .issue-key {
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            padding: 4px 8px;
+            background: white;
+            border-radius: 3px;
+            font-weight: 600;
+            width: 120px;
+            flex-shrink: 0;
+        }
+
+        .issue-summary {
+            flex: 1;
+        }
+
+        .issue-summary-link {
+            color: inherit;
+            text-decoration: none;
+            flex: 1;
+        }
+
+        .issue-summary-link:hover {
+            text-decoration: underline;
+            color: #0052CC;
+        }
+
+        .issue-status {
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 500;
+            width: 100px;
+            flex-shrink: 0;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .issue-status:hover {
+            opacity: 0.8;
+        }
+
+        .issue-status.dropdown-open {
+            opacity: 1 !important;
+        }
+
+        .status-dropdown {
+            position: fixed;  /* Changed from absolute to fixed for better stacking */
+            background: white;
+            border: 1px solid #DFE1E6;
+            border-radius: 3px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            z-index: 10000;  /* Much higher z-index */
+            min-width: 150px;
+            display: none;
+            opacity: 1 !important;  /* Override inherited opacity from .tree-node.empty */
+        }
+
+        .status-dropdown.active {
+            display: block;
+        }
+
+        .status-option {
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .status-option:hover {
+            background: #F4F5F7;
+        }
+
+        .status-new { background: #DFE1E6; color: #172B4D; }
+        .status-in-progress { background: #0052CC; color: white; }
+        .status-approved { background: #00875A; color: white; }
+        .status-closed { background: #6B778C; color: white; }
+        .status-review { background: #FF991F; color: white; }
+
+        .issue-priority {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-weight: 500;
+            width: 80px;
+            flex-shrink: 0;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .issue-priority:hover {
+            opacity: 0.8;
+        }
+
+        .issue-priority.dropdown-open {
+            opacity: 1 !important;
+        }
+
+        .priority-critical { background: #DE350B; color: white; }
+        .priority-major { background: #FF5630; color: white; }
+        .priority-normal { background: #FFC400; color: #172B4D; }
+
+        .issue-assignee {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 3px;
+            background: #EBECF0;
+            color: #172B4D;
+            font-weight: 500;
+            width: 140px;
+            flex-shrink: 0;
+            text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .issue-updated {
+            font-size: 12px;
+            padding: 4px 8px;
+            color: #6B778C;
+            width: 110px;
+            flex-shrink: 0;
+            text-align: center;
+        }
+
+        .children {
+            display: none;
+        }
+
+        .children.expanded {
+            display: block;
+        }
+
+        .add-item-tree-node {
+            padding: 12px;
+            cursor: pointer;
+            color: #0052CC;
+            font-size: 14px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            border: 1px dashed #DFE1E6;
+            background: #FAFBFC;
+        }
+
+        .add-item-tree-node.add-epic {
+            margin-left: 48px;  /* Match epic indentation */
+        }
+
+        .add-item-tree-node.add-task {
+            margin-left: 72px;  /* Match task indentation */
+        }
+
+        .add-item-tree-node:hover {
+            background: #EBF5FF;
+            border-color: #0052CC;
+        }
+
+        .add-item-tree-node .add-icon {
+            font-size: 18px;
+            font-weight: bold;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* Toast notifications */
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 100000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 400px;
+        }
+
+        .toast {
+            padding: 16px 20px;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            animation: slideIn 0.3s ease-out;
+            border-left: 4px solid #DFE1E6;
+        }
+
+        .toast.success {
+            border-left-color: #00875A;
+        }
+
+        .toast.error {
+            border-left-color: #DE350B;
+        }
+
+        .toast.info {
+            border-left-color: #0052CC;
+        }
+
+        .toast-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+
+        .toast.success .toast-icon {
+            color: #00875A;
+        }
+
+        .toast.error .toast-icon {
+            color: #DE350B;
+        }
+
+        .toast.info .toast-icon {
+            color: #0052CC;
+        }
+
+        .toast-content {
+            flex: 1;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #172B4D;
+        }
+
+        .toast-close {
+            cursor: pointer;
+            color: #6B778C;
+            font-size: 18px;
+            line-height: 1;
+            padding: 0 4px;
+            flex-shrink: 0;
+        }
+
+        .toast-close:hover {
+            color: #172B4D;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .toast.removing {
+            animation: slideOut 0.3s ease-in forwards;
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        .stats {
+            padding: 16px 24px;
+            background: #F4F5F7;
+            border-top: 1px solid #DFE1E6;
+            display: flex;
+            gap: 24px;
+            font-size: 14px;
+            color: #6B778C;
+        }
+
+        .stat-item {
+            display: flex;
+            gap: 8px;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: #172B4D;
+        }
+
+        .filter-input {
+            padding: 8px 12px;
+            border: 1px solid #DFE1E6;
+            border-radius: 4px;
+            font-size: 14px;
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .table-header {
+            display: flex;
+            background: #F4F5F7;
+            border-bottom: 2px solid #DFE1E6;
+            padding: 12px 24px 12px 36px;
+            gap: 12px;
+            font-weight: 600;
+            font-size: 13px;
+            color: #172B4D;
+            align-items: center;
+        }
+
+        .header-cell {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .header-cell.sortable {
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.2s;
+        }
+
+        .header-cell.sortable:hover {
+            color: #0052CC;
+        }
+
+        .header-cell:nth-child(1) { width: 120px; } /* Key */
+        .header-cell:nth-child(2) { flex: 1; } /* Summary */
+        .header-cell:nth-child(3) { width: 100px; } /* Status */
+        .header-cell:nth-child(4) { width: 80px; } /* Priority */
+        .header-cell:nth-child(5) { width: 140px; } /* Assignee */
+        .header-cell:nth-child(6) { width: 110px; } /* Created */
+
+        .sort-indicator {
+            font-size: 11px;
+            color: #6B778C;
+        }
+
+        .sort-indicator.active {
+            color: #0052CC;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 24px;
+            color: #6B778C;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 8px;
+            color: #172B4D;
+        }
+
+        .link {
+            color: #0052CC;
+            text-decoration: none;
+        }
+
+        .link:hover {
+            text-decoration: underline;
+        }
+
+        .btn-add {
+            margin-left: 8px;
+            padding: 4px 10px;
+            background: #36B37E;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .btn-add:hover {
+            background: #00875A;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #DFE1E6;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .btn-cancel {
+            padding: 8px 16px;
+            background: #F4F5F7;
+            color: #172B4D;
+            border: 1px solid #DFE1E6;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .btn-cancel:hover {
+            background: #E4E5E7;
+        }
+
+        .btn-submit {
+            padding: 8px 16px;
+            background: #0052CC;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .btn-submit:hover {
+            background: #0747A6;
+        }
+
+        .btn-submit:disabled {
+            background: #B3D4FF;
+            cursor: not-allowed;
+        }
+
+        .issue-details {
+            margin: 0;
+            padding: 16px;
+            background: white;
+            border: 1px solid #DFE1E6;
+            border-top: 1px solid #EBECF0;
+            border-radius: 0 0 4px 4px;
+            font-size: 13px;
+        }
+
+        /* Match the left margin of the tree-node to align properly */
+        .strat + .issue-details {
+            margin-left: 24px;
+        }
+
+        .epic + .issue-details {
+            margin-left: 48px;
+        }
+
+        .task + .issue-details {
+            margin-left: 72px;
+        }
+
+        .detail-row {
+            margin-bottom: 12px;
+        }
+
+        .detail-row strong {
+            display: block;
+            margin-bottom: 4px;
+            color: #172B4D;
+        }
+
+        .description {
+            background: #F4F5F7;
+            padding: 8px;
+            border-radius: 3px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .labels {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .label {
+            background: #0052CC;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .label-delete {
+            cursor: pointer;
+            font-weight: bold;
+            opacity: 0.7;
+        }
+
+        .label-delete:hover {
+            opacity: 1;
+        }
+
+        .label-input-container {
+            margin-top: 8px;
+            display: flex;
+            gap: 6px;
+        }
+
+        .label-input {
+            padding: 4px 8px;
+            border: 1px solid #DFE1E6;
+            border-radius: 3px;
+            font-size: 12px;
+            flex: 1;
+        }
+
+        .btn-add-label {
+            padding: 4px 12px;
+            background: #36B37E;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .btn-add-label:hover {
+            background: #00875A;
+        }
+
+        .comments-section {
+            margin-top: 16px;
+        }
+
+        .comments-list {
+            background: #F4F5F7;
+            padding: 8px;
+            border-radius: 3px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .comment {
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #DFE1E6;
+        }
+
+        .comment:last-child {
+            border-bottom: none;
+        }
+
+        .comment-header {
+            margin-bottom: 6px;
+            color: #172B4D;
+        }
+
+        .comment-date {
+            color: #6B778C;
+            font-size: 11px;
+            margin-left: 8px;
+        }
+
+        .comment-body {
+            color: #172B4D;
+            white-space: pre-wrap;
+        }
+
+        .btn-add-comment {
+            margin-top: 8px;
+            padding: 6px 12px;
+            background: #0052CC;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .btn-add-comment:hover {
+            background: #0747A6;
+        }
+
+        .btn-reload {
+            margin-left: 8px;
+            padding: 2px 8px;
+            background: #6B778C;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .btn-reload:hover {
+            background: #505F79;
+        }
+
+        .no-data {
+            color: #6B778C;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <!-- Toast notification container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="container">
+        <div class="header">
+            <h1 id="pageTitle">🛡️ JIRA Hierarchy Viewer</h1>
+            <p>Expandable tree view of RFEs → STRATs → Epics → Tasks</p>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="loadData()" id="refreshBtn">🔄 Refresh Data</button>
+            <button class="btn-secondary btn" onclick="toggleTopLevel()" id="topLevelBtn">Group By: RFEs</button>
+            <button class="btn-secondary btn" onclick="expandAll()">⬇️ Expand All</button>
+            <button class="btn-secondary btn" onclick="collapseAll()">⬆️ Collapse All</button>
+            <button class="btn-secondary btn" onclick="showConfigModal()">⚙️ Settings</button>
+            <input type="text" class="filter-input" id="searchInput" placeholder="Search issues..." onkeyup="filterIssues()">
+            <span id="loadingIndicator" style="display: none; color: #0052CC; font-size: 14px;">⏳ Loading...</span>
+        </div>
+
+        <div class="table-header" id="tableHeader" style="display: none;">
+            <div class="header-cell sortable" onclick="handleColumnSort('key')">
+                <span>Key</span>
+                <span class="sort-indicator" id="sort-key"></span>
+            </div>
+            <div class="header-cell sortable" onclick="handleColumnSort('summary')">
+                <span>Summary</span>
+                <span class="sort-indicator" id="sort-summary"></span>
+            </div>
+            <div class="header-cell sortable" onclick="handleColumnSort('status')">
+                <span>Status</span>
+                <span class="sort-indicator" id="sort-status"></span>
+            </div>
+            <div class="header-cell sortable" onclick="handleColumnSort('priority')">
+                <span>Priority</span>
+                <span class="sort-indicator" id="sort-priority"></span>
+            </div>
+            <div class="header-cell sortable" onclick="handleColumnSort('assignee')">
+                <span>Assignee</span>
+                <span class="sort-indicator" id="sort-assignee"></span>
+            </div>
+            <div class="header-cell sortable" onclick="handleColumnSort('updated')">
+                <span>Updated</span>
+                <span class="sort-indicator" id="sort-updated"></span>
+            </div>
+        </div>
+
+        <div id="content">
+            <div class="loading">
+                Click "Refresh Data" to load AI Safety hierarchy from JIRA
+            </div>
+        </div>
+
+        <div class="stats" id="stats" style="display: none;">
+            <div class="stat-item">
+                <span>RFEs:</span>
+                <span class="stat-value" id="rfeCount">0</span>
+            </div>
+            <div class="stat-item">
+                <span>STRATs:</span>
+                <span class="stat-value" id="stratCount">0</span>
+            </div>
+            <div class="stat-item">
+                <span>Epics:</span>
+                <span class="stat-value" id="epicCount">0</span>
+            </div>
+            <div class="stat-item">
+                <span>Tasks:</span>
+                <span class="stat-value" id="taskCount">0</span>
+            </div>
+            <div class="stat-item">
+                <span>Last Updated:</span>
+                <span class="stat-value" id="lastUpdated">Never</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for creating epics -->
+    <div class="modal" id="createEpicModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create New Epic</h2>
+                <p id="epicParentInfo"></p>
+            </div>
+            <form id="createEpicForm" onsubmit="handleCreateEpic(event)">
+                <div class="form-group">
+                    <label for="epicSummary">Summary *</label>
+                    <input type="text" id="epicSummary" required>
+                </div>
+                <div class="form-group">
+                    <label for="epicComponent">Component *</label>
+                    <input type="text" id="epicComponent" required>
+                    <small style="color: #6B778C; font-size: 12px;">Component to assign to this epic</small>
+                </div>
+                <div class="form-group">
+                    <label for="epicDescription">Description</label>
+                    <textarea id="epicDescription"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" onclick="closeModal('createEpicModal')">Cancel</button>
+                    <button type="submit" class="btn-submit" id="epicSubmitBtn">Create Epic</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for creating tasks -->
+    <div class="modal" id="createTaskModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create New Task</h2>
+                <p id="taskParentInfo"></p>
+            </div>
+            <form id="createTaskForm" onsubmit="handleCreateTask(event)">
+                <div class="form-group">
+                    <label for="taskType">Type *</label>
+                    <select id="taskType" required>
+                        <option value="Story">Story</option>
+                        <option value="Task">Task</option>
+                        <option value="Spike">Spike</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="taskSummary">Summary *</label>
+                    <input type="text" id="taskSummary" required>
+                </div>
+                <div class="form-group">
+                    <label for="taskComponent">Component *</label>
+                    <input type="text" id="taskComponent" required>
+                    <small style="color: #6B778C; font-size: 12px;">Component to assign to this task</small>
+                </div>
+                <div class="form-group">
+                    <label for="taskDescription">Description</label>
+                    <textarea id="taskDescription"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" onclick="closeModal('createTaskModal')">Cancel</button>
+                    <button type="submit" class="btn-submit" id="taskSubmitBtn">Create Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for configuration -->
+    <div class="modal" id="configModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <p>Configure your JIRA connection and filters</p>
+            </div>
+            <form id="configForm" onsubmit="handleSaveConfig(event)">
+                <div class="form-group">
+                    <label for="configPAT">Personal Access Token *</label>
+                    <input type="password" id="configPAT" required placeholder="Enter your JIRA PAT">
+                    <small style="color: #6B778C; font-size: 12px;">Stored locally in your browser only</small>
+                </div>
+                <div class="form-group">
+                    <label for="configComponent">Component Filter *</label>
+                    <input type="text" id="configComponent" required placeholder="e.g., AI Safety">
+                    <small style="color: #6B778C; font-size: 12px;">Filter RFEs by this component</small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" onclick="closeModal('configModal')">Cancel</button>
+                    <button type="submit" class="btn-submit" id="configSubmitBtn">Save Settings</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for adding comments -->
+    <div class="modal" id="addCommentModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Comment</h2>
+                <p id="commentIssueInfo"></p>
+            </div>
+            <form id="addCommentForm" onsubmit="handleAddComment(event)">
+                <div class="form-group">
+                    <label for="commentBody">Comment *</label>
+                    <textarea id="commentBody" required rows="6"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" onclick="closeModal('addCommentModal')">Cancel</button>
+                    <button type="submit" class="btn-submit" id="commentSubmitBtn">Add Comment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // JIRA Configuration
+        const JIRA_CONFIG = {
+            baseUrl: 'https://issues.redhat.com',
+            // User will need to provide authentication
+            // For now, we'll use a proxy or generate static data
+        };
+
+        let hierarchyData = {rfes: [], strats: [], metadata: {total_rfes: 0, total_strats: 0, total_epics: 0, total_tasks: 0}};
+        let eventSource = null;
+
+        // Track if we're currently loading
+        let isLoading = false;
+
+        // Track current top level mode
+        let currentTopLevel = 'rfe';
+
+        // Toast notification system
+        function showToast(message, type = 'info', duration = 4000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            const icons = {
+                success: '✓',
+                error: '✕',
+                info: 'ℹ'
+            };
+
+            toast.innerHTML = `
+                <span class="toast-icon">${icons[type] || icons.info}</span>
+                <div class="toast-content">${message}</div>
+                <span class="toast-close" onclick="removeToast(this.parentElement)">×</span>
+            `;
+
+            container.appendChild(toast);
+
+            // Auto-remove after duration
+            if (duration > 0) {
+                setTimeout(() => {
+                    removeToast(toast);
+                }, duration);
+            }
+
+            return toast;
+        }
+
+        function removeToast(toast) {
+            if (!toast) return;
+            toast.classList.add('removing');
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.parentElement.removeChild(toast);
+                }
+            }, 300);
+        }
+
+        function showSuccess(message) {
+            return showToast(message, 'success');
+        }
+
+        function showError(message) {
+            return showToast(message, 'error', 6000);
+        }
+
+        function showInfo(message) {
+            return showToast(message, 'info');
+        }
+
+        // Configuration management
+        function loadConfig() {
+            const pat = localStorage.getItem('jira_pat');
+            const component = localStorage.getItem('jira_component') || 'AI Safety';
+            const topLevel = localStorage.getItem('jira_top_level') || 'rfe';
+            return { pat, component, topLevel };
+        }
+
+        function saveConfig(pat, component) {
+            localStorage.setItem('jira_pat', pat);
+            localStorage.setItem('jira_component', component);
+        }
+
+        function saveTopLevel(topLevel) {
+            localStorage.setItem('jira_top_level', topLevel);
+        }
+
+        function toggleTopLevel() {
+            const config = loadConfig();
+            const newTopLevel = config.topLevel === 'rfe' ? 'strat' : 'rfe';
+            saveTopLevel(newTopLevel);
+
+            // Update button text
+            const btn = document.getElementById('topLevelBtn');
+            btn.textContent = `Group by: ${newTopLevel === 'rfe' ? 'RFEs' : 'STRATs'}`;
+
+            // Force close any existing connection
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+
+            // Reset loading flag and hide indicator
+            isLoading = false;
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+            }
+
+            // Reload data with new top level
+            loadData();
+        }
+
+        function showConfigModal() {
+            const config = loadConfig();
+            document.getElementById('configPAT').value = config.pat || '';
+            document.getElementById('configComponent').value = config.component || 'AI Safety';
+            document.getElementById('configModal').classList.add('active');
+        }
+
+        function handleSaveConfig(event) {
+            event.preventDefault();
+            const oldConfig = loadConfig();
+            const pat = document.getElementById('configPAT').value;
+            const component = document.getElementById('configComponent').value;
+            saveConfig(pat, component);
+            closeModal('configModal');
+
+            // Auto-refresh if component changed
+            if (oldConfig.component !== component) {
+                refreshData();
+            }
+        }
+
+        // Comment management
+        let currentCommentIssueKey = null;
+
+        function showAddCommentModal(issueKey) {
+            currentCommentIssueKey = issueKey;
+            document.getElementById('commentIssueInfo').textContent = `Add comment to ${issueKey}`;
+            document.getElementById('commentBody').value = '';
+            document.getElementById('addCommentModal').classList.add('active');
+        }
+
+        async function handleAddComment(event) {
+            event.preventDefault();
+
+            const submitBtn = document.getElementById('commentSubmitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Adding...';
+
+            try {
+                const config = loadConfig();
+                if (!config.pat) {
+                    showError('Please configure your Personal Access Token in Settings');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Add Comment';
+                    return;
+                }
+
+                const commentBody = document.getElementById('commentBody').value;
+
+                const response = await fetch('/api/add-comment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        pat: config.pat,
+                        issue_key: currentCommentIssueKey,
+                        comment: commentBody
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // Add comment directly to the issue without full refresh
+                    addCommentToIssue(currentCommentIssueKey, commentBody);
+                    closeModal('addCommentModal');
+                    showSuccess(`Comment added successfully!`);
+                } else {
+                    showError(`Error adding comment: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Error adding comment: ${error.message}`);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Add Comment';
+            }
+        }
+
+        function addCommentToIssue(issueKey, commentBody) {
+            // Create new comment object
+            const newComment = {
+                body: commentBody,
+                author: 'You',  // We don't have the actual user info, so use 'You'
+                created: new Date().toISOString()
+            };
+
+            // Update the DOM immediately - this is the critical part for UX
+            const detailsDiv = document.getElementById(`details-${issueKey}`);
+            if (detailsDiv) {
+                const commentsList = detailsDiv.querySelector('.comments-list');
+                if (commentsList) {
+                    // Remove "No comments" message if present
+                    const noCommentsMsg = commentsList.querySelector('.no-data');
+                    if (noCommentsMsg) {
+                        noCommentsMsg.remove();
+                    }
+
+                    // Add the new comment to the DOM immediately
+                    const commentDiv = document.createElement('div');
+                    commentDiv.className = 'comment';
+                    commentDiv.innerHTML = `
+                        <div class="comment-header"><strong>${newComment.author}</strong> <span class="comment-date">${new Date(newComment.created).toLocaleString()}</span></div>
+                        <div class="comment-body">${newComment.body}</div>
+                    `;
+                    commentsList.appendChild(commentDiv);
+                }
+            }
+
+            // Update hierarchyData in background (non-blocking, only if data exists)
+            // Use setTimeout to ensure this doesn't block the UI update
+            setTimeout(() => {
+                if (!hierarchyData.rfes) return;
+
+                // Search through RFEs
+                for (const rfe of hierarchyData.rfes) {
+                    if (rfe.key === issueKey) {
+                        if (!rfe.comments) rfe.comments = [];
+                        rfe.comments.push(newComment);
+                        return;
+                    }
+                    // Search through STRATs
+                    if (rfe.strats) {
+                        for (const strat of rfe.strats) {
+                            if (strat.key === issueKey) {
+                                if (!strat.comments) strat.comments = [];
+                                strat.comments.push(newComment);
+                                return;
+                            }
+                            // Search through Epics
+                            if (strat.epics) {
+                                for (const epic of strat.epics) {
+                                    if (epic.key === issueKey) {
+                                        if (!epic.comments) epic.comments = [];
+                                        epic.comments.push(newComment);
+                                        return;
+                                    }
+                                    // Search through Tasks
+                                    if (epic.tasks) {
+                                        for (const task of epic.tasks) {
+                                            if (task.key === issueKey) {
+                                                if (!task.comments) task.comments = [];
+                                                task.comments.push(newComment);
+                                                return;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }, 0);
+        }
+
+        // Load data using Server-Sent Events for progressive loading
+        function loadData() {
+            if (isLoading) {
+                console.log('Already loading data, skipping duplicate request');
+                return;
+            }
+
+            const content = document.getElementById('content');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const refreshBtn = document.getElementById('refreshBtn');
+
+            // Show loading indicator, but DON'T disable the button or clear the tree
+            loadingIndicator.style.display = 'inline';
+            isLoading = true;
+
+            // Close existing connection if any
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            // Get config first
+            const config = loadConfig();
+
+            // Store old data temporarily
+            const oldData = hierarchyData;
+
+            // Reset data
+            hierarchyData = {rfes: [], strats: [], metadata: {total_rfes: 0, total_strats: 0, total_epics: 0, total_tasks: 0}};
+
+            // Track current mode
+            currentTopLevel = config.topLevel;
+
+            // Hide table header during refresh
+            document.getElementById('tableHeader').style.display = 'none';
+
+            // Initialize tree structure
+            if (!document.getElementById('tree')) {
+                content.innerHTML = '<div class="tree" id="tree"></div>';
+            } else {
+                // Clear existing tree for refresh
+                document.getElementById('tree').innerHTML = '';
+            }
+            const tree = document.getElementById('tree');
+            if (!config.pat) {
+                showError('Please configure your Personal Access Token in Settings');
+                loadingIndicator.style.display = 'none';
+                isLoading = false;
+                showConfigModal();
+                return;
+            }
+
+            // Update page title with component
+            const pageTitle = `🛡️ ${config.component} JIRA Hierarchy Viewer`;
+            document.getElementById('pageTitle').textContent = pageTitle;
+            document.title = pageTitle;
+
+            // Update top level button text
+            const topLevelBtn = document.getElementById('topLevelBtn');
+            topLevelBtn.textContent = `Group By: ${config.topLevel === 'rfe' ? 'RFEs' : 'STRATs'}`;
+
+            // Show table header immediately when loading starts
+            document.getElementById('tableHeader').style.display = 'flex';
+
+            // Create EventSource to stream data with config as query params
+            const params = new URLSearchParams({
+                pat: config.pat,
+                component: config.component,
+                top_level: config.topLevel
+            });
+            eventSource = new EventSource('/api/hierarchy/stream?' + params.toString());
+
+            eventSource.addEventListener('progress', function(e) {
+                const progress = JSON.parse(e.data);
+                loadingIndicator.textContent = `⏳ ${progress.message}`;
+            });
+
+            eventSource.addEventListener('rfe', function(e) {
+                const rfe = JSON.parse(e.data);
+                hierarchyData.rfes.push(rfe);
+                hierarchyData.metadata.total_rfes++;
+
+                // Add RFE to tree immediately
+                addRfeToTree(tree, rfe);
+                updateStats(hierarchyData);
+            });
+
+            eventSource.addEventListener('strat', function(e) {
+                const strat = JSON.parse(e.data);
+                hierarchyData.metadata.total_strats++;
+
+                if (currentTopLevel === 'strat') {
+                    // STRAT mode: STRATs are top-level
+                    hierarchyData.strats.push(strat);
+                    addStratToTree(strat, true);  // Pass true to indicate top-level
+                    updateStats(hierarchyData);
+                } else {
+                    // RFE mode: STRATs are children of RFEs
+                    const rfe = hierarchyData.rfes.find(r => r.key === strat.rfe_key);
+                    if (rfe) {
+                        if (!rfe.strats) rfe.strats = [];
+                        rfe.strats.push(strat);
+
+                        // Add STRAT to tree immediately
+                        addStratToTree(strat);
+                        updateStats(hierarchyData);
+                    }
+                }
+            });
+
+            eventSource.addEventListener('epic', function(e) {
+                const epic = JSON.parse(e.data);
+                console.log('Epic received:', epic.key, 'components:', epic.components);
+                hierarchyData.metadata.total_epics++;
+
+                if (currentTopLevel === 'strat') {
+                    // STRAT mode: Find parent STRAT in top-level strats
+                    const strat = hierarchyData.strats.find(s => s.key === epic.strat_key);
+                    if (strat) {
+                        if (!strat.epics) strat.epics = [];
+                        strat.epics.push(epic);
+
+                        // Add epic to tree immediately
+                        addEpicToTree(epic);
+                        updateStats(hierarchyData);
+                    }
+                } else {
+                    // RFE mode: Find parent RFE and STRAT, then add epic
+                    const rfe = hierarchyData.rfes.find(r => r.key === epic.rfe_key);
+                    if (rfe && rfe.strats) {
+                        const strat = rfe.strats.find(s => s.key === epic.strat_key);
+                        if (strat) {
+                            if (!strat.epics) strat.epics = [];
+                            strat.epics.push(epic);
+
+                            // Add epic to tree immediately
+                            addEpicToTree(epic);
+                            updateStats(hierarchyData);
+                        }
+                    }
+                }
+            });
+
+            eventSource.addEventListener('task', function(e) {
+                const task = JSON.parse(e.data);
+                console.log('Task received:', task.key, 'components:', task.components);
+                hierarchyData.metadata.total_tasks++;
+
+                if (currentTopLevel === 'strat') {
+                    // STRAT mode: Find parent STRAT and epic
+                    const strat = hierarchyData.strats.find(s => s.key === task.strat_key);
+                    if (strat && strat.epics) {
+                        const epic = strat.epics.find(ep => ep.key === task.epic_key);
+                        if (epic) {
+                            if (!epic.tasks) epic.tasks = [];
+                            epic.tasks.push(task);
+
+                            // Add task to tree immediately
+                            addTaskToTree(task);
+                            updateStats(hierarchyData);
+                        }
+                    }
+                } else {
+                    // RFE mode: Find parent RFE, STRAT, and epic, then add task
+                    const rfe = hierarchyData.rfes.find(r => r.key === task.rfe_key);
+                    if (rfe && rfe.strats) {
+                        const strat = rfe.strats.find(s => s.key === task.strat_key);
+                        if (strat && strat.epics) {
+                            const epic = strat.epics.find(ep => ep.key === task.epic_key);
+                            if (epic) {
+                                if (!epic.tasks) epic.tasks = [];
+                                epic.tasks.push(task);
+
+                                // Add task to tree immediately
+                                addTaskToTree(task);
+                                updateStats(hierarchyData);
+                            }
+                        }
+                    }
+                }
+            });
+
+            eventSource.addEventListener('complete', function(e) {
+                const stats = JSON.parse(e.data);
+                console.log('Loading complete:', stats);
+                eventSource.close();
+
+                updateStats(hierarchyData);
+
+                // Hide loading indicator
+                loadingIndicator.style.display = 'none';
+                isLoading = false;
+            });
+
+            eventSource.addEventListener('error', function(e) {
+                console.error('EventSource error:', e);
+                eventSource.close();
+
+                // Hide loading indicator
+                loadingIndicator.style.display = 'none';
+                isLoading = false;
+
+                // Only show error if tree is empty
+                if (!tree.hasChildNodes()) {
+                    content.innerHTML = `
+                        <div class="empty-state">
+                            <h3>⚠️ Unable to Load Data</h3>
+                            <p>Error connecting to server</p>
+                            <p style="margin-top: 12px;">Check the console for details</p>
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        function addRfeToTree(tree, rfe) {
+            const rfeId = `rfe-${rfe.key}`;
+            const rfeHtml = `
+                <div class="tree-item" id="item-${rfe.key}">
+                    <div class="tree-node rfe empty" id="node-${rfe.key}" onclick="toggleNode('${rfeId}')">
+                        <span class="expand-icon">▶</span>
+                        <div class="tree-content">
+                            <span class="issue-key">${rfe.key}</span>
+                            <a href="${JIRA_CONFIG.baseUrl}/browse/${rfe.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${rfe.summary}</a>
+                            <span class="issue-status ${getStatusClass(rfe.status)}" onclick="event.stopPropagation(); showStatusDropdown('${rfe.key}', this)">${rfe.status}</span>
+                            <span class="issue-priority ${getPriorityClass(rfe.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${rfe.key}', this)">${rfe.priority}</span>
+                            <span class="issue-assignee">${rfe.assignee || 'Unassigned'}</span>
+                            <span class="issue-updated">${formatDate(rfe.updated)}</span>
+                            <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${rfe.key}', 'rfe')">↻</button>
+                        </div>
+                    </div>
+                    ${generateDetailsHTML(rfe)}
+                    <div class="children" id="${rfeId}"></div>
+                </div>
+            `;
+            tree.insertAdjacentHTML('beforeend', rfeHtml);
+        }
+
+        function addStratToTree(strat, isTopLevel = false) {
+            const stratId = `strat-${strat.key}`;
+            const stratHtml = `
+                <div class="tree-item" id="item-${strat.key}">
+                    <div class="tree-node strat empty" id="node-${strat.key}" onclick="toggleNode('${stratId}')">
+                        <span class="expand-icon">▶</span>
+                        <div class="tree-content">
+                            <span class="issue-key">${strat.key}</span>
+                            <a href="${JIRA_CONFIG.baseUrl}/browse/${strat.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${strat.summary}</a>
+                            <span class="issue-status ${getStatusClass(strat.status)}" onclick="event.stopPropagation(); showStatusDropdown('${strat.key}', this)">${strat.status}</span>
+                            <span class="issue-priority ${getPriorityClass(strat.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${strat.key}', this)">${strat.priority}</span>
+                            <span class="issue-assignee">${strat.assignee || 'Unassigned'}</span>
+                            <span class="issue-updated">${formatDate(strat.updated)}</span>
+                            <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${strat.key}', 'strat')">↻</button>
+                        </div>
+                    </div>
+                    ${generateDetailsHTML(strat)}
+                    <div class="children" id="${stratId}"></div>
+                </div>
+            `;
+
+            if (isTopLevel) {
+                // Add to tree root directly
+                const tree = document.getElementById('tree');
+                tree.insertAdjacentHTML('beforeend', stratHtml);
+            } else {
+                // Add to parent RFE container
+                const rfeContainer = document.getElementById(`rfe-${strat.rfe_key}`);
+                if (!rfeContainer) return;
+
+                // Remove "empty" class and update expand icon for parent RFE
+                const rfeNodeDiv = document.getElementById(`node-${strat.rfe_key}`);
+                if (rfeNodeDiv && rfeNodeDiv.classList.contains('empty')) {
+                    rfeNodeDiv.classList.remove('empty');
+                }
+
+                rfeContainer.insertAdjacentHTML('beforeend', stratHtml);
+            }
+
+            // Add the "+ Epic" button to the STRAT (will be at bottom initially)
+            addCreateButton(stratId, 'epic', strat.key);
+        }
+
+        function addCreateButton(containerId, itemType, parentKey) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            const itemClass = itemType === 'epic' ? 'add-epic' : 'add-task';
+
+            // Remove ALL existing add buttons of this type
+            const existingButtons = container.querySelectorAll(`.add-item-tree-node.${itemClass}`);
+            existingButtons.forEach(btn => {
+                if (btn.parentElement) {
+                    btn.parentElement.remove();
+                }
+            });
+
+            const buttonText = itemType === 'epic' ? 'Add Epic' : 'Add Task';
+            const modalFunction = itemType === 'epic' ? 'showCreateEpicModal' : 'showCreateTaskModal';
+
+            const buttonHtml = `
+                <div class="tree-item">
+                    <div class="add-item-tree-node ${itemClass}" onclick="${modalFunction}('${parentKey}')">
+                        <span class="add-icon">+</span>
+                        <span>${buttonText}</span>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', buttonHtml);
+        }
+
+        function addEpicToTree(epic) {
+            const stratContainer = document.getElementById(`strat-${epic.strat_key}`);
+            if (!stratContainer) return;
+
+            // Remove "empty" class for parent STRAT
+            const stratNodeDiv = document.getElementById(`node-${epic.strat_key}`);
+            if (stratNodeDiv && stratNodeDiv.classList.contains('empty')) {
+                stratNodeDiv.classList.remove('empty');
+            }
+
+            const epicId = `epic-${epic.key}`;
+            const epicHtml = `
+                <div class="tree-item" id="item-${epic.key}">
+                    <div class="tree-node epic" onclick="toggleNode('${epicId}')">
+                        <span class="expand-icon">▶</span>
+                        <div class="tree-content">
+                            <span class="issue-key">${epic.key}</span>
+                            <a href="${JIRA_CONFIG.baseUrl}/browse/${epic.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${epic.summary}</a>
+                            <span class="issue-status ${getStatusClass(epic.status)}" onclick="event.stopPropagation(); showStatusDropdown('${epic.key}', this)">${epic.status}</span>
+                            <span class="issue-priority ${getPriorityClass(epic.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${epic.key}', this)">${epic.priority}</span>
+                            <span class="issue-assignee">${epic.assignee || 'Unassigned'}</span>
+                            <span class="issue-updated">${formatDate(epic.updated)}</span>
+                            <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${epic.key}', 'epic')">↻</button>
+                        </div>
+                    </div>
+                    ${generateDetailsHTML(epic)}
+                    <div class="children" id="${epicId}"></div>
+                </div>
+            `;
+            stratContainer.insertAdjacentHTML('beforeend', epicHtml);
+
+            // Re-add the "+ Epic" button to keep it at the bottom of the STRAT
+            addCreateButton(`strat-${epic.strat_key}`, 'epic', epic.strat_key);
+
+            // Add the "+ Task" button to the Epic
+            addCreateButton(epicId, 'task', epic.key);
+        }
+
+        function addTaskToTree(task) {
+            const epicContainer = document.getElementById(`epic-${task.epic_key}`);
+            if (!epicContainer) return;
+
+            const taskId = `task-${task.key}`;
+            const taskHtml = `
+                <div class="tree-item" id="item-${task.key}">
+                    <div class="tree-node task" onclick="toggleNode('${taskId}')">
+                        <span class="expand-icon">▶</span>
+                        <div class="tree-content">
+                            <span class="issue-key">${task.key}</span>
+                            <a href="${JIRA_CONFIG.baseUrl}/browse/${task.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${task.summary}</a>
+                            <span class="issue-status ${getStatusClass(task.status)}" onclick="event.stopPropagation(); showStatusDropdown('${task.key}', this)">${task.status}</span>
+                            <span class="issue-priority ${getPriorityClass(task.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${task.key}', this)">${task.priority}</span>
+                            <span class="issue-assignee">${task.assignee || 'Unassigned'}</span>
+                            <span class="issue-updated">${formatDate(task.updated)}</span>
+                            <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${task.key}', 'task')">↻</button>
+                        </div>
+                    </div>
+                    ${generateDetailsHTML(task)}
+                    <div class="children" id="${taskId}"></div>
+                </div>
+            `;
+            epicContainer.insertAdjacentHTML('beforeend', taskHtml);
+
+            // Re-add the "+ Task" button to keep it at the bottom of the Epic
+            addCreateButton(`epic-${task.epic_key}`, 'task', task.epic_key);
+        }
+
+        function renderHierarchy(data) {
+            const content = document.getElementById('content');
+
+            if (!data.strats || data.strats.length === 0) {
+                content.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No AI Safety Issues Found</h3>
+                        <p>No STRATs with component = "AI Safety" were found.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '<div class="tree">';
+
+            data.strats.forEach(strat => {
+                const stratId = `strat-${strat.key}`;
+                const hasChildren = strat.epics && strat.epics.length > 0;
+
+                html += `
+                    <div class="tree-item">
+                        <div class="tree-node strat" onclick="toggleNode('${stratId}')">
+                            <span class="expand-icon">${hasChildren ? '▶' : '•'}</span>
+                            <div class="tree-content">
+                                <span class="issue-key">${strat.key}</span>
+                                <span class="issue-summary">${strat.summary}</span>
+                                <span class="issue-status ${getStatusClass(strat.status)}">${strat.status}</span>
+                                <span class="issue-priority ${getPriorityClass(strat.priority)}">${strat.priority}</span>
+                            </div>
+                        </div>
+                        <div class="children" id="${stratId}">
+                `;
+
+                if (strat.epics) {
+                    strat.epics.forEach(epic => {
+                        const epicId = `epic-${epic.key}`;
+                        const hasEpicChildren = epic.tasks && epic.tasks.length > 0;
+
+                        html += `
+                            <div class="tree-item">
+                                <div class="tree-node epic" onclick="toggleNode('${epicId}')">
+                                    <span class="expand-icon">${hasEpicChildren ? '▶' : '•'}</span>
+                                    <div class="tree-content">
+                                        <span class="issue-key">${epic.key}</span>
+                                        <span class="issue-summary">${epic.summary}</span>
+                                        <span class="issue-status ${getStatusClass(epic.status)}">${epic.status}</span>
+                                        <span class="issue-priority ${getPriorityClass(epic.priority)}">${epic.priority}</span>
+                                    </div>
+                                </div>
+                                <div class="children" id="${epicId}">
+                        `;
+
+                        if (epic.tasks) {
+                            epic.tasks.forEach(task => {
+                                html += `
+                                    <div class="tree-item">
+                                        <div class="tree-node task">
+                                            <span class="expand-icon">•</span>
+                                            <div class="tree-content">
+                                                <span class="issue-key">${task.key}</span>
+                                                <span class="issue-summary">${task.summary}</span>
+                                                <span class="issue-status ${getStatusClass(task.status)}">${task.status}</span>
+                                                <span class="issue-priority ${getPriorityClass(task.priority)}">${task.priority}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                        }
+
+                        html += `
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            content.innerHTML = html;
+        }
+
+        function generateDetailsHTML(issue) {
+            const labelsHTML = issue.labels && issue.labels.length > 0
+                ? issue.labels.map(l => {
+                    const escapedLabel = l.replace(/"/g, '&quot;');
+                    return `<span class="label">${l}<span class="label-delete" data-issue-key="${issue.key}" data-label="${escapedLabel}" onclick="deleteLabelClick(event)">×</span></span>`;
+                }).join('')
+                : '<span class="no-data">No labels</span>';
+
+            const componentsHTML = issue.components && issue.components.length > 0
+                ? issue.components.map(c => `<span class="label">${c}</span>`).join('')
+                : '<span class="no-data">No components</span>';
+
+            const commentsHTML = issue.comments && issue.comments.length > 0
+                ? issue.comments.map(c => `
+                    <div class="comment">
+                        <div class="comment-header"><strong>${c.author}</strong> <span class="comment-date">${new Date(c.created).toLocaleString()}</span></div>
+                        <div class="comment-body">${c.body}</div>
+                    </div>
+                  `).join('')
+                : '<div class="no-data">No comments</div>';
+
+            return `
+                <div class="issue-details" id="details-${issue.key}" style="display: none;">
+                    <div class="detail-row">
+                        <strong>Reporter:</strong> <span>${issue.reporter || 'Unknown'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <strong>Assignee:</strong> <span>${issue.assignee || 'Unassigned'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <strong>Created:</strong> <span>${formatDate(issue.created) || 'Unknown'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <strong>Labels:</strong>
+                        <div class="labels" id="labels-${issue.key}">${labelsHTML}</div>
+                        <div class="label-input-container">
+                            <input type="text" class="label-input" id="label-input-${issue.key}" placeholder="Add a label">
+                            <button class="btn-add-label" onclick="addLabel('${issue.key}')">Add</button>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <strong>Components:</strong> <div class="labels">${componentsHTML}</div>
+                    </div>
+                    <div class="detail-row">
+                        <strong>Description:</strong> <div class="description">${issue.description || '<span class="no-data">No description</span>'}</div>
+                    </div>
+                    <div class="detail-row comments-section">
+                        <strong>Comments:</strong>
+                        <div class="comments-list">${commentsHTML}</div>
+                        <button class="btn-add-comment" onclick="showAddCommentModal('${issue.key}')">+ Add Comment</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleNode(nodeId) {
+            const node = document.getElementById(nodeId);
+            const issueKey = nodeId.replace(/^(rfe|strat|epic|task)-/, '');
+            const treeItem = node.parentElement;
+            const icon = treeItem.querySelector('.expand-icon');
+            const details = document.getElementById(`details-${issueKey}`);
+
+            if (node.classList.contains('expanded')) {
+                node.classList.remove('expanded');
+                if (icon) icon.textContent = '▶';
+                if (details) details.style.display = 'none';
+            } else {
+                node.classList.add('expanded');
+                if (icon) icon.textContent = '▼';
+                if (details) details.style.display = 'block';
+            }
+        }
+
+        function expandAll() {
+            document.querySelectorAll('.children').forEach(node => {
+                node.classList.add('expanded');
+            });
+            document.querySelectorAll('.expand-icon').forEach(icon => {
+                if (icon.textContent === '▶') {
+                    icon.textContent = '▼';
+                }
+            });
+        }
+
+        function collapseAll() {
+            document.querySelectorAll('.children').forEach(node => {
+                node.classList.remove('expanded');
+            });
+            document.querySelectorAll('.expand-icon').forEach(icon => {
+                if (icon.textContent === '▼') {
+                    icon.textContent = '▶';
+                }
+            });
+        }
+
+        function compareItems(a, b, field, order) {
+            let aVal, bVal;
+
+            switch(field) {
+                case 'key':
+                    aVal = a.key || '';
+                    bVal = b.key || '';
+                    break;
+                case 'summary':
+                    aVal = (a.summary || '').toLowerCase();
+                    bVal = (b.summary || '').toLowerCase();
+                    break;
+                case 'status':
+                    aVal = (a.status || '').toLowerCase();
+                    bVal = (b.status || '').toLowerCase();
+                    break;
+                case 'priority':
+                    // Custom priority order: Critical > Major > Normal > Undefined
+                    const priorityOrder = { 'critical': 4, 'major': 3, 'normal': 2, 'undefined': 1 };
+                    aVal = priorityOrder[(a.priority || 'undefined').toLowerCase()] || 0;
+                    bVal = priorityOrder[(b.priority || 'undefined').toLowerCase()] || 0;
+                    break;
+                case 'assignee':
+                    aVal = (a.assignee || 'unassigned').toLowerCase();
+                    bVal = (b.assignee || 'unassigned').toLowerCase();
+                    break;
+                case 'updated':
+                    aVal = a.updated ? new Date(a.updated).getTime() : 0;
+                    bVal = b.updated ? new Date(b.updated).getTime() : 0;
+                    break;
+                default:
+                    return 0;
+            }
+
+            let result;
+            if (field === 'priority') {
+                result = bVal - aVal; // Higher priority first by default
+                if (order === 'asc') result = -result;
+            } else {
+                result = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+                if (order === 'desc') result = -result;
+            }
+
+            return result;
+        }
+
+        function sortHierarchyData(data, field, order) {
+            if (!data) return data;
+
+            // Sort RFEs
+            if (data.rfes && Array.isArray(data.rfes)) {
+                data.rfes.sort((a, b) => compareItems(a, b, field, order));
+
+                // Sort STRATs within each RFE
+                data.rfes.forEach(rfe => {
+                    if (rfe.strats && Array.isArray(rfe.strats)) {
+                        rfe.strats.sort((a, b) => compareItems(a, b, field, order));
+
+                        // Sort Epics within each STRAT
+                        rfe.strats.forEach(strat => {
+                            if (strat.epics && Array.isArray(strat.epics)) {
+                                strat.epics.sort((a, b) => compareItems(a, b, field, order));
+
+                                // Sort Tasks within each Epic
+                                strat.epics.forEach(epic => {
+                                    if (epic.tasks && Array.isArray(epic.tasks)) {
+                                        epic.tasks.sort((a, b) => compareItems(a, b, field, order));
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+
+            return data;
+        }
+
+        let currentSortField = null;
+        let currentSortOrder = 'asc';
+
+        function handleColumnSort(field) {
+            // Toggle sort order if clicking the same field, otherwise default to ascending
+            if (currentSortField === field) {
+                currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortField = field;
+                currentSortOrder = 'asc';
+            }
+
+            // Update sort indicators
+            document.querySelectorAll('.sort-indicator').forEach(indicator => {
+                indicator.textContent = '';
+                indicator.classList.remove('active');
+            });
+
+            const indicator = document.getElementById(`sort-${field}`);
+            if (indicator) {
+                indicator.textContent = currentSortOrder === 'asc' ? '▲' : '▼';
+                indicator.classList.add('active');
+            }
+
+            // Sort the hierarchy data
+            sortHierarchyData(hierarchyData, currentSortField, currentSortOrder);
+
+            // Re-render the tree
+            const tree = document.getElementById('tree');
+            if (tree && hierarchyData.rfes) {
+                tree.innerHTML = '';
+                hierarchyData.rfes.forEach(rfe => {
+                    addRfeToTree(tree, rfe);
+                    if (rfe.strats) {
+                        rfe.strats.forEach(strat => {
+                            addStratToTree(strat);
+                            if (strat.epics) {
+                                strat.epics.forEach(epic => {
+                                    addEpicToTree(epic);
+                                    if (epic.tasks) {
+                                        epic.tasks.forEach(task => {
+                                            addTaskToTree(task);
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+        }
+
+        function filterIssues() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const allNodes = document.querySelectorAll('.tree-item');
+
+            allNodes.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        function getStatusClass(status) {
+            const statusLower = status.toLowerCase().replace(/\s+/g, '-');
+            if (statusLower.includes('progress') || statusLower.includes('approved')) return 'status-in-progress';
+            if (statusLower.includes('new')) return 'status-new';
+            if (statusLower.includes('closed') || statusLower.includes('resolved')) return 'status-closed';
+            if (statusLower.includes('review')) return 'status-review';
+            return 'status-new';
+        }
+
+        function getPriorityClass(priority) {
+            const priorityLower = priority.toLowerCase();
+            if (priorityLower === 'critical') return 'priority-critical';
+            if (priorityLower === 'major') return 'priority-major';
+            return 'priority-normal';
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${month}/${day}/${year}`;
+        }
+
+        function updateStats(data) {
+            document.getElementById('stats').style.display = 'flex';
+            document.getElementById('rfeCount').textContent = data.metadata.total_rfes || 0;
+            document.getElementById('stratCount').textContent = data.metadata.total_strats || 0;
+            document.getElementById('epicCount').textContent = data.metadata.total_epics || 0;
+            document.getElementById('taskCount').textContent = data.metadata.total_tasks || 0;
+            document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+        }
+
+        // Modal management
+        let currentStratKey = null;
+        let currentEpicKey = null;
+
+        function showCreateEpicModal(stratKey) {
+            currentStratKey = stratKey;
+            const config = loadConfig();
+            document.getElementById('epicParentInfo').textContent = `Parent STRAT: ${stratKey}`;
+            document.getElementById('epicSummary').value = '';
+            document.getElementById('epicComponent').value = config.component || 'AI Safety';
+            document.getElementById('epicDescription').value = '';
+            document.getElementById('createEpicModal').classList.add('active');
+        }
+
+        function showCreateTaskModal(epicKey) {
+            currentEpicKey = epicKey;
+            const config = loadConfig();
+            document.getElementById('taskParentInfo').textContent = `Parent Epic: ${epicKey}`;
+            document.getElementById('taskSummary').value = '';
+            document.getElementById('taskComponent').value = config.component || 'AI Safety';
+            document.getElementById('taskDescription').value = '';
+            document.getElementById('createTaskModal').classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        async function handleCreateEpic(event) {
+            event.preventDefault();
+
+            const submitBtn = document.getElementById('epicSubmitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating...';
+
+            try {
+                const config = loadConfig();
+                if (!config.pat) {
+                    showError('Please configure your Personal Access Token in Settings');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Create Epic';
+                    return;
+                }
+
+                const summary = document.getElementById('epicSummary').value;
+                const component = document.getElementById('epicComponent').value;
+                const description = document.getElementById('epicDescription').value;
+
+                const response = await fetch('/api/create-epic', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        pat: config.pat,
+                        strat_key: currentStratKey,
+                        summary: summary,
+                        component: component,
+                        description: description
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    showSuccess(`Epic ${result.epic.key} created successfully!`);
+                    closeModal('createEpicModal');
+                    // Add the new epic directly to the tree
+                    addEpicToTree(result.epic);
+                    // Update stats
+                    hierarchyData.metadata.total_epics++;
+                    updateStats(hierarchyData);
+                } else {
+                    showError(`Error creating epic: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Error creating epic: ${error.message}`);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Epic';
+            }
+        }
+
+        async function handleCreateTask(event) {
+            event.preventDefault();
+
+            const submitBtn = document.getElementById('taskSubmitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating...';
+
+            try {
+                const config = loadConfig();
+                if (!config.pat) {
+                    showError('Please configure your Personal Access Token in Settings');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Create Task';
+                    return;
+                }
+
+                const taskType = document.getElementById('taskType').value;
+                const summary = document.getElementById('taskSummary').value;
+                const component = document.getElementById('taskComponent').value;
+                const description = document.getElementById('taskDescription').value;
+
+                const response = await fetch('/api/create-task', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        pat: config.pat,
+                        epic_key: currentEpicKey,
+                        issue_type: taskType,
+                        summary: summary,
+                        component: component,
+                        description: description
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    showSuccess(`Task ${result.task.key} created successfully!`);
+                    closeModal('createTaskModal');
+                    // Add the new task directly to the tree
+                    addTaskToTree(result.task);
+                    // Update stats
+                    hierarchyData.metadata.total_tasks++;
+                    updateStats(hierarchyData);
+                } else {
+                    showError(`Error creating task: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Error creating task: ${error.message}`);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Task';
+            }
+        }
+
+        // Label management
+        async function addLabel(issueKey) {
+            const input = document.getElementById(`label-input-${issueKey}`);
+            const labelText = input.value.trim();
+
+            if (!labelText) {
+                showError('Please enter a label');
+                return;
+            }
+
+            try {
+                const config = loadConfig();
+                if (!config.pat) {
+                    showError('Please configure your Personal Access Token in Settings');
+                    return;
+                }
+
+                const response = await fetch('/api/update-labels', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        pat: config.pat,
+                        issue_key: issueKey,
+                        action: 'add',
+                        label: labelText
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // Add label to UI
+                    updateIssueLabels(issueKey, result.labels);
+                    input.value = '';
+                    showSuccess('Label added successfully');
+                } else {
+                    showError(`Error adding label: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Error adding label: ${error.message}`);
+            }
+        }
+
+        async function deleteLabel(issueKey, labelText) {
+            try {
+                const config = loadConfig();
+                if (!config.pat) {
+                    showError('Please configure your Personal Access Token in Settings');
+                    return;
+                }
+
+                const response = await fetch('/api/update-labels', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        pat: config.pat,
+                        issue_key: issueKey,
+                        action: 'remove',
+                        label: labelText
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // Update labels in UI
+                    updateIssueLabels(issueKey, result.labels);
+                    showSuccess('Label removed successfully');
+                } else {
+                    showError(`Error removing label: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Error removing label: ${error.message}`);
+            }
+        }
+
+        function updateIssueLabels(issueKey, labels) {
+            // Update in hierarchyData
+            updateIssueInData(issueKey, (issue) => {
+                issue.labels = labels;
+            });
+
+            // Update in DOM
+            const labelsDiv = document.getElementById(`labels-${issueKey}`);
+            if (labelsDiv) {
+                const labelsHTML = labels && labels.length > 0
+                    ? labels.map(l => {
+                        const escapedLabel = l.replace(/"/g, '&quot;');
+                        return `<span class="label">${l}<span class="label-delete" data-issue-key="${issueKey}" data-label="${escapedLabel}" onclick="deleteLabelClick(event)">×</span></span>`;
+                    }).join('')
+                    : '<span class="no-data">No labels</span>';
+                labelsDiv.innerHTML = labelsHTML;
+            }
+        }
+
+        function deleteLabelClick(event) {
+            event.stopPropagation();
+            event.preventDefault();
+            const target = event.target;
+            const issueKey = target.getAttribute('data-issue-key');
+            const label = target.getAttribute('data-label');
+            if (issueKey && label) {
+                deleteLabel(issueKey, label);
+            }
+        }
+
+        // Status management
+        let currentStatusDropdown = null;
+
+        async function showStatusDropdown(issueKey, statusElement) {
+            // Close any existing dropdown
+            if (currentStatusDropdown) {
+                currentStatusDropdown.remove();
+                currentStatusDropdown = null;
+            }
+
+            // Fetch available transitions
+            try {
+                const config = loadConfig();
+                if (!config.pat) {
+                    showError('Please configure your Personal Access Token in Settings');
+                    return;
+                }
+
+                const response = await fetch(`/api/transitions?issue_key=${issueKey}&pat=${config.pat}`);
+                const result = await response.json();
+
+                if (response.ok && result.transitions) {
+                    // Create dropdown
+                    const dropdown = document.createElement('div');
+                    dropdown.className = 'status-dropdown active';
+                    dropdown.innerHTML = result.transitions.map(t =>
+                        `<div class="status-option" onclick="changeStatus('${issueKey}', '${t.id}', '${t.name}')">${t.name}</div>`
+                    ).join('');
+
+                    // Position dropdown using fixed positioning
+                    const rect = statusElement.getBoundingClientRect();
+                    dropdown.style.left = `${rect.left}px`;
+                    dropdown.style.top = `${rect.bottom + 4}px`;
+
+                    document.body.appendChild(dropdown);
+                    statusElement.classList.add('dropdown-open');
+                    currentStatusDropdown = dropdown;
+
+                    // Close dropdown when clicking outside
+                    setTimeout(() => {
+                        document.addEventListener('click', closeStatusDropdown);
+                    }, 0);
+                } else {
+                    showError(`Error fetching transitions: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Error fetching transitions: ${error.message}`);
+            }
+        }
+
+        function closeStatusDropdown() {
+            if (currentStatusDropdown) {
+                const statusElement = currentStatusDropdown.parentElement;
+                if (statusElement) {
+                    statusElement.classList.remove('dropdown-open');
+                }
+                currentStatusDropdown.remove();
+                currentStatusDropdown = null;
+                document.removeEventListener('click', closeStatusDropdown);
+            }
+        }
+
+        async function changeStatus(issueKey, transitionId, statusName) {
+            try {
+                const config = loadConfig();
+                if (!config.pat) {
+                    showError('Please configure your Personal Access Token in Settings');
+                    return;
+                }
+
+                const response = await fetch('/api/transition', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        pat: config.pat,
+                        issue_key: issueKey,
+                        transition_id: transitionId
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // Update status in UI
+                    updateIssueStatus(issueKey, statusName);
+                    showSuccess(`Status updated to ${statusName}`);
+                } else {
+                    showError(`Error changing status: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Error changing status: ${error.message}`);
+            }
+
+            closeStatusDropdown();
+        }
+
+        function updateIssueStatus(issueKey, newStatus) {
+            // Update in hierarchyData
+            updateIssueInData(issueKey, (issue) => {
+                issue.status = newStatus;
+            });
+
+            // Update all status badges in DOM
+            document.querySelectorAll('.tree-node').forEach(node => {
+                const keySpan = node.querySelector('.issue-key');
+                if (keySpan && keySpan.textContent === issueKey) {
+                    const statusSpan = node.querySelector('.issue-status');
+                    if (statusSpan) {
+                        statusSpan.textContent = newStatus;
+                        statusSpan.className = `issue-status ${getStatusClass(newStatus)}`;
+                    }
+                }
+            });
+        }
+
+        // Priority management
+        let currentPriorityDropdown = null;
+        const PRIORITY_LEVELS = ['Blocker', 'Critical', 'Major', 'Normal', 'Minor', 'Undefined'];
+
+        async function showPriorityDropdown(issueKey, priorityElement) {
+            // Close any existing dropdown
+            if (currentPriorityDropdown) {
+                currentPriorityDropdown.remove();
+                currentPriorityDropdown = null;
+            }
+
+            // Create dropdown with standard priority levels
+            const dropdown = document.createElement('div');
+            dropdown.className = 'status-dropdown active';
+            dropdown.innerHTML = PRIORITY_LEVELS.map(p =>
+                `<div class="status-option" onclick="changePriority('${issueKey}', '${p}')">${p}</div>`
+            ).join('');
+
+            // Position dropdown using fixed positioning
+            const rect = priorityElement.getBoundingClientRect();
+            dropdown.style.left = `${rect.left}px`;
+            dropdown.style.top = `${rect.bottom + 4}px`;
+
+            document.body.appendChild(dropdown);
+            priorityElement.classList.add('dropdown-open');
+            currentPriorityDropdown = dropdown;
+
+            // Close dropdown when clicking outside
+            setTimeout(() => {
+                document.addEventListener('click', closePriorityDropdown);
+            }, 0);
+        }
+
+        function closePriorityDropdown() {
+            if (currentPriorityDropdown) {
+                const priorityElement = currentPriorityDropdown.parentElement;
+                if (priorityElement) {
+                    priorityElement.classList.remove('dropdown-open');
+                }
+                currentPriorityDropdown.remove();
+                currentPriorityDropdown = null;
+                document.removeEventListener('click', closePriorityDropdown);
+            }
+        }
+
+        async function changePriority(issueKey, priorityName) {
+            try {
+                const config = loadConfig();
+                if (!config.pat) {
+                    showError('Please configure your Personal Access Token in Settings');
+                    return;
+                }
+
+                const response = await fetch('/api/update-priority', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        issue_key: issueKey,
+                        priority: priorityName,
+                        pat: config.pat
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // Update priority in UI
+                    updateIssuePriority(issueKey, priorityName);
+                    showSuccess(`Priority updated to ${priorityName}`);
+                } else {
+                    showError(`Error changing priority: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Error changing priority: ${error.message}`);
+            }
+
+            closePriorityDropdown();
+        }
+
+        function updateIssuePriority(issueKey, newPriority) {
+            // Update in hierarchyData
+            updateIssueInData(issueKey, (issue) => {
+                issue.priority = newPriority;
+            });
+
+            // Update all priority badges in DOM
+            document.querySelectorAll('.tree-node').forEach(node => {
+                const keySpan = node.querySelector('.issue-key');
+                if (keySpan && keySpan.textContent === issueKey) {
+                    const prioritySpan = node.querySelector('.issue-priority');
+                    if (prioritySpan) {
+                        prioritySpan.textContent = newPriority;
+                        prioritySpan.className = `issue-priority ${getPriorityClass(newPriority)}`;
+                    }
+                }
+            });
+        }
+
+        function updateIssueInData(issueKey, updateFn) {
+            if (!hierarchyData.rfes) return;
+
+            for (const rfe of hierarchyData.rfes) {
+                if (rfe.key === issueKey) {
+                    updateFn(rfe);
+                    return;
+                }
+                if (rfe.strats) {
+                    for (const strat of rfe.strats) {
+                        if (strat.key === issueKey) {
+                            updateFn(strat);
+                            return;
+                        }
+                        if (strat.epics) {
+                            for (const epic of strat.epics) {
+                                if (epic.key === issueKey) {
+                                    updateFn(epic);
+                                    return;
+                                }
+                                if (epic.tasks) {
+                                    for (const task of epic.tasks) {
+                                        if (task.key === issueKey) {
+                                            updateFn(task);
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Reload item and its children
+        async function reloadItem(issueKey, itemType) {
+            try {
+                const config = loadConfig();
+                if (!config.pat) {
+                    showError('Please configure your Personal Access Token in Settings');
+                    return;
+                }
+
+                // Show loading indicator on the button
+                const buttons = document.querySelectorAll(`button[onclick*="reloadItem('${issueKey}'"]`);
+                buttons.forEach(btn => {
+                    btn.textContent = '⟳';
+                    btn.disabled = true;
+                });
+
+                const response = await fetch(`/api/reload-item?issue_key=${issueKey}&item_type=${itemType}&pat=${config.pat}&component=${config.component}`);
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // Update hierarchyData and DOM based on item type
+                    updateItemInHierarchy(issueKey, itemType, result.data);
+                    showSuccess(`${issueKey} reloaded successfully`);
+                } else {
+                    showError(`Error reloading item: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Error reloading item: ${error.message}`);
+            } finally {
+                // Restore button state
+                const buttons = document.querySelectorAll(`button[onclick*="reloadItem('${issueKey}'"]`);
+                buttons.forEach(btn => {
+                    btn.textContent = '↻';
+                    btn.disabled = false;
+                });
+            }
+        }
+
+        function updateItemInHierarchy(issueKey, itemType, newData) {
+            if (!hierarchyData.rfes) return;
+
+            // Find and replace the item in hierarchyData
+            for (let i = 0; i < hierarchyData.rfes.length; i++) {
+                const rfe = hierarchyData.rfes[i];
+
+                if (itemType === 'rfe' && rfe.key === issueKey) {
+                    // Replace entire RFE
+                    hierarchyData.rfes[i] = newData;
+                    // Re-render this RFE and its children in the DOM
+                    rerenderRfe(newData);
+                    return;
+                }
+
+                if (rfe.strats) {
+                    for (let j = 0; j < rfe.strats.length; j++) {
+                        const strat = rfe.strats[j];
+
+                        if (itemType === 'strat' && strat.key === issueKey) {
+                            // Replace STRAT
+                            rfe.strats[j] = newData;
+                            rerenderStrat(newData);
+                            return;
+                        }
+
+                        if (strat.epics) {
+                            for (let k = 0; k < strat.epics.length; k++) {
+                                const epic = strat.epics[k];
+
+                                if (itemType === 'epic' && epic.key === issueKey) {
+                                    // Replace Epic
+                                    strat.epics[k] = newData;
+                                    rerenderEpic(newData);
+                                    return;
+                                }
+
+                                if (epic.tasks) {
+                                    for (let l = 0; l < epic.tasks.length; l++) {
+                                        const task = epic.tasks[l];
+
+                                        if (itemType === 'task' && task.key === issueKey) {
+                                            // Replace Task
+                                            epic.tasks[l] = newData;
+                                            rerenderTask(newData);
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function rerenderRfe(rfe) {
+            const itemElement = document.getElementById(`item-${rfe.key}`);
+            if (!itemElement) return;
+
+            // Update the tree-node content in place
+            const treeNode = itemElement.querySelector('.tree-node');
+            if (treeNode) {
+                const summaryLink = treeNode.querySelector('.issue-summary-link');
+                const statusSpan = treeNode.querySelector('.issue-status');
+                const prioritySpan = treeNode.querySelector('.issue-priority');
+                const assigneeSpan = treeNode.querySelector('.issue-assignee');
+                const updatedSpan = treeNode.querySelector('.issue-updated');
+
+                if (summaryLink) summaryLink.textContent = rfe.summary;
+                if (statusSpan) {
+                    statusSpan.textContent = rfe.status;
+                    statusSpan.className = `issue-status ${getStatusClass(rfe.status)}`;
+                }
+                if (prioritySpan) {
+                    prioritySpan.textContent = rfe.priority;
+                    prioritySpan.className = `issue-priority ${getPriorityClass(rfe.priority)}`;
+                }
+                if (assigneeSpan) assigneeSpan.textContent = rfe.assignee || 'Unassigned';
+                if (updatedSpan) updatedSpan.textContent = formatDate(rfe.updated);
+            }
+
+            // Update the details section
+            const detailsElement = itemElement.querySelector('.issue-details');
+            if (detailsElement) {
+                detailsElement.outerHTML = generateDetailsHTML(rfe);
+            }
+
+            // Clear and rebuild children
+            const childrenContainer = document.getElementById(`rfe-${rfe.key}`);
+            if (childrenContainer) {
+                // Collapse the container and reset icon
+                childrenContainer.classList.remove('expanded');
+                const icon = itemElement.querySelector('.expand-icon');
+                if (icon) icon.textContent = '▶';
+
+                // Hide details
+                const details = itemElement.querySelector('.issue-details');
+                if (details) details.style.display = 'none';
+
+                childrenContainer.innerHTML = '';
+                if (rfe.strats) {
+                    rfe.strats.forEach(strat => {
+                        addStratToTree(strat);
+                        if (strat.epics) {
+                            strat.epics.forEach(epic => {
+                                addEpicToTree(epic);
+                                if (epic.tasks) {
+                                    epic.tasks.forEach(task => addTaskToTree(task));
+                                }
+                            });
+                        }
+                    });
+                }
+
+                // Update empty class based on whether there are STRATs
+                if (treeNode) {
+                    if (rfe.strats && rfe.strats.length > 0) {
+                        treeNode.classList.remove('empty');
+                    } else {
+                        treeNode.classList.add('empty');
+                    }
+                }
+            }
+        }
+
+        function rerenderStrat(strat) {
+            const itemElement = document.getElementById(`item-${strat.key}`);
+            if (!itemElement) return;
+
+            // Update the tree-node content in place
+            const treeNode = itemElement.querySelector('.tree-node');
+            if (treeNode) {
+                const summaryLink = treeNode.querySelector('.issue-summary-link');
+                const statusSpan = treeNode.querySelector('.issue-status');
+                const prioritySpan = treeNode.querySelector('.issue-priority');
+                const assigneeSpan = treeNode.querySelector('.issue-assignee');
+                const updatedSpan = treeNode.querySelector('.issue-updated');
+
+                if (summaryLink) summaryLink.textContent = strat.summary;
+                if (statusSpan) {
+                    statusSpan.textContent = strat.status;
+                    statusSpan.className = `issue-status ${getStatusClass(strat.status)}`;
+                }
+                if (prioritySpan) {
+                    prioritySpan.textContent = strat.priority;
+                    prioritySpan.className = `issue-priority ${getPriorityClass(strat.priority)}`;
+                }
+                if (assigneeSpan) assigneeSpan.textContent = strat.assignee || 'Unassigned';
+                if (updatedSpan) updatedSpan.textContent = formatDate(strat.updated);
+            }
+
+            // Update the details section
+            const detailsElement = itemElement.querySelector('.issue-details');
+            if (detailsElement) {
+                detailsElement.outerHTML = generateDetailsHTML(strat);
+            }
+
+            // Clear and rebuild children
+            const childrenContainer = document.getElementById(`strat-${strat.key}`);
+            if (childrenContainer) {
+                // Collapse the container and reset icon
+                childrenContainer.classList.remove('expanded');
+                const icon = itemElement.querySelector('.expand-icon');
+                if (icon) icon.textContent = '▶';
+
+                // Hide details
+                const details = itemElement.querySelector('.issue-details');
+                if (details) details.style.display = 'none';
+
+                childrenContainer.innerHTML = '';
+                if (strat.epics) {
+                    strat.epics.forEach(epic => {
+                        addEpicToTree(epic);
+                        if (epic.tasks) {
+                            epic.tasks.forEach(task => addTaskToTree(task));
+                        }
+                    });
+                }
+                // Re-add the create button
+                addCreateButton(`strat-${strat.key}`, 'epic', strat.key);
+
+                // Update empty class based on whether there are Epics
+                if (treeNode) {
+                    if (strat.epics && strat.epics.length > 0) {
+                        treeNode.classList.remove('empty');
+                    } else {
+                        treeNode.classList.add('empty');
+                    }
+                }
+            }
+        }
+
+        function rerenderEpic(epic) {
+            const itemElement = document.getElementById(`item-${epic.key}`);
+            if (!itemElement) return;
+
+            // Update the tree-node content in place
+            const treeNode = itemElement.querySelector('.tree-node');
+            if (treeNode) {
+                const summaryLink = treeNode.querySelector('.issue-summary-link');
+                const statusSpan = treeNode.querySelector('.issue-status');
+                const prioritySpan = treeNode.querySelector('.issue-priority');
+                const assigneeSpan = treeNode.querySelector('.issue-assignee');
+                const updatedSpan = treeNode.querySelector('.issue-updated');
+
+                if (summaryLink) summaryLink.textContent = epic.summary;
+                if (statusSpan) {
+                    statusSpan.textContent = epic.status;
+                    statusSpan.className = `issue-status ${getStatusClass(epic.status)}`;
+                }
+                if (prioritySpan) {
+                    prioritySpan.textContent = epic.priority;
+                    prioritySpan.className = `issue-priority ${getPriorityClass(epic.priority)}`;
+                }
+                if (assigneeSpan) assigneeSpan.textContent = epic.assignee || 'Unassigned';
+                if (updatedSpan) updatedSpan.textContent = formatDate(epic.updated);
+            }
+
+            // Update the details section
+            const detailsElement = itemElement.querySelector('.issue-details');
+            if (detailsElement) {
+                detailsElement.outerHTML = generateDetailsHTML(epic);
+            }
+
+            // Clear and rebuild children
+            const childrenContainer = document.getElementById(`epic-${epic.key}`);
+            if (childrenContainer) {
+                // Collapse the container and reset icon
+                childrenContainer.classList.remove('expanded');
+                const icon = itemElement.querySelector('.expand-icon');
+                if (icon) icon.textContent = '▶';
+
+                // Hide details
+                const details = itemElement.querySelector('.issue-details');
+                if (details) details.style.display = 'none';
+
+                childrenContainer.innerHTML = '';
+                if (epic.tasks) {
+                    epic.tasks.forEach(task => addTaskToTree(task));
+                }
+                // Re-add the create button
+                addCreateButton(`epic-${epic.key}`, 'task', epic.key);
+
+                // Update empty class based on whether there are Tasks
+                if (treeNode) {
+                    if (epic.tasks && epic.tasks.length > 0) {
+                        treeNode.classList.remove('empty');
+                    } else {
+                        treeNode.classList.add('empty');
+                    }
+                }
+            }
+        }
+
+        function rerenderTask(task) {
+            const itemElement = document.getElementById(`item-${task.key}`);
+            if (!itemElement) return;
+
+            // Update the tree-node content in place
+            const treeNode = itemElement.querySelector('.tree-node');
+            if (treeNode) {
+                const summaryLink = treeNode.querySelector('.issue-summary-link');
+                const statusSpan = treeNode.querySelector('.issue-status');
+                const prioritySpan = treeNode.querySelector('.issue-priority');
+                const assigneeSpan = treeNode.querySelector('.issue-assignee');
+                const updatedSpan = treeNode.querySelector('.issue-updated');
+
+                if (summaryLink) summaryLink.textContent = task.summary;
+                if (statusSpan) {
+                    statusSpan.textContent = task.status;
+                    statusSpan.className = `issue-status ${getStatusClass(task.status)}`;
+                }
+                if (prioritySpan) {
+                    prioritySpan.textContent = task.priority;
+                    prioritySpan.className = `issue-priority ${getPriorityClass(task.priority)}`;
+                }
+                if (assigneeSpan) assigneeSpan.textContent = task.assignee || 'Unassigned';
+                if (updatedSpan) updatedSpan.textContent = formatDate(task.updated);
+            }
+
+            // Update the details section
+            const detailsElement = itemElement.querySelector('.issue-details');
+            if (detailsElement) {
+                detailsElement.outerHTML = generateDetailsHTML(task);
+            }
+
+            // Collapse and reset icon
+            const taskContainer = document.getElementById(`task-${task.key}`);
+            if (taskContainer) {
+                taskContainer.classList.remove('expanded');
+            }
+            const icon = itemElement.querySelector('.expand-icon');
+            if (icon) icon.textContent = '▶';
+
+            // Hide details
+            const details = itemElement.querySelector('.issue-details');
+            if (details) details.style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.addEventListener('click', (event) => {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('active');
+            }
+        });
+
+        // Load sample data on page load for demonstration
+        window.addEventListener('DOMContentLoaded', () => {
+            loadData();
+        });
+    </script>
+</body>
+</html>
