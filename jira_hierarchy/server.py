@@ -3,7 +3,10 @@
 import json
 import os
 import sys
+import threading
+import time
 import traceback
+import webbrowser
 from datetime import datetime
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
@@ -55,6 +58,8 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             self.handle_transition()
         elif parsed_path.path == '/api/update-priority':
             self.handle_update_priority()
+        elif parsed_path.path == '/api/update-assignee':
+            self.handle_update_assignee()
         else:
             self.send_error(404, 'Not Found')
 
@@ -67,13 +72,14 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             strat_key = data.get('strat_key')
             summary = data.get('summary')
             component = data.get('component')
+            assignee = data.get('assignee')
             description = data.get('description', '')
 
             if not strat_key or not summary:
                 self.send_json({'error': 'Missing required fields'}, status=400)
                 return
 
-            epic_data = create_epic(summary, description, strat_key, component, pat)
+            epic_data = create_epic(summary, description, strat_key, component, assignee, pat)
             self.send_json({'success': True, 'epic': epic_data})
 
         except Exception as e:
@@ -90,6 +96,7 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             epic_key = data.get('epic_key')
             summary = data.get('summary')
             component = data.get('component')
+            assignee = data.get('assignee')
             description = data.get('description', '')
             issue_type = data.get('issue_type', 'Story')
 
@@ -97,7 +104,7 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
                 self.send_json({'error': 'Missing required fields'}, status=400)
                 return
 
-            task_data = create_task(summary, description, epic_key, issue_type, component, pat)
+            task_data = create_task(summary, description, epic_key, issue_type, component, assignee, pat)
             self.send_json({'success': True, 'task': task_data})
 
         except Exception as e:
@@ -209,6 +216,32 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
 
         except Exception as e:
             print(f"Error updating priority: {e}", file=sys.stderr)
+            traceback.print_exc()
+            self.send_json({'error': str(e)}, status=500)
+
+    def handle_update_assignee(self):
+        """Update the assignee of a JIRA issue"""
+        try:
+            data = self.read_json_body()
+
+            pat = data.get('pat')
+            issue_key = data.get('issue_key')
+            assignee = data.get('assignee', '')
+
+            if not issue_key:
+                self.send_json({'error': 'Missing required fields'}, status=400)
+                return
+
+            from .jira_client import update_jira_issue
+            # If assignee is empty, set to null to unassign
+            if assignee:
+                update_jira_issue(issue_key, {'assignee': {'name': assignee}}, pat)
+            else:
+                update_jira_issue(issue_key, {'assignee': None}, pat)
+            self.send_json({'success': True})
+
+        except Exception as e:
+            print(f"Error updating assignee: {e}", file=sys.stderr)
             traceback.print_exc()
             self.send_json({'error': str(e)}, status=500)
 
@@ -400,6 +433,12 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
         sys.stderr.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {format % args}\n")
 
 
+def open_browser():
+    """Open the default browser after a short delay"""
+    time.sleep(1)  # Wait for server to be ready
+    webbrowser.open(f"http://localhost:{SERVER_PORT}/")
+
+
 def run_server():
     """Start the HTTP server"""
     server_address = (SERVER_HOST, SERVER_PORT)
@@ -415,6 +454,9 @@ def run_server():
     print("Press Ctrl+C to stop the server")
     print("=" * 70)
     print()
+
+    # Open browser in a separate thread
+    threading.Thread(target=open_browser, daemon=True).start()
 
     try:
         httpd.serve_forever()

@@ -300,6 +300,16 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .issue-assignee:hover {
+            opacity: 0.8;
+        }
+
+        .issue-assignee.dropdown-open {
+            opacity: 1 !important;
         }
 
         .issue-updated {
@@ -940,6 +950,13 @@
                     <small style="color: #6B778C; font-size: 12px;">Component to assign to this epic</small>
                 </div>
                 <div class="form-group">
+                    <label for="epicAssignee">Assignee</label>
+                    <select id="epicAssignee">
+                        <option value="">Unassigned</option>
+                    </select>
+                    <small style="color: #6B778C; font-size: 12px;">Select from known assignees or leave unassigned</small>
+                </div>
+                <div class="form-group">
                     <label for="epicDescription">Description</label>
                     <textarea id="epicDescription"></textarea>
                 </div>
@@ -963,7 +980,7 @@
                     <label for="taskType">Type *</label>
                     <select id="taskType" required>
                         <option value="Story">Story</option>
-                        <option value="Task">Task</option>
+                        <option value="Task" selected>Task</option>
                         <option value="Spike">Spike</option>
                     </select>
                 </div>
@@ -975,6 +992,13 @@
                     <label for="taskComponent">Component *</label>
                     <input type="text" id="taskComponent" required>
                     <small style="color: #6B778C; font-size: 12px;">Component to assign to this task</small>
+                </div>
+                <div class="form-group">
+                    <label for="taskAssignee">Assignee</label>
+                    <select id="taskAssignee">
+                        <option value="">Unassigned</option>
+                    </select>
+                    <small style="color: #6B778C; font-size: 12px;">Select from known assignees or leave unassigned</small>
                 </div>
                 <div class="form-group">
                     <label for="taskDescription">Description</label>
@@ -1044,6 +1068,7 @@
 
         let hierarchyData = {rfes: [], strats: [], metadata: {total_rfes: 0, total_strats: 0, total_epics: 0, total_tasks: 0}};
         let eventSource = null;
+        let knownAssignees = new Map(); // Track assignees: username -> display name
 
         // Track if we're currently loading
         let isLoading = false;
@@ -1515,7 +1540,15 @@
             });
         }
 
+        // Helper function to track assignees
+        function trackAssignee(displayName, username) {
+            if (username && displayName && displayName !== 'Unassigned') {
+                knownAssignees.set(username, displayName);
+            }
+        }
+
         function addRfeToTree(tree, rfe) {
+            trackAssignee(rfe.assignee, rfe.assignee_username);
             const rfeId = `rfe-${rfe.key}`;
             const rfeHtml = `
                 <div class="tree-item" id="item-${rfe.key}">
@@ -1526,7 +1559,7 @@
                             <a href="${JIRA_CONFIG.baseUrl}/browse/${rfe.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${rfe.summary}</a>
                             <span class="issue-status ${getStatusClass(rfe.status)}" onclick="event.stopPropagation(); showStatusDropdown('${rfe.key}', this)">${rfe.status}</span>
                             <span class="issue-priority ${getPriorityClass(rfe.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${rfe.key}', this)">${rfe.priority}</span>
-                            <span class="issue-assignee">${rfe.assignee || 'Unassigned'}</span>
+                            <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${rfe.key}', this)">${rfe.assignee || 'Unassigned'}</span>
                             <span class="issue-updated">${formatDate(rfe.updated)}</span>
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${rfe.key}', 'rfe')">↻</button>
                         </div>
@@ -1539,6 +1572,7 @@
         }
 
         function addStratToTree(strat, isTopLevel = false) {
+            trackAssignee(strat.assignee, strat.assignee_username);
             const stratId = `strat-${strat.key}`;
             const stratHtml = `
                 <div class="tree-item" id="item-${strat.key}">
@@ -1549,7 +1583,7 @@
                             <a href="${JIRA_CONFIG.baseUrl}/browse/${strat.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${strat.summary}</a>
                             <span class="issue-status ${getStatusClass(strat.status)}" onclick="event.stopPropagation(); showStatusDropdown('${strat.key}', this)">${strat.status}</span>
                             <span class="issue-priority ${getPriorityClass(strat.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${strat.key}', this)">${strat.priority}</span>
-                            <span class="issue-assignee">${strat.assignee || 'Unassigned'}</span>
+                            <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${strat.key}', this)">${strat.assignee || 'Unassigned'}</span>
                             <span class="issue-updated">${formatDate(strat.updated)}</span>
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${strat.key}', 'strat')">↻</button>
                         </div>
@@ -1610,6 +1644,7 @@
         }
 
         function addEpicToTree(epic) {
+            trackAssignee(epic.assignee, epic.assignee_username);
             const stratContainer = document.getElementById(`strat-${epic.strat_key}`);
             if (!stratContainer) return;
 
@@ -1629,7 +1664,7 @@
                             <a href="${JIRA_CONFIG.baseUrl}/browse/${epic.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${epic.summary}</a>
                             <span class="issue-status ${getStatusClass(epic.status)}" onclick="event.stopPropagation(); showStatusDropdown('${epic.key}', this)">${epic.status}</span>
                             <span class="issue-priority ${getPriorityClass(epic.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${epic.key}', this)">${epic.priority}</span>
-                            <span class="issue-assignee">${epic.assignee || 'Unassigned'}</span>
+                            <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${epic.key}', this)">${epic.assignee || 'Unassigned'}</span>
                             <span class="issue-updated">${formatDate(epic.updated)}</span>
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${epic.key}', 'epic')">↻</button>
                         </div>
@@ -1648,6 +1683,7 @@
         }
 
         function addTaskToTree(task) {
+            trackAssignee(task.assignee, task.assignee_username);
             const epicContainer = document.getElementById(`epic-${task.epic_key}`);
             if (!epicContainer) return;
 
@@ -1661,7 +1697,7 @@
                             <a href="${JIRA_CONFIG.baseUrl}/browse/${task.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${task.summary}</a>
                             <span class="issue-status ${getStatusClass(task.status)}" onclick="event.stopPropagation(); showStatusDropdown('${task.key}', this)">${task.status}</span>
                             <span class="issue-priority ${getPriorityClass(task.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${task.key}', this)">${task.priority}</span>
-                            <span class="issue-assignee">${task.assignee || 'Unassigned'}</span>
+                            <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${task.key}', this)">${task.assignee || 'Unassigned'}</span>
                             <span class="issue-updated">${formatDate(task.updated)}</span>
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${task.key}', 'task')">↻</button>
                         </div>
@@ -2040,6 +2076,25 @@
         let currentStratKey = null;
         let currentEpicKey = null;
 
+        function populateAssigneeDropdown(selectId) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+
+            // Keep only the "Unassigned" option
+            select.innerHTML = '<option value="">Unassigned</option>';
+
+            // Add known assignees sorted by display name
+            const sortedAssignees = Array.from(knownAssignees.entries())
+                .sort((a, b) => a[1].localeCompare(b[1])); // Sort by display name
+
+            sortedAssignees.forEach(([username, displayName]) => {
+                const option = document.createElement('option');
+                option.value = username;
+                option.textContent = `${displayName} (${username})`;
+                select.appendChild(option);
+            });
+        }
+
         function showCreateEpicModal(stratKey) {
             currentStratKey = stratKey;
             const config = loadConfig();
@@ -2047,6 +2102,7 @@
             document.getElementById('epicSummary').value = '';
             document.getElementById('epicComponent').value = config.component || 'AI Safety';
             document.getElementById('epicDescription').value = '';
+            populateAssigneeDropdown('epicAssignee');
             document.getElementById('createEpicModal').classList.add('active');
         }
 
@@ -2057,6 +2113,7 @@
             document.getElementById('taskSummary').value = '';
             document.getElementById('taskComponent').value = config.component || 'AI Safety';
             document.getElementById('taskDescription').value = '';
+            populateAssigneeDropdown('taskAssignee');
             document.getElementById('createTaskModal').classList.add('active');
         }
 
@@ -2082,6 +2139,7 @@
 
                 const summary = document.getElementById('epicSummary').value;
                 const component = document.getElementById('epicComponent').value;
+                const assignee = document.getElementById('epicAssignee').value;
                 const description = document.getElementById('epicDescription').value;
 
                 const response = await fetch('/api/create-epic', {
@@ -2094,6 +2152,7 @@
                         strat_key: currentStratKey,
                         summary: summary,
                         component: component,
+                        assignee: assignee,
                         description: description
                     })
                 });
@@ -2138,6 +2197,7 @@
                 const taskType = document.getElementById('taskType').value;
                 const summary = document.getElementById('taskSummary').value;
                 const component = document.getElementById('taskComponent').value;
+                const assignee = document.getElementById('taskAssignee').value;
                 const description = document.getElementById('taskDescription').value;
 
                 const response = await fetch('/api/create-task', {
@@ -2151,6 +2211,7 @@
                         issue_type: taskType,
                         summary: summary,
                         component: component,
+                        assignee: assignee,
                         description: description
                     })
                 });
@@ -2492,6 +2553,141 @@
                     if (prioritySpan) {
                         prioritySpan.textContent = newPriority;
                         prioritySpan.className = `issue-priority ${getPriorityClass(newPriority)}`;
+                    }
+                }
+            });
+        }
+
+        // Assignee dropdown management
+        let currentAssigneeDropdown = null;
+
+        async function showAssigneeDropdown(issueKey, assigneeElement) {
+            // Close any existing dropdown
+            if (currentAssigneeDropdown) {
+                currentAssigneeDropdown.remove();
+                currentAssigneeDropdown = null;
+            }
+
+            // Create dropdown with input field and known assignees
+            const dropdown = document.createElement('div');
+            dropdown.className = 'status-dropdown active';
+
+            // Build options HTML from known assignees (sorted by display name)
+            const assigneeOptions = Array.from(knownAssignees.entries())
+                .sort((a, b) => a[1].localeCompare(b[1])) // Sort by display name
+                .map(([username, displayName]) => `<div class="status-option" onclick="changeAssignee('${issueKey}', '${username}')">${displayName} (${username})</div>`)
+                .join('');
+
+            dropdown.innerHTML = `
+                <input type="text" id="assignee-input-${issueKey}" placeholder="Username" style="width: 100%; padding: 8px; border: 1px solid #DFE1E6; border-radius: 3px; margin-bottom: 8px;" />
+                <div class="status-option" onclick="changeAssignee('${issueKey}', '')">Unassigned</div>
+                ${assigneeOptions}
+            `;
+
+            // Position dropdown using fixed positioning
+            const rect = assigneeElement.getBoundingClientRect();
+            dropdown.style.left = `${rect.left}px`;
+            dropdown.style.top = `${rect.bottom + 4}px`;
+            dropdown.style.minWidth = '200px';
+
+            document.body.appendChild(dropdown);
+            assigneeElement.classList.add('dropdown-open');
+            currentAssigneeDropdown = dropdown;
+
+            // Focus the input
+            const input = document.getElementById(`assignee-input-${issueKey}`);
+            if (input) {
+                input.focus();
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        changeAssignee(issueKey, input.value);
+                    }
+                });
+                // Stop propagation to prevent dropdown from closing
+                input.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+            }
+
+            // Close dropdown when clicking outside
+            setTimeout(() => {
+                document.addEventListener('click', closeAssigneeDropdown);
+            }, 0);
+        }
+
+        function closeAssigneeDropdown() {
+            if (currentAssigneeDropdown) {
+                const assigneeElement = currentAssigneeDropdown.parentElement;
+                if (assigneeElement) {
+                    assigneeElement.classList.remove('dropdown-open');
+                }
+                currentAssigneeDropdown.remove();
+                currentAssigneeDropdown = null;
+                document.removeEventListener('click', closeAssigneeDropdown);
+            }
+        }
+
+        async function changeAssignee(issueKey, assigneeUsername) {
+            try {
+                const config = loadConfig();
+                if (!config.pat) {
+                    showError('Please configure your Personal Access Token in Settings');
+                    return;
+                }
+
+                const response = await fetch('/api/update-assignee', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        issue_key: issueKey,
+                        assignee: assigneeUsername,
+                        pat: config.pat
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // Get display name from known assignees, or use username as fallback
+                    let displayName;
+                    if (!assigneeUsername) {
+                        displayName = 'Unassigned';
+                    } else if (knownAssignees.has(assigneeUsername)) {
+                        displayName = knownAssignees.get(assigneeUsername);
+                    } else {
+                        // New assignee - track with username as display name temporarily
+                        displayName = assigneeUsername;
+                        trackAssignee(assigneeUsername, assigneeUsername);
+                    }
+
+                    updateIssueAssignee(issueKey, displayName, assigneeUsername);
+                    showSuccess(`Assignee updated to ${displayName}`);
+                } else {
+                    showError(`Error changing assignee: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Error changing assignee: ${error.message}`);
+            }
+
+            closeAssigneeDropdown();
+        }
+
+        function updateIssueAssignee(issueKey, newAssigneeDisplayName, newAssigneeUsername) {
+            // Update in hierarchyData
+            updateIssueInData(issueKey, (issue) => {
+                issue.assignee = newAssigneeDisplayName;
+                issue.assignee_username = newAssigneeUsername || null;
+            });
+
+            // Update all assignee spans in DOM
+            document.querySelectorAll('.tree-node').forEach(node => {
+                const keySpan = node.querySelector('.issue-key');
+                if (keySpan && keySpan.textContent === issueKey) {
+                    const assigneeSpan = node.querySelector('.issue-assignee');
+                    if (assigneeSpan) {
+                        assigneeSpan.textContent = newAssigneeDisplayName;
                     }
                 }
             });

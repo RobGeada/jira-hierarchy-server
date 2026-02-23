@@ -25,6 +25,7 @@ def build_issue_data(issue, issue_type='rfe'):
         "status": fields.get('status', {}).get('name', 'Unknown'),
         "priority": fields.get('priority', {}).get('name', 'Undefined'),
         "assignee": assignee.get('displayName', 'Unassigned') if assignee else 'Unassigned',
+        "assignee_username": assignee.get('name') if assignee else None,
         "reporter": reporter.get('displayName', 'Unknown') if reporter else 'Unknown',
         "description": fields.get('description', ''),
         "labels": fields.get('labels', []),
@@ -151,7 +152,7 @@ def fetch_tasks_for_epic(epic_key, jira_pat):
         return []
 
 
-def create_epic(summary, description, strat_key, component=None, jira_pat=None):
+def create_epic(summary, description, strat_key, component=None, assignee=None, jira_pat=None):
     """
     Create a new Epic and link it to a STRAT
 
@@ -160,6 +161,7 @@ def create_epic(summary, description, strat_key, component=None, jira_pat=None):
         description: Epic description
         strat_key: Parent STRAT key
         component: Component name to assign
+        assignee: Assignee email or username
         jira_pat: Personal Access Token
 
     Returns:
@@ -173,6 +175,10 @@ def create_epic(summary, description, strat_key, component=None, jira_pat=None):
     # Add component if provided
     if component:
         custom_fields["components"] = [{"name": component}]
+
+    # Add assignee if provided
+    if assignee:
+        custom_fields["assignee"] = {"name": assignee}
 
     epic_key = create_jira_issue(
         project_key="RHOAIENG",
@@ -193,7 +199,7 @@ def create_epic(summary, description, strat_key, component=None, jira_pat=None):
     return epic_data
 
 
-def create_task(summary, description, epic_key, issue_type, component=None, jira_pat=None):
+def create_task(summary, description, epic_key, issue_type, component=None, assignee=None, jira_pat=None):
     """
     Create a new Task and link it to an Epic
 
@@ -203,6 +209,7 @@ def create_task(summary, description, epic_key, issue_type, component=None, jira
         epic_key: Parent Epic key
         issue_type: Issue type (Story, Spike, etc.)
         component: Component name to assign
+        assignee: Assignee email or username
         jira_pat: Personal Access Token
 
     Returns:
@@ -215,6 +222,10 @@ def create_task(summary, description, epic_key, issue_type, component=None, jira
     # Add component if provided
     if component:
         custom_fields["components"] = [{"name": component}]
+
+    # Add assignee if provided
+    if assignee:
+        custom_fields["assignee"] = {"name": assignee}
 
     task_key = create_jira_issue(
         project_key="RHOAIENG",
