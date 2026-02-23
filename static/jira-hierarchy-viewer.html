@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Safety JIRA Hierarchy Viewer</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -257,6 +258,31 @@
             background: #F4F5F7;
         }
 
+        .dropdown-header {
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #6B778C;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: default;
+            border-bottom: 1px solid #DFE1E6;
+            margin-bottom: 4px;
+        }
+
+        .hierarchy-header {
+            padding: 8px 12px;
+            margin-left: 24px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #6B778C;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #DFE1E6;
+            margin-top: 4px;
+            margin-bottom: 4px;
+        }
+
         .status-new { background: #DFE1E6; color: #172B4D; }
         .status-in-progress { background: #0052CC; color: white; }
         .status-approved { background: #00875A; color: white; }
@@ -496,6 +522,26 @@
             max-width: 300px;
         }
 
+        .assignee-filter {
+            padding: 8px 12px;
+            border: 1px solid #DFE1E6;
+            border-radius: 4px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            min-width: 200px;
+        }
+
+        .assignee-filter:hover {
+            border-color: #0052CC;
+        }
+
+        .assignee-filter:focus {
+            outline: none;
+            border-color: #0052CC;
+            box-shadow: 0 0 0 2px rgba(0, 82, 204, 0.2);
+        }
+
         .table-header {
             display: flex;
             background: #F4F5F7;
@@ -716,11 +762,109 @@
 
         .description {
             background: #F4F5F7;
-            padding: 8px;
+            padding: 12px;
             border-radius: 3px;
-            white-space: pre-wrap;
             max-height: 300px;
             overflow-y: auto;
+            line-height: 1.6;
+        }
+
+        .description h1, .description h2, .description h3, .description h4, .description h5, .description h6 {
+            margin-top: 16px;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #172B4D;
+        }
+
+        .description h1 { font-size: 1.5em; }
+        .description h2 { font-size: 1.3em; }
+        .description h3 { font-size: 1.1em; }
+
+        .description p {
+            margin-bottom: 12px;
+        }
+
+        .description ul, .description ol {
+            margin-left: 20px;
+            margin-bottom: 12px;
+        }
+
+        .description li {
+            margin-bottom: 4px;
+        }
+
+        .description code {
+            background: #DFE1E6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .description pre {
+            background: #172B4D;
+            color: #F4F5F7;
+            padding: 12px;
+            border-radius: 3px;
+            overflow-x: auto;
+            margin-bottom: 12px;
+        }
+
+        .description pre code {
+            background: transparent;
+            padding: 0;
+            color: #F4F5F7;
+        }
+
+        .description blockquote {
+            border-left: 3px solid #0052CC;
+            padding-left: 12px;
+            margin-left: 0;
+            color: #6B778C;
+            margin-bottom: 12px;
+        }
+
+        .description a {
+            color: #0052CC;
+            text-decoration: none;
+        }
+
+        .description a:hover {
+            text-decoration: underline;
+        }
+
+        .description table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+
+        .description table th,
+        .description table td {
+            border: 1px solid #DFE1E6;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .description table th {
+            background: #DFE1E6;
+            font-weight: 600;
+        }
+
+        .comment-body {
+            line-height: 1.6;
+        }
+
+        .comment-body p {
+            margin-bottom: 8px;
+        }
+
+        .comment-body code {
+            background: #DFE1E6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            font-size: 0.9em;
         }
 
         .labels {
@@ -871,6 +1015,9 @@
             <button class="btn-secondary btn" onclick="expandAll()">⬇️ Expand All</button>
             <button class="btn-secondary btn" onclick="collapseAll()">⬆️ Collapse All</button>
             <button class="btn-secondary btn" onclick="showConfigModal()">⚙️ Settings</button>
+            <select id="assigneeFilter" onchange="filterByAssignee()" class="assignee-filter">
+                <option value="">All Assignees</option>
+            </select>
             <input type="text" class="filter-input" id="searchInput" placeholder="Search issues..." onkeyup="filterIssues()">
             <span id="loadingIndicator" style="display: none; color: #0052CC; font-size: 14px;">⏳ Loading...</span>
         </div>
@@ -1513,6 +1660,7 @@
                 eventSource.close();
 
                 updateStats(hierarchyData);
+                populateAssigneeFilter();
 
                 // Hide loading indicator
                 loadingIndicator.style.display = 'none';
@@ -1547,11 +1695,23 @@
             }
         }
 
+        // Helper function to add section headers to containers
+        function ensureContainerHeader(containerId, headerText) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            // Check if header already exists
+            if (!container.querySelector('.hierarchy-header')) {
+                const headerHtml = `<div class="hierarchy-header">${headerText}</div>`;
+                container.insertAdjacentHTML('afterbegin', headerHtml);
+            }
+        }
+
         function addRfeToTree(tree, rfe) {
             trackAssignee(rfe.assignee, rfe.assignee_username);
             const rfeId = `rfe-${rfe.key}`;
             const rfeHtml = `
-                <div class="tree-item" id="item-${rfe.key}">
+                <div class="tree-item" id="item-${rfe.key}" data-assignee="${rfe.assignee_username || ''}">
                     <div class="tree-node rfe empty" id="node-${rfe.key}" onclick="toggleNode('${rfeId}')">
                         <span class="expand-icon">▶</span>
                         <div class="tree-content">
@@ -1575,7 +1735,7 @@
             trackAssignee(strat.assignee, strat.assignee_username);
             const stratId = `strat-${strat.key}`;
             const stratHtml = `
-                <div class="tree-item" id="item-${strat.key}">
+                <div class="tree-item" id="item-${strat.key}" data-assignee="${strat.assignee_username || ''}">
                     <div class="tree-node strat empty" id="node-${strat.key}" onclick="toggleNode('${stratId}')">
                         <span class="expand-icon">▶</span>
                         <div class="tree-content">
@@ -1607,6 +1767,9 @@
                 if (rfeNodeDiv && rfeNodeDiv.classList.contains('empty')) {
                     rfeNodeDiv.classList.remove('empty');
                 }
+
+                // Add header if this is the first STRAT
+                ensureContainerHeader(`rfe-${strat.rfe_key}`, 'STRATS:');
 
                 rfeContainer.insertAdjacentHTML('beforeend', stratHtml);
             }
@@ -1654,6 +1817,9 @@
                 stratNodeDiv.classList.remove('empty');
             }
 
+            // Add header if this is the first Epic
+            ensureContainerHeader(`strat-${epic.strat_key}`, 'EPICS:');
+
             const epicId = `epic-${epic.key}`;
             const epicHtml = `
                 <div class="tree-item" id="item-${epic.key}">
@@ -1686,6 +1852,9 @@
             trackAssignee(task.assignee, task.assignee_username);
             const epicContainer = document.getElementById(`epic-${task.epic_key}`);
             if (!epicContainer) return;
+
+            // Add header if this is the first Task
+            ensureContainerHeader(`epic-${task.epic_key}`, 'TASKS:');
 
             const taskId = `task-${task.key}`;
             const taskHtml = `
@@ -1815,10 +1984,15 @@
                 ? issue.comments.map(c => `
                     <div class="comment">
                         <div class="comment-header"><strong>${c.author}</strong> <span class="comment-date">${new Date(c.created).toLocaleString()}</span></div>
-                        <div class="comment-body">${c.body}</div>
+                        <div class="comment-body">${marked.parse(c.body || '')}</div>
                     </div>
                   `).join('')
                 : '<div class="no-data">No comments</div>';
+
+            // Render description as markdown
+            const descriptionHTML = issue.description
+                ? marked.parse(issue.description)
+                : '<span class="no-data">No description</span>';
 
             return `
                 <div class="issue-details" id="details-${issue.key}" style="display: none;">
@@ -1843,7 +2017,7 @@
                         <strong>Components:</strong> <div class="labels">${componentsHTML}</div>
                     </div>
                     <div class="detail-row">
-                        <strong>Description:</strong> <div class="description">${issue.description || '<span class="no-data">No description</span>'}</div>
+                        <strong>Description:</strong> <div class="description">${descriptionHTML}</div>
                     </div>
                     <div class="detail-row comments-section">
                         <strong>Comments:</strong>
@@ -2033,6 +2207,45 @@
                 if (text.includes(searchTerm)) {
                     item.style.display = 'block';
                 } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        function populateAssigneeFilter() {
+            const select = document.getElementById('assigneeFilter');
+            if (!select) return;
+
+            // Keep the "All Assignees" option
+            select.innerHTML = '<option value="">All Assignees</option>';
+
+            // Add known assignees sorted by display name
+            const sortedAssignees = Array.from(knownAssignees.entries())
+                .sort((a, b) => a[1].localeCompare(b[1]));  // Sort by display name
+
+            sortedAssignees.forEach(([username, displayName]) => {
+                const option = document.createElement('option');
+                option.value = username;
+                option.textContent = `${displayName} (${username})`;
+                select.appendChild(option);
+            });
+        }
+
+        function filterByAssignee() {
+            const selectedAssignee = document.getElementById('assigneeFilter').value;
+            const tree = document.getElementById('tree');
+
+            // Get all top-level items (direct children of #tree)
+            const topLevelItems = tree.querySelectorAll(':scope > .tree-item');
+
+            topLevelItems.forEach(item => {
+                const itemAssignee = item.getAttribute('data-assignee') || '';
+
+                if (!selectedAssignee || itemAssignee === selectedAssignee) {
+                    // Show this top-level item and all its children
+                    item.style.display = 'block';
+                } else {
+                    // Hide this top-level item and all its children
                     item.style.display = 'none';
                 }
             });
@@ -2778,6 +2991,7 @@
                     hierarchyData.rfes[i] = newData;
                     // Re-render this RFE and its children in the DOM
                     rerenderRfe(newData);
+                    populateAssigneeFilter();
                     return;
                 }
 
@@ -2789,6 +3003,7 @@
                             // Replace STRAT
                             rfe.strats[j] = newData;
                             rerenderStrat(newData);
+                            populateAssigneeFilter();
                             return;
                         }
 
@@ -2800,6 +3015,7 @@
                                     // Replace Epic
                                     strat.epics[k] = newData;
                                     rerenderEpic(newData);
+                                    populateAssigneeFilter();
                                     return;
                                 }
 
@@ -2811,6 +3027,7 @@
                                             // Replace Task
                                             epic.tasks[l] = newData;
                                             rerenderTask(newData);
+                                            populateAssigneeFilter();
                                             return;
                                         }
                                     }
@@ -2820,11 +3037,16 @@
                     }
                 }
             }
+            populateAssigneeFilter();
         }
 
         function rerenderRfe(rfe) {
+            trackAssignee(rfe.assignee, rfe.assignee_username);
             const itemElement = document.getElementById(`item-${rfe.key}`);
             if (!itemElement) return;
+
+            // Update data-assignee attribute
+            itemElement.setAttribute('data-assignee', rfe.assignee_username || '');
 
             // Update the tree-node content in place
             const treeNode = itemElement.querySelector('.tree-node');
@@ -2893,8 +3115,12 @@
         }
 
         function rerenderStrat(strat) {
+            trackAssignee(strat.assignee, strat.assignee_username);
             const itemElement = document.getElementById(`item-${strat.key}`);
             if (!itemElement) return;
+
+            // Update data-assignee attribute
+            itemElement.setAttribute('data-assignee', strat.assignee_username || '');
 
             // Update the tree-node content in place
             const treeNode = itemElement.querySelector('.tree-node');
