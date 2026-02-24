@@ -37,6 +37,8 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             self.get_transitions()
         elif parsed_path.path == '/api/reload-item':
             self.reload_item()
+        elif parsed_path.path == '/api/strats-by-assignee':
+            self.get_strats_by_assignee()
         elif parsed_path.path == '/health':
             self.send_json({'status': 'ok'})
         else:
@@ -60,6 +62,8 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             self.handle_update_priority()
         elif parsed_path.path == '/api/update-assignee':
             self.handle_update_assignee()
+        elif parsed_path.path == '/api/batch-add-comments':
+            self.handle_batch_add_comments()
         else:
             self.send_error(404, 'Not Found')
 
@@ -130,6 +134,40 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
 
         except Exception as e:
             print(f"Error adding comment: {e}", file=sys.stderr)
+            traceback.print_exc()
+            self.send_json({'error': str(e)}, status=500)
+
+    def handle_batch_add_comments(self):
+        """Add comments to multiple JIRA issues"""
+        try:
+            data = self.read_json_body()
+
+            pat = data.get('pat')
+            comments_data = data.get('comments', [])  # List of {issue_key, comment}
+
+            if not comments_data:
+                self.send_json({'error': 'No comments provided'}, status=400)
+                return
+
+            results = []
+            for item in comments_data:
+                issue_key = item.get('issue_key')
+                comment = item.get('comment')
+
+                if not issue_key or not comment:
+                    results.append({'issue_key': issue_key, 'success': False, 'error': 'Missing fields'})
+                    continue
+
+                try:
+                    add_jira_comment(issue_key, comment, pat)
+                    results.append({'issue_key': issue_key, 'success': True})
+                except Exception as e:
+                    results.append({'issue_key': issue_key, 'success': False, 'error': str(e)})
+
+            self.send_json({'success': True, 'results': results})
+
+        except Exception as e:
+            print(f"Error batch adding comments: {e}", file=sys.stderr)
             traceback.print_exc()
             self.send_json({'error': str(e)}, status=500)
 
@@ -362,6 +400,49 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             traceback.print_exc()
             self.send_json({'error': str(e)}, status=500)
 
+    def get_strats_by_assignee(self):
+        """Fetch all STRATs assigned to a specific user"""
+        try:
+            parsed_path = urlparse(self.path)
+            params = parse_qs(parsed_path.query)
+
+            assignee = params.get('assignee', [None])[0]
+            pat = params.get('pat', [None])[0]
+            component = params.get('component', [None])[0]
+
+            if not assignee:
+                self.send_json({'error': 'Missing assignee parameter'}, status=400)
+                return
+
+            from .jira_client import run_jira_query
+            from .data_fetcher import build_issue_data
+
+            # Build JQL query for STRATs assigned to this user
+            jql_parts = [
+                f'project = RHAISTRAT',
+                f'AND assignee = "{assignee}"',
+                f'AND status NOT IN (Closed, Resolved)'
+            ]
+
+            if component:
+                jql_parts.append(f'AND component = "{component}"')
+
+            jql_parts.append('ORDER BY priority DESC, created DESC')
+
+            strats_jql = ' '.join(jql_parts)
+
+            field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components'
+            strat_issues = run_jira_query(strats_jql, field_list, pat)
+
+            strats = [build_issue_data(strat, 'strat') for strat in strat_issues]
+
+            self.send_json({'success': True, 'strats': strats})
+
+        except Exception as e:
+            print(f"Error fetching STRATs by assignee: {e}", file=sys.stderr)
+            traceback.print_exc()
+            self.send_json({'error': str(e)}, status=500)
+
     def serve_viewer(self):
         """Serve the HTML viewer page"""
         # Look for HTML in static/ directory
@@ -439,8 +520,12 @@ def open_browser():
     webbrowser.open(f"http://localhost:{SERVER_PORT}/")
 
 
-def run_server():
-    """Start the HTTP server"""
+def run_server(open_browser_window=True):
+    """Start the HTTP server
+
+    Args:
+        open_browser_window: Whether to automatically open browser on startup (default: True)
+    """
     server_address = (SERVER_HOST, SERVER_PORT)
     httpd = ThreadingHTTPServer(server_address, JIRAHierarchyHandler)
 
@@ -451,12 +536,19 @@ def run_server():
     print(f"   http://localhost:{SERVER_PORT}/api/hierarchy/stream - SSE stream")
     print(f"   http://localhost:{SERVER_PORT}/health               - Health check")
     print()
+
+    # Open browser in a separate thread (if enabled)
+    if open_browser_window:
+        print("🌐 Opening browser window...")
+        threading.Thread(target=open_browser, daemon=True).start()
+    else:
+        print("🌐 Browser auto-open disabled (use --no-browser)")
+        print(f"   Navigate to http://localhost:{SERVER_PORT}/ to view")
+
+    print()
     print("Press Ctrl+C to stop the server")
     print("=" * 70)
     print()
-
-    # Open browser in a separate thread
-    threading.Thread(target=open_browser, daemon=True).start()
 
     try:
         httpd.serve_forever()

@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Safety JIRA Hierarchy Viewer</title>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -755,7 +754,6 @@
         }
 
         .detail-row strong {
-            display: block;
             margin-bottom: 4px;
             color: #172B4D;
         }
@@ -764,9 +762,12 @@
             background: #F4F5F7;
             padding: 12px;
             border-radius: 3px;
-            max-height: 300px;
-            overflow-y: auto;
+            height: 300px;
+            max-height: none;
+            overflow: auto;
             line-height: 1.6;
+            resize: vertical;
+            min-height: 100px;
         }
 
         .description h1, .description h2, .description h3, .description h4, .description h5, .description h6 {
@@ -776,21 +777,52 @@
             color: #172B4D;
         }
 
+        .description h1:first-child,
+        .description h2:first-child,
+        .description h3:first-child,
+        .description h4:first-child,
+        .description h5:first-child,
+        .description h6:first-child {
+            margin-top: 0;
+        }
+
         .description h1 { font-size: 1.5em; }
         .description h2 { font-size: 1.3em; }
         .description h3 { font-size: 1.1em; }
+        .description h4 { font-size: 1.0em; }
 
         .description p {
             margin-bottom: 12px;
         }
 
+        .description > br:first-child {
+            display: none;
+        }
+
+        .description strong {
+            font-weight: 600;
+            color: #172B4D;
+        }
+
+        .description em {
+            font-style: italic;
+        }
+
         .description ul, .description ol {
-            margin-left: 20px;
+            margin-left: 24px;
             margin-bottom: 12px;
+            margin-top: 8px;
+            padding-left: 0;
         }
 
         .description li {
-            margin-bottom: 4px;
+            margin-bottom: 6px;
+            line-height: 1.5;
+        }
+
+        .description li p {
+            margin: 0;
+            display: inline;
         }
 
         .description code {
@@ -851,12 +883,91 @@
             font-weight: 600;
         }
 
+        .description .jira-panel {
+            background: #F4F5F7;
+            border: 1px solid #DFE1E6;
+            padding: 12px;
+            border-radius: 3px;
+            margin-bottom: 12px;
+        }
+
+        .description img {
+            max-width: 100%;
+            height: auto;
+            margin: 8px 0;
+        }
+
+        .description cite {
+            font-style: italic;
+            color: #6B778C;
+        }
+
+        .description u {
+            text-decoration: underline;
+        }
+
+        .description del {
+            text-decoration: line-through;
+            color: #6B778C;
+        }
+
         .comment-body {
             line-height: 1.6;
         }
 
+        .comment-body h1, .comment-body h2, .comment-body h3, .comment-body h4, .comment-body h5, .comment-body h6 {
+            margin-top: 12px;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #172B4D;
+        }
+
+        .comment-body h1:first-child,
+        .comment-body h2:first-child,
+        .comment-body h3:first-child,
+        .comment-body h4:first-child,
+        .comment-body h5:first-child,
+        .comment-body h6:first-child {
+            margin-top: 0;
+        }
+
+        .comment-body h1 { font-size: 1.4em; }
+        .comment-body h2 { font-size: 1.2em; }
+        .comment-body h3 { font-size: 1.05em; }
+        .comment-body h4 { font-size: 1.0em; }
+
         .comment-body p {
             margin-bottom: 8px;
+        }
+
+        .comment-body > br:first-child {
+            display: none;
+        }
+
+        .comment-body strong {
+            font-weight: 600;
+            color: #172B4D;
+        }
+
+        .comment-body em {
+            font-style: italic;
+        }
+
+        .comment-body ul, .comment-body ol {
+            margin-left: 24px;
+            margin-bottom: 8px;
+            margin-top: 6px;
+            padding-left: 0;
+        }
+
+        .comment-body li {
+            margin-bottom: 6px;
+            line-height: 1.5;
+        }
+
+        .comment-body li p {
+            margin: 0;
+            display: inline;
         }
 
         .comment-body code {
@@ -865,6 +976,84 @@
             border-radius: 3px;
             font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
             font-size: 0.9em;
+        }
+
+        .comment-body pre {
+            background: #172B4D;
+            color: #F4F5F7;
+            padding: 12px;
+            border-radius: 3px;
+            overflow-x: auto;
+            margin-bottom: 8px;
+        }
+
+        .comment-body pre code {
+            background: transparent;
+            padding: 0;
+            color: #F4F5F7;
+        }
+
+        .comment-body blockquote {
+            border-left: 3px solid #0052CC;
+            padding-left: 12px;
+            margin-left: 0;
+            color: #6B778C;
+            margin-bottom: 8px;
+        }
+
+        .comment-body a {
+            color: #0052CC;
+            text-decoration: none;
+        }
+
+        .comment-body a:hover {
+            text-decoration: underline;
+        }
+
+        .comment-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .comment-body table th,
+        .comment-body table td {
+            border: 1px solid #DFE1E6;
+            padding: 6px;
+            text-align: left;
+        }
+
+        .comment-body table th {
+            background: #DFE1E6;
+            font-weight: 600;
+        }
+
+        .comment-body .jira-panel {
+            background: #F4F5F7;
+            border: 1px solid #DFE1E6;
+            padding: 12px;
+            border-radius: 3px;
+            margin-bottom: 8px;
+        }
+
+        .comment-body img {
+            max-width: 100%;
+            height: auto;
+            margin: 6px 0;
+        }
+
+        .comment-body cite {
+            font-style: italic;
+            color: #6B778C;
+        }
+
+        .comment-body u {
+            text-decoration: underline;
+        }
+
+        .comment-body del {
+            text-decoration: line-through;
+            color: #6B778C;
         }
 
         .labels {
@@ -997,6 +1186,119 @@
             color: #6B778C;
             font-style: italic;
         }
+
+        .status-update-strat {
+            background: #F4F5F7;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-radius: 4px;
+            border-left: 4px solid #0052CC;
+            transition: opacity 0.2s, border-left-color 0.2s;
+        }
+
+        .status-update-strat.skipped {
+            opacity: 0.5;
+            border-left-color: #6B778C;
+        }
+
+        .status-update-strat-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .status-update-strat-key {
+            font-weight: 600;
+            color: #0052CC;
+            text-decoration: none;
+        }
+
+        .status-update-strat-key:hover {
+            text-decoration: underline;
+        }
+
+        .status-update-strat-summary {
+            flex: 1;
+            color: #172B4D;
+        }
+
+        .status-update-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 8px;
+            background: white;
+            border-radius: 3px;
+        }
+
+        .status-update-controls label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #172B4D;
+            cursor: pointer;
+        }
+
+        .status-update-controls input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        .status-update-controls button {
+            padding: 4px 12px;
+            background: #F4F5F7;
+            border: 1px solid #DFE1E6;
+            border-radius: 3px;
+            font-size: 13px;
+            cursor: pointer;
+            color: #172B4D;
+        }
+
+        .status-update-controls button:hover {
+            background: #DFE1E6;
+        }
+
+        .status-update-comment-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #DFE1E6;
+            border-radius: 3px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .status-update-comment-input:focus {
+            outline: none;
+            border-color: #0052CC;
+            box-shadow: 0 0 0 2px rgba(0, 82, 204, 0.2);
+        }
+
+        .status-update-comment-input:disabled {
+            background: #F4F5F7;
+            color: #6B778C;
+            cursor: not-allowed;
+        }
+
+        .status-update-loading {
+            text-align: center;
+            padding: 40px;
+            color: #6B778C;
+        }
+
+        .comment-source-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #DFE1E6;
+            color: #172B4D;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
     </style>
 </head>
 <body>
@@ -1015,6 +1317,7 @@
             <button class="btn-secondary btn" onclick="expandAll()">⬇️ Expand All</button>
             <button class="btn-secondary btn" onclick="collapseAll()">⬆️ Collapse All</button>
             <button class="btn-secondary btn" onclick="showConfigModal()">⚙️ Settings</button>
+            <button class="btn-secondary btn" onclick="showStatusUpdateModal()">📝 Status Update</button>
             <select id="assigneeFilter" onchange="filterByAssignee()" class="assignee-filter">
                 <option value="">All Assignees</option>
             </select>
@@ -1202,6 +1505,49 @@
                     <button type="submit" class="btn-submit" id="commentSubmitBtn">Add Comment</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal for status updates -->
+    <div class="modal" id="statusUpdateModal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2>Status Update</h2>
+                <p>Generate a status report for your assigned STRATs</p>
+            </div>
+            <div class="form-group">
+                <label for="statusUpdateAssignee">Select Assignee *</label>
+                <select id="statusUpdateAssignee" onchange="loadStratsForStatusUpdate()" required>
+                    <option value="">Select assignee...</option>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeModal('statusUpdateModal')">Cancel</button>
+            </div>
+            <div id="statusUpdateStratsContainer" style="display: none;">
+                <div id="statusUpdateStratsList"></div>
+                <div class="modal-footer" style="margin-top: 20px;">
+                    <button type="button" class="btn-cancel" onclick="closeModal('statusUpdateModal')">Cancel</button>
+                    <button type="button" class="btn-submit" onclick="generateStatusReport()">Generate Report</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for generated status report -->
+    <div class="modal" id="statusReportModal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>Status Report</h2>
+            </div>
+            <div class="form-group">
+                <div id="statusReportOutput" style="max-height: 600px; overflow-y: auto; padding: 12px; background: #F4F5F7; border-radius: 3px; line-height: 1.6;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="backToStatusUpdate()" style="margin-right: auto;">← Back</button>
+                <button type="button" class="btn-cancel" onclick="closeModal('statusReportModal')">Close</button>
+                <button type="button" class="btn-submit" onclick="copyStatusReport()">Copy to Clipboard</button>
+            </div>
         </div>
     </div>
 
@@ -1416,14 +1762,14 @@
                         noCommentsMsg.remove();
                     }
 
-                    // Add the new comment to the DOM immediately
+                    // Add the new comment to the DOM immediately (at the top for newest-first)
                     const commentDiv = document.createElement('div');
                     commentDiv.className = 'comment';
                     commentDiv.innerHTML = `
                         <div class="comment-header"><strong>${newComment.author}</strong> <span class="comment-date">${new Date(newComment.created).toLocaleString()}</span></div>
-                        <div class="comment-body">${newComment.body}</div>
+                        <div class="comment-body">${renderJiraText(newComment.body)}</div>
                     `;
-                    commentsList.appendChild(commentDiv);
+                    commentsList.prepend(commentDiv);
                 }
             }
 
@@ -1968,6 +2314,217 @@
             content.innerHTML = html;
         }
 
+        function renderJiraText(text) {
+            if (!text) return '';
+
+            // Normalize line endings (convert \r\n to \n)
+            let result = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+            // Store block elements temporarily to protect them from inline processing
+            const blocks = [];
+            let blockIndex = 0;
+
+            function storeBlock(content) {
+                const placeholder = `__BLOCK_${blockIndex}__`;
+                blocks[blockIndex] = content;
+                blockIndex++;
+                return placeholder;
+            }
+
+            function restoreBlocks(text) {
+                for (let i = blocks.length - 1; i >= 0; i--) {
+                    text = text.replace(`__BLOCK_${i}__`, blocks[i]);
+                }
+                return text;
+            }
+
+            // Code blocks (protect content first)
+            result = result.replace(/\{code(?::([^\}]+))?\}([\s\S]*?)\{code\}/g, function(match, lang, code) {
+                const escaped = code.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                return storeBlock('<pre><code>' + escaped + '</code></pre>');
+            });
+
+            // No format blocks
+            result = result.replace(/\{noformat\}([\s\S]*?)\{noformat\}/g, function(match, content) {
+                const escaped = content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                return storeBlock('<pre>' + escaped + '</pre>');
+            });
+
+            // Quote blocks
+            result = result.replace(/\{quote\}([\s\S]*?)\{quote\}/g, function(match, content) {
+                return storeBlock('<blockquote>' + content + '</blockquote>');
+            });
+
+            // Panel blocks
+            result = result.replace(/\{panel(?::title=([^\}]+))?\}([\s\S]*?)\{panel\}/g, function(match, title, content) {
+                if (title) {
+                    return storeBlock('<div class="jira-panel"><strong>' + title + '</strong><br>' + content.trim() + '</div>');
+                }
+                return storeBlock('<div class="jira-panel">' + content.trim() + '</div>');
+            });
+
+            // Escape remaining HTML (after protecting blocks)
+            result = result.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+            // Headers (h1. through h6.)
+            result = result.replace(/^h1\.\s+(.+)$/gm, '<h1>$1</h1>');
+            result = result.replace(/^h2\.\s+(.+)$/gm, '<h2>$1</h2>');
+            result = result.replace(/^h3\.\s+(.+)$/gm, '<h3>$1</h3>');
+            result = result.replace(/^h4\.\s+(.+)$/gm, '<h4>$1</h4>');
+            result = result.replace(/^h5\.\s+(.+)$/gm, '<h5>$1</h5>');
+            result = result.replace(/^h6\.\s+(.+)$/gm, '<h6>$1</h6>');
+
+            // Process lists BEFORE text formatting to avoid conflicts with * and -
+            // Lists - collect list items
+            const listLines = result.split('\n');
+            const processedListLines = [];
+            let inList = false;
+            let listItems = [];
+
+            for (let i = 0; i < listLines.length; i++) {
+                const line = listLines[i];
+
+                // Bullet list: * or - (with optional leading whitespace, and optional space after marker)
+                // JIRA allows " * text" or " *text" or even " * *text"
+                if (/^\s*[\*\-](.+)$/.test(line)) {
+                    const content = line.match(/^\s*[\*\-](.+)$/)[1].trimStart();
+                    listItems.push('<li>' + content + '</li>');
+                    inList = true;
+                }
+                // Numbered list: # (with optional leading whitespace)
+                else if (/^\s*#\s+(.+)$/.test(line)) {
+                    const content = line.match(/^\s*#\s+(.+)$/)[1];
+                    listItems.push('<li>' + content + '</li>');
+                    inList = true;
+                }
+                else {
+                    // End of list
+                    if (inList) {
+                        processedListLines.push('<ul>' + listItems.join('') + '</ul>');
+                        listItems = [];
+                        inList = false;
+                    }
+                    processedListLines.push(line);
+                }
+            }
+
+            // Close any remaining list
+            if (inList) {
+                processedListLines.push('<ul>' + listItems.join('') + '</ul>');
+            }
+
+            result = processedListLines.join('\n');
+
+            // Color markup
+            result = result.replace(/\{color:([^}]+)\}([\s\S]*?)\{color\}/g, '<span style="color:$1">$2</span>');
+
+            // Text formatting (order matters! Do complex patterns first)
+
+            // Underline/Inserted: {+}text{+} (do this before +text+)
+            result = result.replace(/\{\+\}([^{]+)\{\+\}/g, '<u>$1</u>');
+
+            // Deleted: {-}text{-} (do this before -text-)
+            result = result.replace(/\{-\}([^{]+)\{-\}/g, '<del>$1</del>');
+
+            // Bold: *text* (single asterisk on each side)
+            // Lists are already processed, so we can safely convert all remaining * patterns to bold
+            result = result.replace(/\*([^*]+?)\*/g, '<strong>$1</strong>');
+
+            // Italic: _text_ (avoid matching in URLs or within words)
+            result = result.replace(/\b_([^_\n]+)_\b/g, '<em>$1</em>');
+
+            // Underline: +text+ (avoid matching in URLs like https://example.com/path+query)
+            result = result.replace(/([^:/\w]|^)\+([^\+\n]+)\+/g, '$1<u>$2</u>');
+
+            // Strikethrough: -text- (must have spaces or line boundaries, not within words like "production-ready")
+            result = result.replace(/(\s|^)-([^-\n]+?)-(\s|$|[,.])/g, '$1<del>$2</del>$3');
+
+            // Monospace/Code: {{text}}
+            result = result.replace(/\{\{([^}]+)\}\}/g, '<code>$1</code>');
+
+            // Quote/Citation: ??text??
+            result = result.replace(/\?\?([^?]+)\?\?/g, '<cite>$1</cite>');
+
+            // Superscript: ^text^
+            result = result.replace(/\^([^\^\n]+)\^/g, '<sup>$1</sup>');
+
+            // Subscript: ~text~
+            result = result.replace(/~([^~\n]+)~/g, '<sub>$1</sub>');
+
+            // Links: [text|url]
+            result = result.replace(/\[([^\|\]]+)\|([^\]]+)\]/g, '<a href="$2" target="_blank">$1</a>');
+
+            // Links: [url]
+            result = result.replace(/\[([^\]]+)\]/g, '<a href="$1" target="_blank">$1</a>');
+
+            // Images: !image.png! or !image.png|alt!
+            result = result.replace(/!([^\|\!]+)\|([^\!]+)!/g, '<img src="$1" alt="$2">');
+            result = result.replace(/!([^\!]+)!/g, '<img src="$1" alt="">');
+
+            // Tables - collect table rows
+            const lines = result.split('\n');
+            const processedLines = [];
+            let inTable = false;
+            let tableRows = [];
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+
+                // Header row: ||header1||header2||
+                if (/^\|\|.+\|\|$/.test(line)) {
+                    const headers = line.match(/\|\|(.+)\|\|$/)[1].split('||').filter(h => h);
+                    const row = '<tr>' + headers.map(h => '<th>' + h.trim() + '</th>').join('') + '</tr>';
+                    tableRows.push(row);
+                    inTable = true;
+                }
+                // Data row: |cell1|cell2|
+                else if (/^\|[^\|].+\|$/.test(line)) {
+                    const cells = line.slice(1, -1).split('|');
+                    const row = '<tr>' + cells.map(c => '<td>' + c.trim() + '</td>').join('') + '</tr>';
+                    tableRows.push(row);
+                    inTable = true;
+                }
+                else {
+                    // End of table
+                    if (inTable) {
+                        processedLines.push('<table>' + tableRows.join('') + '</table>');
+                        tableRows = [];
+                        inTable = false;
+                    }
+                    processedLines.push(line);
+                }
+            }
+
+            // Close any remaining table
+            if (inTable) {
+                processedLines.push('<table>' + tableRows.join('') + '</table>');
+            }
+
+            result = processedLines.join('\n');
+
+            // Remove all newlines around block elements - let CSS handle spacing
+            // Remove newlines before block opening tags
+            result = result.replace(/\n+(?=<(h[1-6]|table|ul|ol|blockquote|pre|div))/g, '');
+
+            // Remove newlines after block closing tags
+            result = result.replace(/(<\/(h[1-6]|table|ul|ol|blockquote|pre|div)>)\n+/g, '$1');
+
+            // For text content: convert double newlines to paragraph breaks, ignore single newlines
+            // Mark paragraphs (double newline)
+            result = result.replace(/\n\n+/g, '__PARA__');
+
+            // Remove remaining single newlines (JIRA doesn't render these as breaks)
+            result = result.replace(/\n/g, ' ');
+
+            // Restore paragraph breaks
+            result = result.replace(/__PARA__/g, '<br><br>');
+
+            // Restore protected blocks
+            result = restoreBlocks(result);
+
+            return result;
+        }
+
         function generateDetailsHTML(issue) {
             const labelsHTML = issue.labels && issue.labels.length > 0
                 ? issue.labels.map(l => {
@@ -1981,17 +2538,17 @@
                 : '<span class="no-data">No components</span>';
 
             const commentsHTML = issue.comments && issue.comments.length > 0
-                ? issue.comments.map(c => `
+                ? issue.comments.slice().reverse().map(c => `
                     <div class="comment">
                         <div class="comment-header"><strong>${c.author}</strong> <span class="comment-date">${new Date(c.created).toLocaleString()}</span></div>
-                        <div class="comment-body">${marked.parse(c.body || '')}</div>
+                        <div class="comment-body">${renderJiraText(c.body || '')}</div>
                     </div>
                   `).join('')
                 : '<div class="no-data">No comments</div>';
 
-            // Render description as markdown
+            // Render description using JIRA text formatting
             const descriptionHTML = issue.description
-                ? marked.parse(issue.description)
+                ? renderJiraText(issue.description)
                 : '<span class="no-data">No description</span>';
 
             return `
@@ -2332,6 +2889,252 @@
 
         function closeModal(modalId) {
             document.getElementById(modalId).classList.remove('active');
+        }
+
+        // Status Update Modal Functions
+        function showStatusUpdateModal() {
+            // Populate assignee dropdown
+            const select = document.getElementById('statusUpdateAssignee');
+            select.innerHTML = '<option value="">Select assignee...</option>';
+
+            const sortedAssignees = Array.from(knownAssignees.entries())
+                .sort((a, b) => a[1].localeCompare(b[1]));
+
+            sortedAssignees.forEach(([username, displayName]) => {
+                const option = document.createElement('option');
+                option.value = username;
+                option.textContent = `${displayName} (${username})`;
+                select.appendChild(option);
+            });
+
+            // Reset the form
+            document.getElementById('statusUpdateStratsContainer').style.display = 'none';
+            document.getElementById('statusUpdateStratsList').innerHTML = '';
+
+            document.getElementById('statusUpdateModal').classList.add('active');
+        }
+
+        async function loadStratsForStatusUpdate() {
+            const assignee = document.getElementById('statusUpdateAssignee').value;
+            if (!assignee) {
+                document.getElementById('statusUpdateStratsContainer').style.display = 'none';
+                return;
+            }
+
+            const config = loadConfig();
+            if (!config.pat) {
+                showError('Please configure your Personal Access Token in Settings');
+                return;
+            }
+
+            const container = document.getElementById('statusUpdateStratsList');
+            container.innerHTML = '<div class="status-update-loading">Loading STRATs...</div>';
+            document.getElementById('statusUpdateStratsContainer').style.display = 'block';
+
+            try {
+                const response = await fetch(`/api/strats-by-assignee?assignee=${encodeURIComponent(assignee)}&pat=${encodeURIComponent(config.pat)}&component=${encodeURIComponent(config.component)}`);
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    if (result.strats.length === 0) {
+                        container.innerHTML = '<div class="status-update-loading">No STRATs found for this assignee</div>';
+                        return;
+                    }
+
+                    container.innerHTML = result.strats.map(strat => {
+                        const lastComment = strat.comments && strat.comments.length > 0
+                            ? strat.comments[strat.comments.length - 1].body
+                            : '';
+                        const hasLastComment = lastComment.length > 0;
+
+                        return `
+                        <div class="status-update-strat" data-strat-key="${strat.key}">
+                            <div class="status-update-strat-header">
+                                <a href="${JIRA_CONFIG.baseUrl}/browse/${strat.key}" target="_blank" class="status-update-strat-key">${strat.key}</a>
+                                <span class="status-update-strat-summary">${strat.summary}</span>
+                            </div>
+                            <div class="status-update-controls">
+                                <label>
+                                    <input type="checkbox" class="skip-strat-checkbox" onchange="toggleSkipStrat('${strat.key}')">
+                                    Skip
+                                </label>
+                                ${hasLastComment ? `<button onclick="useLastComment('${strat.key}')">Use Last Comment</button>` : ''}
+                            </div>
+                            <div id="comment-source-${strat.key}"></div>
+                            <textarea
+                                class="status-update-comment-input"
+                                id="comment-input-${strat.key}"
+                                data-strat-key="${strat.key}"
+                                data-last-comment="${hasLastComment ? 'true' : 'false'}"
+                                data-used-last-comment="false"
+                                placeholder="Add status update for ${strat.key}..."
+                            ></textarea>
+                            <div style="display:none;" data-last-comment-text="${strat.key}">${lastComment}</div>
+                        </div>
+                        `;
+                    }).join('');
+                } else {
+                    showError(`Error loading STRATs: ${result.error || 'Unknown error'}`);
+                    container.innerHTML = '';
+                    document.getElementById('statusUpdateStratsContainer').style.display = 'none';
+                }
+            } catch (error) {
+                showError(`Error loading STRATs: ${error.message}`);
+                container.innerHTML = '';
+                document.getElementById('statusUpdateStratsContainer').style.display = 'none';
+            }
+        }
+
+        function toggleSkipStrat(stratKey) {
+            const stratDiv = document.querySelector(`.status-update-strat[data-strat-key="${stratKey}"]`);
+            const checkbox = stratDiv.querySelector('.skip-strat-checkbox');
+            const textarea = stratDiv.querySelector('.status-update-comment-input');
+
+            if (checkbox.checked) {
+                stratDiv.classList.add('skipped');
+                textarea.disabled = true;
+            } else {
+                stratDiv.classList.remove('skipped');
+                textarea.disabled = false;
+            }
+        }
+
+        function useLastComment(stratKey) {
+            const lastCommentDiv = document.querySelector(`[data-last-comment-text="${stratKey}"]`);
+            const textarea = document.getElementById(`comment-input-${stratKey}`);
+            const sourceDiv = document.getElementById(`comment-source-${stratKey}`);
+
+            if (lastCommentDiv && textarea) {
+                const lastComment = lastCommentDiv.textContent;
+                textarea.value = lastComment;
+                textarea.setAttribute('data-used-last-comment', 'true');
+                sourceDiv.innerHTML = '<span class="comment-source-badge">USING LAST COMMENT</span>';
+            }
+        }
+
+        async function generateStatusReport() {
+            const config = loadConfig();
+            if (!config.pat) {
+                showError('Please configure your Personal Access Token in Settings');
+                return;
+            }
+
+            // Collect all comments
+            const commentInputs = document.querySelectorAll('.status-update-comment-input');
+            const commentsData = [];
+            const reportLines = [];
+
+            commentInputs.forEach(input => {
+                const stratKey = input.getAttribute('data-strat-key');
+                const comment = input.value.trim();
+                const isSkipped = input.disabled; // Disabled means skipped
+                const usedLastComment = input.getAttribute('data-used-last-comment') === 'true';
+
+                // Skip if checkbox is checked OR if comment is empty
+                if (isSkipped || !comment) {
+                    return;
+                }
+
+                // Only add to JIRA if it's a NEW comment (not using last comment)
+                if (!usedLastComment) {
+                    commentsData.push({
+                        issue_key: stratKey,
+                        comment: comment
+                    });
+                }
+
+                // Add to report - ticket key as link and rendered comment
+                reportLines.push({
+                    key: stratKey,
+                    comment: comment
+                });
+            });
+
+            if (reportLines.length === 0) {
+                showError('Please add at least one comment (or use last comment)');
+                return;
+            }
+
+            // Add NEW comments to JIRA (if any)
+            try {
+                if (commentsData.length > 0) {
+                    const response = await fetch('/api/batch-add-comments', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            pat: config.pat,
+                            comments: commentsData
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok && result.success) {
+                        // Check if any failed
+                        const failed = result.results.filter(r => !r.success);
+                        if (failed.length > 0) {
+                            showError(`Failed to add ${failed.length} comment(s). Check console for details.`);
+                            console.error('Failed comments:', failed);
+                        } else {
+                            showSuccess(`Successfully added ${result.results.length} new comment(s) to JIRA`);
+                        }
+                    } else {
+                        showError(`Error adding comments: ${result.error || 'Unknown error'}`);
+                        return;
+                    }
+                } else {
+                    showSuccess('Using existing comments, no new comments added to JIRA');
+                }
+
+                // Show the report modal with rendered HTML
+                const reportHTML = reportLines.map(item => `
+                    <div style="margin-bottom: 24px;">
+                        <div style="margin-bottom: 8px;">
+                            <a href="${JIRA_CONFIG.baseUrl}/browse/${item.key}" target="_blank" style="font-weight: 600; color: #0052CC; text-decoration: none; font-size: 14px;">${item.key}</a>
+                        </div>
+                        <div class="comment-body">${renderJiraText(item.comment)}</div>
+                        <br>
+                    </div>
+                `).join('');
+
+                document.getElementById('statusReportOutput').innerHTML = reportHTML;
+                closeModal('statusUpdateModal');
+                document.getElementById('statusReportModal').classList.add('active');
+
+            } catch (error) {
+                showError(`Error adding comments: ${error.message}`);
+            }
+        }
+
+        function copyStatusReport() {
+            const reportDiv = document.getElementById('statusReportOutput');
+
+            // Create a selection range to copy the formatted content
+            const range = document.createRange();
+            range.selectNodeContents(reportDiv);
+
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            try {
+                // Copy using execCommand which properly preserves formatting
+                document.execCommand('copy');
+                showSuccess('Report copied to clipboard!');
+            } catch (error) {
+                showError('Failed to copy to clipboard');
+            } finally {
+                // Clear the selection
+                selection.removeAllRanges();
+            }
+        }
+
+        function backToStatusUpdate() {
+            // Close the status report modal and reopen the status update modal
+            closeModal('statusReportModal');
+            document.getElementById('statusUpdateModal').classList.add('active');
         }
 
         async function handleCreateEpic(event) {
@@ -3292,12 +4095,8 @@
             if (details) details.style.display = 'none';
         }
 
-        // Close modal when clicking outside
-        window.addEventListener('click', (event) => {
-            if (event.target.classList.contains('modal')) {
-                event.target.classList.remove('active');
-            }
-        });
+        // Modals can only be closed via Cancel/Close buttons (not by clicking outside)
+        // This prevents accidental data loss
 
         // Load sample data on page load for demonstration
         window.addEventListener('DOMContentLoaded', () => {

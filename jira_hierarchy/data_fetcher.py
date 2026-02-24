@@ -70,7 +70,7 @@ def fetch_rfes(component, jira_pat):
 
 def fetch_strats_for_rfe(rfe_key, jira_pat):
     """
-    Fetch STRATs linked to an RFE
+    Fetch STRATs linked to an RFE (all issue types in RHAISTRAT project)
 
     Args:
         rfe_key: RFE issue key
@@ -81,7 +81,6 @@ def fetch_strats_for_rfe(rfe_key, jira_pat):
     """
     strats_jql = (
         f'project = RHAISTRAT '
-        f'AND issuetype = Feature '
         f'AND (issueFunction in linkedIssuesOf("key = {rfe_key}", "is cloned by") '
         f'OR issueFunction in linkedIssuesOf("key = {rfe_key}", "clones")) '
         f'AND status NOT IN (Closed, Resolved)'

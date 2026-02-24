@@ -65,7 +65,15 @@ jira-dashboard-configs/
 python3 jira-hierarchy-server.py
 ```
 
-Then open your browser to: http://localhost:8000
+The browser will automatically open to http://localhost:8000
+
+**Command line options:**
+- `--no-browser`: Skip automatically opening the browser (useful if you already have the page open)
+
+```bash
+# Skip opening browser
+python3 jira-hierarchy-server.py --no-browser
+```
 
 ## Configuration
 

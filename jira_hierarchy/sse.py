@@ -78,7 +78,6 @@ def stream_hierarchy_rfe_first(wfile, jira_pat, component="AI Safety"):
     rfe_keys = [rfe['key'] for rfe in rfes]
     strats_jql = (
         f'project = RHAISTRAT '
-        f'AND issuetype = Feature '
         f'AND (issueFunction in linkedIssuesOf("key in ({",".join(rfe_keys)})", "is cloned by") '
         f'OR issueFunction in linkedIssuesOf("key in ({",".join(rfe_keys)})", "clones")) '
         f'AND status NOT IN (Closed, Resolved)'
@@ -273,7 +272,6 @@ def stream_hierarchy_strat_first(wfile, jira_pat, component="AI Safety"):
     send_sse_event(wfile, 'progress', {'message': 'Loading STRATs...'})
     strats_jql = (
         f'project = RHAISTRAT '
-        f'AND issuetype = Feature '
         f'AND component = "{component}" '
         f'AND status NOT IN (Closed, Resolved) '
         f'ORDER BY priority DESC, created DESC'

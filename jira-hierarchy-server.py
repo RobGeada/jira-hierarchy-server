@@ -4,6 +4,7 @@ JIRA Hierarchy Viewer Server
 Entry point for the JIRA hierarchy visualization web application
 """
 
+import argparse
 import os
 import sys
 
@@ -59,8 +60,20 @@ def check_requirements():
 
 def main():
     """Main entry point"""
+    parser = argparse.ArgumentParser(
+        description='JIRA Hierarchy Viewer Server',
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        '--no-browser',
+        action='store_true',
+        help='Do not automatically open browser window on startup'
+    )
+
+    args = parser.parse_args()
+
     check_requirements()
-    run_server()
+    run_server(open_browser_window=not args.no_browser)
 
 
 if __name__ == '__main__':
