@@ -62,6 +62,8 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             self.handle_update_priority()
         elif parsed_path.path == '/api/update-assignee':
             self.handle_update_assignee()
+        elif parsed_path.path == '/api/update-description':
+            self.handle_update_description()
         elif parsed_path.path == '/api/batch-add-comments':
             self.handle_batch_add_comments()
         else:
@@ -280,6 +282,28 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
 
         except Exception as e:
             print(f"Error updating assignee: {e}", file=sys.stderr)
+            traceback.print_exc()
+            self.send_json({'error': str(e)}, status=500)
+
+    def handle_update_description(self):
+        """Update the description of a JIRA issue"""
+        try:
+            data = self.read_json_body()
+
+            pat = data.get('pat')
+            issue_key = data.get('issue_key')
+            description = data.get('description', '')
+
+            if not issue_key:
+                self.send_json({'error': 'Missing required fields'}, status=400)
+                return
+
+            from .jira_client import update_jira_issue
+            update_jira_issue(issue_key, {'description': description}, pat)
+            self.send_json({'success': True})
+
+        except Exception as e:
+            print(f"Error updating description: {e}", file=sys.stderr)
             traceback.print_exc()
             self.send_json({'error': str(e)}, status=500)
 

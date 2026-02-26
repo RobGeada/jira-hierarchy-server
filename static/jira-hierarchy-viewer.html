@@ -1166,6 +1166,21 @@
             background: #0747A6;
         }
 
+        .btn-edit-description {
+            padding: 2px 8px;
+            background: #0052CC;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+
+        .btn-edit-description:hover {
+            background: #0747A6;
+        }
+
         .btn-reload {
             margin-left: 8px;
             padding: 2px 8px;
@@ -2574,7 +2589,16 @@
                         <strong>Components:</strong> <div class="labels">${componentsHTML}</div>
                     </div>
                     <div class="detail-row">
-                        <strong>Description:</strong> <div class="description">${descriptionHTML}</div>
+                        <strong>Description:</strong>
+                        <button class="btn-edit-description" onclick="editDescription('${issue.key}')" style="margin-left: 8px; font-size: 12px; padding: 2px 8px;">Edit</button>
+                        <div class="description" id="description-view-${issue.key}">${descriptionHTML}</div>
+                        <div id="description-edit-${issue.key}" style="display: none;">
+                            <textarea id="description-textarea-${issue.key}" style="width: 100%; min-height: 200px; padding: 8px; font-family: inherit; resize: vertical;">${issue.description || ''}</textarea>
+                            <div style="margin-top: 8px; display: flex; gap: 8px;">
+                                <button class="btn-submit" onclick="saveDescription('${issue.key}')">Save</button>
+                                <button class="btn-cancel" onclick="cancelEditDescription('${issue.key}')">Cancel</button>
+                            </div>
+                        </div>
                     </div>
                     <div class="detail-row comments-section">
                         <strong>Comments:</strong>
@@ -3135,6 +3159,60 @@
             // Close the status report modal and reopen the status update modal
             closeModal('statusReportModal');
             document.getElementById('statusUpdateModal').classList.add('active');
+        }
+
+        function editDescription(issueKey) {
+            // Hide the view, show the edit textarea
+            document.getElementById(`description-view-${issueKey}`).style.display = 'none';
+            document.getElementById(`description-edit-${issueKey}`).style.display = 'block';
+        }
+
+        function cancelEditDescription(issueKey) {
+            // Show the view, hide the edit textarea
+            document.getElementById(`description-view-${issueKey}`).style.display = 'block';
+            document.getElementById(`description-edit-${issueKey}`).style.display = 'none';
+        }
+
+        async function saveDescription(issueKey) {
+            const config = loadConfig();
+            if (!config.pat) {
+                showError('Please configure your Personal Access Token in Settings');
+                return;
+            }
+
+            const textarea = document.getElementById(`description-textarea-${issueKey}`);
+            const newDescription = textarea.value;
+
+            try {
+                const response = await fetch('/api/update-description', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        pat: config.pat,
+                        issue_key: issueKey,
+                        description: newDescription
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // Update the view with the new rendered description
+                    const descriptionView = document.getElementById(`description-view-${issueKey}`);
+                    descriptionView.innerHTML = newDescription ? renderJiraText(newDescription) : '<span class="no-data">No description</span>';
+
+                    // Hide edit, show view
+                    cancelEditDescription(issueKey);
+
+                    showSuccess('Description updated successfully');
+                } else {
+                    showError(`Error updating description: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Error updating description: ${error.message}`);
+            }
         }
 
         async function handleCreateEpic(event) {
