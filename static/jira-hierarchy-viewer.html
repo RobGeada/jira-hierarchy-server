@@ -2181,9 +2181,10 @@
             // Add header if this is the first Epic
             ensureContainerHeader(`strat-${epic.strat_key}`, 'EPICS:');
 
-            const epicId = `epic-${epic.key}`;
+            // Create unique ID including parent STRAT to allow same Epic under multiple STRATs
+            const epicId = `epic-${epic.strat_key}-${epic.key}`;
             const epicHtml = `
-                <div class="tree-item" id="item-${epic.key}">
+                <div class="tree-item" id="item-${epic.strat_key}-${epic.key}">
                     <div class="tree-node epic" onclick="toggleNode('${epicId}')">
                         <span class="expand-icon">▶</span>
                         <div class="tree-content">
@@ -2211,11 +2212,12 @@
 
         function addTaskToTree(task) {
             trackAssignee(task.assignee, task.assignee_username);
-            const epicContainer = document.getElementById(`epic-${task.epic_key}`);
+            // Use unique epic ID that includes parent STRAT
+            const epicContainer = document.getElementById(`epic-${task.strat_key}-${task.epic_key}`);
             if (!epicContainer) return;
 
             // Add header if this is the first Task
-            ensureContainerHeader(`epic-${task.epic_key}`, 'TASKS:');
+            ensureContainerHeader(`epic-${task.strat_key}-${task.epic_key}`, 'TASKS:');
 
             const taskId = `task-${task.key}`;
             const taskHtml = `
@@ -2239,7 +2241,7 @@
             epicContainer.insertAdjacentHTML('beforeend', taskHtml);
 
             // Re-add the "+ Task" button to keep it at the bottom of the Epic
-            addCreateButton(`epic-${task.epic_key}`, 'task', task.epic_key);
+            addCreateButton(`epic-${task.strat_key}-${task.epic_key}`, 'task', task.epic_key);
         }
 
         function renderHierarchy(data) {
@@ -2611,10 +2613,14 @@
 
         function toggleNode(nodeId) {
             const node = document.getElementById(nodeId);
-            const issueKey = nodeId.replace(/^(rfe|strat|epic|task)-/, '');
+            if (!node) return;
+
             const treeItem = node.parentElement;
             const icon = treeItem.querySelector('.expand-icon');
-            const details = document.getElementById(`details-${issueKey}`);
+
+            // Find the details element within this specific tree-item
+            // This ensures we toggle the correct instance when an issue appears in multiple places
+            const details = treeItem.querySelector('.issue-details');
 
             if (node.classList.contains('expanded')) {
                 node.classList.remove('expanded');
@@ -4112,65 +4118,80 @@
         }
 
         function rerenderEpic(epic) {
-            const itemElement = document.getElementById(`item-${epic.key}`);
-            if (!itemElement) return;
+            // Find ALL instances of this Epic (it may appear under multiple STRATs)
+            // Use a data attribute selector to find all items with this epic key
+            const itemElements = document.querySelectorAll(`[id^="item-"][id$="-${epic.key}"]`);
 
-            // Update the tree-node content in place
-            const treeNode = itemElement.querySelector('.tree-node');
-            if (treeNode) {
-                const summaryLink = treeNode.querySelector('.issue-summary-link');
-                const statusSpan = treeNode.querySelector('.issue-status');
-                const prioritySpan = treeNode.querySelector('.issue-priority');
-                const assigneeSpan = treeNode.querySelector('.issue-assignee');
-                const updatedSpan = treeNode.querySelector('.issue-updated');
+            itemElements.forEach(itemElement => {
+                // Extract the strat key from the item ID
+                const itemId = itemElement.id;  // e.g., "item-RHAISTRAT-1178-RHOAIENG-52132"
+                const match = itemId.match(/^item-(.+)-([A-Z]+-\d+)$/);
+                if (!match) return;
 
-                if (summaryLink) summaryLink.textContent = epic.summary;
-                if (statusSpan) {
-                    statusSpan.textContent = epic.status;
-                    statusSpan.className = `issue-status ${getStatusClass(epic.status)}`;
-                }
-                if (prioritySpan) {
-                    prioritySpan.textContent = epic.priority;
-                    prioritySpan.className = `issue-priority ${getPriorityClass(epic.priority)}`;
-                }
-                if (assigneeSpan) assigneeSpan.textContent = epic.assignee || 'Unassigned';
-                if (updatedSpan) updatedSpan.textContent = formatDate(epic.updated);
-            }
+                const stratKey = match[1];
+                const uniqueEpicId = `epic-${stratKey}-${epic.key}`;
 
-            // Update the details section
-            const detailsElement = itemElement.querySelector('.issue-details');
-            if (detailsElement) {
-                detailsElement.outerHTML = generateDetailsHTML(epic);
-            }
-
-            // Clear and rebuild children
-            const childrenContainer = document.getElementById(`epic-${epic.key}`);
-            if (childrenContainer) {
-                // Collapse the container and reset icon
-                childrenContainer.classList.remove('expanded');
-                const icon = itemElement.querySelector('.expand-icon');
-                if (icon) icon.textContent = '▶';
-
-                // Hide details
-                const details = itemElement.querySelector('.issue-details');
-                if (details) details.style.display = 'none';
-
-                childrenContainer.innerHTML = '';
-                if (epic.tasks) {
-                    epic.tasks.forEach(task => addTaskToTree(task));
-                }
-                // Re-add the create button
-                addCreateButton(`epic-${epic.key}`, 'task', epic.key);
-
-                // Update empty class based on whether there are Tasks
+                // Update the tree-node content in place
+                const treeNode = itemElement.querySelector('.tree-node');
                 if (treeNode) {
-                    if (epic.tasks && epic.tasks.length > 0) {
-                        treeNode.classList.remove('empty');
-                    } else {
-                        treeNode.classList.add('empty');
+                    const summaryLink = treeNode.querySelector('.issue-summary-link');
+                    const statusSpan = treeNode.querySelector('.issue-status');
+                    const prioritySpan = treeNode.querySelector('.issue-priority');
+                    const assigneeSpan = treeNode.querySelector('.issue-assignee');
+                    const updatedSpan = treeNode.querySelector('.issue-updated');
+
+                    if (summaryLink) summaryLink.textContent = epic.summary;
+                    if (statusSpan) {
+                        statusSpan.textContent = epic.status;
+                        statusSpan.className = `issue-status ${getStatusClass(epic.status)}`;
+                    }
+                    if (prioritySpan) {
+                        prioritySpan.textContent = epic.priority;
+                        prioritySpan.className = `issue-priority ${getPriorityClass(epic.priority)}`;
+                    }
+                    if (assigneeSpan) assigneeSpan.textContent = epic.assignee || 'Unassigned';
+                    if (updatedSpan) updatedSpan.textContent = formatDate(epic.updated);
+                }
+
+                // Update the details section
+                const detailsElement = itemElement.querySelector('.issue-details');
+                if (detailsElement) {
+                    detailsElement.outerHTML = generateDetailsHTML(epic);
+                }
+
+                // Clear and rebuild children
+                const childrenContainer = document.getElementById(uniqueEpicId);
+                if (childrenContainer) {
+                    // Collapse the container and reset icon
+                    childrenContainer.classList.remove('expanded');
+                    const icon = itemElement.querySelector('.expand-icon');
+                    if (icon) icon.textContent = '▶';
+
+                    // Hide details
+                    const details = itemElement.querySelector('.issue-details');
+                    if (details) details.style.display = 'none';
+
+                    childrenContainer.innerHTML = '';
+                    if (epic.tasks) {
+                        epic.tasks.forEach(task => {
+                            // Add strat_key to task for proper rendering
+                            task.strat_key = stratKey;
+                            addTaskToTree(task);
+                        });
+                    }
+                    // Re-add the create button
+                    addCreateButton(uniqueEpicId, 'task', epic.key);
+
+                    // Update empty class based on whether there are Tasks
+                    if (treeNode) {
+                        if (epic.tasks && epic.tasks.length > 0) {
+                            treeNode.classList.remove('empty');
+                        } else {
+                            treeNode.classList.add('empty');
+                        }
                     }
                 }
-            }
+            });
         }
 
         function rerenderTask(task) {
