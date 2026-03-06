@@ -2698,30 +2698,52 @@
         function sortHierarchyData(data, field, order) {
             if (!data) return data;
 
-            // Sort RFEs
-            if (data.rfes && Array.isArray(data.rfes)) {
-                data.rfes.sort((a, b) => compareItems(a, b, field, order));
+            // Sort based on current top level view
+            if (currentTopLevel === 'strat') {
+                // STRAT-first view: STRATs are top level
+                if (data.strats && Array.isArray(data.strats)) {
+                    data.strats.sort((a, b) => compareItems(a, b, field, order));
 
-                // Sort STRATs within each RFE
-                data.rfes.forEach(rfe => {
-                    if (rfe.strats && Array.isArray(rfe.strats)) {
-                        rfe.strats.sort((a, b) => compareItems(a, b, field, order));
+                    // Sort Epics within each STRAT
+                    data.strats.forEach(strat => {
+                        if (strat.epics && Array.isArray(strat.epics)) {
+                            strat.epics.sort((a, b) => compareItems(a, b, field, order));
 
-                        // Sort Epics within each STRAT
-                        rfe.strats.forEach(strat => {
-                            if (strat.epics && Array.isArray(strat.epics)) {
-                                strat.epics.sort((a, b) => compareItems(a, b, field, order));
+                            // Sort Tasks within each Epic
+                            strat.epics.forEach(epic => {
+                                if (epic.tasks && Array.isArray(epic.tasks)) {
+                                    epic.tasks.sort((a, b) => compareItems(a, b, field, order));
+                                }
+                            });
+                        }
+                    });
+                }
+            } else {
+                // RFE-first view: RFEs are top level
+                if (data.rfes && Array.isArray(data.rfes)) {
+                    data.rfes.sort((a, b) => compareItems(a, b, field, order));
 
-                                // Sort Tasks within each Epic
-                                strat.epics.forEach(epic => {
-                                    if (epic.tasks && Array.isArray(epic.tasks)) {
-                                        epic.tasks.sort((a, b) => compareItems(a, b, field, order));
-                                    }
-                                });
-                            }
-                        });
-                    }
-                });
+                    // Sort STRATs within each RFE
+                    data.rfes.forEach(rfe => {
+                        if (rfe.strats && Array.isArray(rfe.strats)) {
+                            rfe.strats.sort((a, b) => compareItems(a, b, field, order));
+
+                            // Sort Epics within each STRAT
+                            rfe.strats.forEach(strat => {
+                                if (strat.epics && Array.isArray(strat.epics)) {
+                                    strat.epics.sort((a, b) => compareItems(a, b, field, order));
+
+                                    // Sort Tasks within each Epic
+                                    strat.epics.forEach(epic => {
+                                        if (epic.tasks && Array.isArray(epic.tasks)) {
+                                            epic.tasks.sort((a, b) => compareItems(a, b, field, order));
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
             }
 
             return data;
@@ -2754,28 +2776,51 @@
             // Sort the hierarchy data
             sortHierarchyData(hierarchyData, currentSortField, currentSortOrder);
 
-            // Re-render the tree
+            // Re-render the tree based on current view
             const tree = document.getElementById('tree');
-            if (tree && hierarchyData.rfes) {
-                tree.innerHTML = '';
-                hierarchyData.rfes.forEach(rfe => {
-                    addRfeToTree(tree, rfe);
-                    if (rfe.strats) {
-                        rfe.strats.forEach(strat => {
-                            addStratToTree(strat);
-                            if (strat.epics) {
-                                strat.epics.forEach(epic => {
-                                    addEpicToTree(epic);
-                                    if (epic.tasks) {
-                                        epic.tasks.forEach(task => {
-                                            addTaskToTree(task);
-                                        });
-                                    }
-                                });
-                            }
-                        });
-                    }
-                });
+            if (!tree) return;
+
+            tree.innerHTML = '';
+
+            if (currentTopLevel === 'strat') {
+                // STRAT-first view
+                if (hierarchyData.strats && Array.isArray(hierarchyData.strats)) {
+                    hierarchyData.strats.forEach(strat => {
+                        addStratToTree(strat, true);  // true = top-level
+                        if (strat.epics) {
+                            strat.epics.forEach(epic => {
+                                addEpicToTree(epic);
+                                if (epic.tasks) {
+                                    epic.tasks.forEach(task => {
+                                        addTaskToTree(task);
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            } else {
+                // RFE-first view
+                if (hierarchyData.rfes && Array.isArray(hierarchyData.rfes)) {
+                    hierarchyData.rfes.forEach(rfe => {
+                        addRfeToTree(tree, rfe);
+                        if (rfe.strats) {
+                            rfe.strats.forEach(strat => {
+                                addStratToTree(strat);
+                                if (strat.epics) {
+                                    strat.epics.forEach(epic => {
+                                        addEpicToTree(epic);
+                                        if (epic.tasks) {
+                                            epic.tasks.forEach(task => {
+                                                addTaskToTree(task);
+                                            });
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
             }
         }
 

@@ -146,6 +146,46 @@ def stream_hierarchy_rfe_first(wfile, jira_pat, component="AI Safety"):
         # Include customfield_12313140 (Parent Link) in the field list
         epic_field_list = field_list + ',customfield_12313140'
         epic_issues = run_jira_query(epics_jql, epic_field_list, jira_pat)
+        print(f"Found {len(epic_issues)} Epics via Parent Link", file=sys.stderr)
+
+        # Also check for Epics linked via "is documented by" relationship
+        documented_by_epics = {}  # Map of epic_key -> [strat_keys]
+        print(f"Checking {len(strat_issues)} STRATs for 'is documented by' links...", file=sys.stderr)
+        for strat in strat_issues:
+            strat_key = strat['key']
+            issue_links = strat.get('fields', {}).get('issuelinks', [])
+            if issue_links:
+                print(f"  {strat_key} has {len(issue_links)} issuelinks", file=sys.stderr)
+            for link in issue_links:
+                link_type = link.get('type', {}).get('name', '')
+                if 'document' in link_type.lower():
+                    print(f"    Found Document link in {strat_key}, type={link_type}", file=sys.stderr)
+                    inward_issue = link.get('inwardIssue', {})
+                    outward_issue = link.get('outwardIssue', {})
+                    print(f"      inward={inward_issue.get('key')}, outward={outward_issue.get('key')}", file=sys.stderr)
+                    if inward_issue.get('fields', {}).get('issuetype', {}).get('name') == 'Epic':
+                        epic_key = inward_issue.get('key')
+                        status = inward_issue.get('fields', {}).get('status', {}).get('name')
+                        print(f"      Epic {epic_key}, status={status}", file=sys.stderr)
+                        if epic_key and status not in ['Closed', 'Resolved']:
+                            if epic_key not in documented_by_epics:
+                                documented_by_epics[epic_key] = []
+                            documented_by_epics[epic_key].append(strat_key)
+                            print(f"      -> Added to documented_by_epics", file=sys.stderr)
+
+        # Fetch full details for documented-by Epics that aren't already in our list
+        existing_epic_keys = {e['key'] for e in epic_issues}
+        for epic_key, linked_strats in documented_by_epics.items():
+            if epic_key not in existing_epic_keys:
+                try:
+                    from .jira_client import get_jira_issue
+                    epic_data = get_jira_issue(epic_key, fields=epic_field_list, jira_pat=jira_pat)
+                    if epic_data:
+                        epic_issues.append(epic_data)
+                        print(f"  Added Epic {epic_key} via 'is documented by' link", file=sys.stderr)
+                except Exception as e:
+                    print(f"  Warning: Failed to fetch Epic {epic_key}: {e}", file=sys.stderr)
+
         print(f"Found {len(epic_issues)} Epics total", file=sys.stderr)
 
         for epic in epic_issues:
@@ -154,29 +194,42 @@ def stream_hierarchy_rfe_first(wfile, jira_pat, component="AI Safety"):
             epic_key = epic_data['key']
             epic_keys_list.append(epic_key)
 
-            # Find which STRAT this Epic is linked to via Parent Link custom field
+            # Find which STRATs this Epic is linked to
+            linked_strat_keys = []
+
+            # First check Parent Link custom field
             parent_link = epic.get('fields', {}).get('customfield_12313140')  # Parent Link to STRAT
-            if parent_link:
-                if parent_link in strat_keys_list:
-                    if parent_link not in epics_by_strat:
-                        epics_by_strat[parent_link] = []
-                    epics_by_strat[parent_link].append(epic_data)
-                    print(f"  Linked Epic {epic_key} to STRAT {parent_link}", file=sys.stderr)
+            if parent_link and parent_link in strat_keys_list:
+                linked_strat_keys.append(parent_link)
 
-                    # Find RFE key for this epic (via its parent STRAT)
-                    rfe_key = None
-                    for rfe_k, strats in strats_by_rfe.items():
-                        if any(s['key'] == parent_link for s in strats):
-                            rfe_key = rfe_k
-                            break
+            # Also check if this Epic is in documented_by_epics
+            if epic_key in documented_by_epics:
+                for strat_key in documented_by_epics[epic_key]:
+                    if strat_key not in linked_strat_keys:
+                        linked_strat_keys.append(strat_key)
 
-                    # Stream Epic immediately
-                    if rfe_key:
-                        epic_data['rfe_key'] = rfe_key
-                        epic_data['strat_key'] = parent_link
-                        epic_data['tasks'] = []
-                        send_sse_event(wfile, 'epic', epic_data)
-                        total_epics += 1
+            # Link Epic to all related STRATs
+            for strat_key in linked_strat_keys:
+                if strat_key not in epics_by_strat:
+                    epics_by_strat[strat_key] = []
+                epics_by_strat[strat_key].append(epic_data)
+                print(f"  Linked Epic {epic_key} to STRAT {strat_key}", file=sys.stderr)
+
+                # Find RFE key for this epic (via its parent STRAT)
+                rfe_key = None
+                for rfe_k, strats in strats_by_rfe.items():
+                    if any(s['key'] == strat_key for s in strats):
+                        rfe_key = rfe_k
+                        break
+
+                # Stream Epic immediately
+                if rfe_key:
+                    epic_data_copy = epic_data.copy()
+                    epic_data_copy['rfe_key'] = rfe_key
+                    epic_data_copy['strat_key'] = strat_key
+                    epic_data_copy['tasks'] = []
+                    send_sse_event(wfile, 'epic', epic_data_copy)
+                    total_epics += 1
                 else:
                     print(f"  WARNING: Epic {epic_key} has Parent Link {parent_link} not in our STRAT list", file=sys.stderr)
             else:
@@ -276,7 +329,7 @@ def stream_hierarchy_strat_first(wfile, jira_pat, component="AI Safety"):
         f'AND status NOT IN (Closed, Resolved) '
         f'ORDER BY priority DESC, created DESC'
     )
-    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components'
+    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,issuelinks'
     strat_issues = run_jira_query(strats_jql, field_list, jira_pat)
     print(f"Found {len(strat_issues)} STRATs", file=sys.stderr)
 
@@ -314,6 +367,39 @@ def stream_hierarchy_strat_first(wfile, jira_pat, component="AI Safety"):
         )
         epic_field_list = field_list + ',customfield_12313140'
         epic_issues = run_jira_query(epics_jql, epic_field_list, jira_pat)
+        print(f"Found {len(epic_issues)} Epics via Parent Link", file=sys.stderr)
+
+        # Also check for Epics linked via "is documented by" relationship
+        documented_by_epics = {}  # Map of epic_key -> [strat_keys]
+        print(f"Checking {len(strat_issues)} STRATs for 'is documented by' links...", file=sys.stderr)
+        for strat in strat_issues:
+            strat_key = strat['key']
+            issue_links = strat.get('fields', {}).get('issuelinks', [])
+            for link in issue_links:
+                link_type = link.get('type', {}).get('name', '')
+                if 'document' in link_type.lower():
+                    inward_issue = link.get('inwardIssue', {})
+                    if inward_issue.get('fields', {}).get('issuetype', {}).get('name') == 'Epic':
+                        epic_key = inward_issue.get('key')
+                        status = inward_issue.get('fields', {}).get('status', {}).get('name')
+                        if epic_key and status not in ['Closed', 'Resolved']:
+                            if epic_key not in documented_by_epics:
+                                documented_by_epics[epic_key] = []
+                            documented_by_epics[epic_key].append(strat_key)
+
+        # Fetch full details for documented-by Epics that aren't already in our list
+        existing_epic_keys = {e['key'] for e in epic_issues}
+        for epic_key, linked_strats in documented_by_epics.items():
+            if epic_key not in existing_epic_keys:
+                try:
+                    from .jira_client import get_jira_issue
+                    epic_data = get_jira_issue(epic_key, fields=epic_field_list, jira_pat=jira_pat)
+                    if epic_data:
+                        epic_issues.append(epic_data)
+                        print(f"  Added Epic {epic_key} via 'is documented by' link", file=sys.stderr)
+                except Exception as e:
+                    print(f"  Warning: Failed to fetch Epic {epic_key}: {e}", file=sys.stderr)
+
         print(f"Found {len(epic_issues)} Epics total", file=sys.stderr)
 
         for epic in epic_issues:
@@ -322,24 +408,36 @@ def stream_hierarchy_strat_first(wfile, jira_pat, component="AI Safety"):
             epic_key = epic_data['key']
             epic_keys_list.append(epic_key)
 
-            # Find which STRAT this Epic is linked to via Parent Link
+            # Find which STRATs this Epic is linked to
+            linked_strat_keys = []
+
+            # First check Parent Link
             parent_link = epic.get('fields', {}).get('customfield_12313140')
-            if parent_link:
-                if parent_link in strat_keys_list:
-                    if parent_link not in epics_by_strat:
-                        epics_by_strat[parent_link] = []
-                    epics_by_strat[parent_link].append(epic_data)
-                    print(f"  Linked Epic {epic_key} to STRAT {parent_link}", file=sys.stderr)
+            if parent_link and parent_link in strat_keys_list:
+                linked_strat_keys.append(parent_link)
+
+            # Also check if this Epic is in documented_by_epics
+            if epic_key in documented_by_epics:
+                for strat_key in documented_by_epics[epic_key]:
+                    if strat_key not in linked_strat_keys:
+                        linked_strat_keys.append(strat_key)
+
+            # Link Epic to all related STRATs
+            if linked_strat_keys:
+                for strat_key in linked_strat_keys:
+                    if strat_key not in epics_by_strat:
+                        epics_by_strat[strat_key] = []
+                    epics_by_strat[strat_key].append(epic_data)
+                    print(f"  Linked Epic {epic_key} to STRAT {strat_key}", file=sys.stderr)
 
                     # Stream Epic immediately
-                    epic_data['strat_key'] = parent_link
-                    epic_data['tasks'] = []
-                    send_sse_event(wfile, 'epic', epic_data)
+                    epic_data_copy = epic_data.copy()
+                    epic_data_copy['strat_key'] = strat_key
+                    epic_data_copy['tasks'] = []
+                    send_sse_event(wfile, 'epic', epic_data_copy)
                     total_epics += 1
-                else:
-                    print(f"  WARNING: Epic {epic_key} has Parent Link {parent_link} not in our STRAT list", file=sys.stderr)
             else:
-                print(f"  WARNING: Epic {epic_key} has no Parent Link field", file=sys.stderr)
+                print(f"  WARNING: Epic {epic_key} has no Parent Link or Document relationship to our STRATs", file=sys.stderr)
 
     # Step 3: Batch fetch all Tasks for all Epics
     tasks_by_epic = {}

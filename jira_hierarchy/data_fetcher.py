@@ -94,7 +94,7 @@ def fetch_strats_for_rfe(rfe_key, jira_pat):
 
 def fetch_epics_for_strat(strat_key, jira_pat):
     """
-    Fetch Epics linked to a STRAT
+    Fetch Epics linked to a STRAT via Parent Link or "Is Documented By" relationship
 
     Args:
         strat_key: STRAT issue key
@@ -114,6 +114,47 @@ def fetch_epics_for_strat(strat_key, jira_pat):
     # Include customfield_12313140 (Parent Link) in the field list
     field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,customfield_12313140'
     epic_issues = run_jira_query(epics_jql, field_list, jira_pat)
+
+    # Track epic keys we've already found to avoid duplicates
+    existing_epic_keys = {epic['key'] for epic in epic_issues}
+
+    # Also fetch the STRAT to check for "Is Documented By" issue links
+    # Request issuelinks with expand to get linked issue details
+    try:
+        strat_data = get_jira_issue(strat_key, fields='issuelinks', jira_pat=jira_pat)
+    except Exception as e:
+        print(f"Warning: Failed to fetch issuelinks for {strat_key}: {e}", file=sys.stderr)
+        strat_data = None
+
+    # Find Epics linked via "Is Documented By" relationship
+    if strat_data:
+        issue_links = strat_data.get('fields', {}).get('issuelinks', [])
+
+        for link in issue_links:
+            link_type = link.get('type', {}).get('name', '')
+
+            # Check for "Document" link type
+            if 'document' in link_type.lower():
+                # When STRAT "is documented by" Epic, the Epic is in the inwardIssue
+                # (The Epic "documents" the STRAT from Epic's perspective)
+                inward_issue = link.get('inwardIssue', {})
+
+                # Check if the inward issue is an Epic
+                issue_type = inward_issue.get('fields', {}).get('issuetype', {}).get('name')
+                if issue_type == 'Epic':
+                    epic_key = inward_issue.get('key')
+                    status = inward_issue.get('fields', {}).get('status', {}).get('name')
+
+                    # Only add if not Closed/Resolved and not already in our list
+                    if epic_key and status not in ['Closed', 'Resolved'] and epic_key not in existing_epic_keys:
+                        # Fetch full Epic details with all fields we need
+                        try:
+                            epic_data = get_jira_issue(epic_key, fields=field_list, jira_pat=jira_pat)
+                            if epic_data:
+                                epic_issues.append(epic_data)
+                                existing_epic_keys.add(epic_key)
+                        except Exception as e:
+                            print(f"Warning: Failed to fetch Epic {epic_key}: {e}", file=sys.stderr)
 
     return [build_issue_data(epic, 'epic') for epic in epic_issues]
 
