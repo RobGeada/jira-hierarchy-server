@@ -43,13 +43,14 @@ def build_issue_data(issue, issue_type='rfe'):
     }
 
 
-def fetch_rfes(component, jira_pat):
+def fetch_rfes(component, jira_pat, show_closed=False):
     """
     Fetch RFEs for a given component
 
     Args:
         component: Component name to filter by
         jira_pat: Personal Access Token
+        show_closed: Include closed RFEs in results
 
     Returns:
         List of RFE issue dicts
@@ -57,10 +58,11 @@ def fetch_rfes(component, jira_pat):
     rfes_jql = (
         f'project = RHAIRFE '
         f'AND issuetype = "Feature Request" '
-        f'AND component = "{component}" '
-        f'AND status NOT IN (Closed, Resolved) '
-        f'ORDER BY priority DESC, created DESC'
+        f'AND component = "{component}"'
     )
+    if not show_closed:
+        rfes_jql += ' AND status NOT IN (Closed, Resolved)'
+    rfes_jql += ' ORDER BY priority DESC, created DESC'
 
     field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components'
     rfe_issues = run_jira_query(rfes_jql, field_list, jira_pat)

@@ -1495,6 +1495,28 @@
                     <input type="text" id="configComponent" required placeholder="e.g., AI Safety">
                     <small style="color: #6B778C; font-size: 12px;">Filter RFEs by this component</small>
                 </div>
+                <div class="form-group">
+                    <label>Show Closed Items</label>
+                    <small style="color: #6B778C; font-size: 12px; display: block; margin-bottom: 12px;">Select which closed items to display in the hierarchy</small>
+                    <div style="background: #F4F5F7; border-radius: 3px; padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <label style="display: flex; align-items: center; font-weight: normal; cursor: pointer; user-select: none;">
+                            <input type="checkbox" id="showClosedRFEs" style="width: 16px; height: 16px; margin-right: 8px; cursor: pointer;">
+                            <span style="font-size: 14px;">RFEs</span>
+                        </label>
+                        <label style="display: flex; align-items: center; font-weight: normal; cursor: pointer; user-select: none;">
+                            <input type="checkbox" id="showClosedSTRATs" style="width: 16px; height: 16px; margin-right: 8px; cursor: pointer;">
+                            <span style="font-size: 14px;">STRATs</span>
+                        </label>
+                        <label style="display: flex; align-items: center; font-weight: normal; cursor: pointer; user-select: none;">
+                            <input type="checkbox" id="showClosedEpics" style="width: 16px; height: 16px; margin-right: 8px; cursor: pointer;">
+                            <span style="font-size: 14px;">Epics</span>
+                        </label>
+                        <label style="display: flex; align-items: center; font-weight: normal; cursor: pointer; user-select: none;">
+                            <input type="checkbox" id="showClosedTasks" style="width: 16px; height: 16px; margin-right: 8px; cursor: pointer;">
+                            <span style="font-size: 14px;">Tasks</span>
+                        </label>
+                    </div>
+                </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-cancel" onclick="closeModal('configModal')">Cancel</button>
                     <button type="submit" class="btn-submit" id="configSubmitBtn">Save Settings</button>
@@ -1641,12 +1663,28 @@
             const pat = localStorage.getItem('jira_pat');
             const component = localStorage.getItem('jira_component') || 'AI Safety';
             const topLevel = localStorage.getItem('jira_top_level') || 'rfe';
-            return { pat, component, topLevel };
+            const showClosedRFEs = localStorage.getItem('show_closed_rfes') === 'true';
+            const showClosedSTRATs = localStorage.getItem('show_closed_strats') === 'true';
+            const showClosedEpics = localStorage.getItem('show_closed_epics') === 'true';
+            const showClosedTasks = localStorage.getItem('show_closed_tasks') === 'true';
+            return {
+                pat,
+                component,
+                topLevel,
+                showClosedRFEs,
+                showClosedSTRATs,
+                showClosedEpics,
+                showClosedTasks
+            };
         }
 
-        function saveConfig(pat, component) {
+        function saveConfig(pat, component, showClosedRFEs, showClosedSTRATs, showClosedEpics, showClosedTasks) {
             localStorage.setItem('jira_pat', pat);
             localStorage.setItem('jira_component', component);
+            localStorage.setItem('show_closed_rfes', showClosedRFEs);
+            localStorage.setItem('show_closed_strats', showClosedSTRATs);
+            localStorage.setItem('show_closed_epics', showClosedEpics);
+            localStorage.setItem('show_closed_tasks', showClosedTasks);
         }
 
         function saveTopLevel(topLevel) {
@@ -1683,6 +1721,10 @@
             const config = loadConfig();
             document.getElementById('configPAT').value = config.pat || '';
             document.getElementById('configComponent').value = config.component || 'AI Safety';
+            document.getElementById('showClosedRFEs').checked = config.showClosedRFEs || false;
+            document.getElementById('showClosedSTRATs').checked = config.showClosedSTRATs || false;
+            document.getElementById('showClosedEpics').checked = config.showClosedEpics || false;
+            document.getElementById('showClosedTasks').checked = config.showClosedTasks || false;
             document.getElementById('configModal').classList.add('active');
         }
 
@@ -1691,11 +1733,20 @@
             const oldConfig = loadConfig();
             const pat = document.getElementById('configPAT').value;
             const component = document.getElementById('configComponent').value;
-            saveConfig(pat, component);
+            const showClosedRFEs = document.getElementById('showClosedRFEs').checked;
+            const showClosedSTRATs = document.getElementById('showClosedSTRATs').checked;
+            const showClosedEpics = document.getElementById('showClosedEpics').checked;
+            const showClosedTasks = document.getElementById('showClosedTasks').checked;
+
+            saveConfig(pat, component, showClosedRFEs, showClosedSTRATs, showClosedEpics, showClosedTasks);
             closeModal('configModal');
 
-            // Auto-refresh if component changed
-            if (oldConfig.component !== component) {
+            // Auto-refresh if component or closed items settings changed
+            if (oldConfig.component !== component ||
+                oldConfig.showClosedRFEs !== showClosedRFEs ||
+                oldConfig.showClosedSTRATs !== showClosedSTRATs ||
+                oldConfig.showClosedEpics !== showClosedEpics ||
+                oldConfig.showClosedTasks !== showClosedTasks) {
                 refreshData();
             }
         }
@@ -1901,7 +1952,11 @@
             const params = new URLSearchParams({
                 pat: config.pat,
                 component: config.component,
-                top_level: config.topLevel
+                top_level: config.topLevel,
+                show_closed_rfes: config.showClosedRFEs || false,
+                show_closed_strats: config.showClosedSTRATs || false,
+                show_closed_epics: config.showClosedEpics || false,
+                show_closed_tasks: config.showClosedTasks || false
             });
             eventSource = new EventSource('/api/hierarchy/stream?' + params.toString());
 

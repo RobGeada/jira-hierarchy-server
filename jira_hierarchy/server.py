@@ -496,6 +496,10 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
         pat = params.get('pat', [None])[0]
         component = params.get('component', ['AI Safety'])[0]
         top_level = params.get('top_level', ['rfe'])[0]
+        show_closed_rfes = params.get('show_closed_rfes', ['false'])[0].lower() == 'true'
+        show_closed_strats = params.get('show_closed_strats', ['false'])[0].lower() == 'true'
+        show_closed_epics = params.get('show_closed_epics', ['false'])[0].lower() == 'true'
+        show_closed_tasks = params.get('show_closed_tasks', ['false'])[0].lower() == 'true'
 
         if not pat:
             pat = os.getenv('JIRA_PAT')
@@ -511,7 +515,9 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
         try:
-            stream_hierarchy(self.wfile, pat, component, top_level)
+            stream_hierarchy(self.wfile, pat, component, top_level,
+                           show_closed_rfes, show_closed_strats,
+                           show_closed_epics, show_closed_tasks)
         except Exception as e:
             print(f"Error streaming hierarchy: {e}", file=sys.stderr)
             traceback.print_exc()

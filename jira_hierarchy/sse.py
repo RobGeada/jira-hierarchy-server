@@ -24,7 +24,9 @@ def send_sse_event(wfile, event_type, data):
     wfile.flush()
 
 
-def stream_hierarchy(wfile, jira_pat, component="AI Safety", top_level="rfe"):
+def stream_hierarchy(wfile, jira_pat, component="AI Safety", top_level="rfe",
+                     show_closed_rfes=False, show_closed_strats=False,
+                     show_closed_epics=False, show_closed_tasks=False):
     """
     Fetch hierarchy and stream data as Server-Sent Events
 
@@ -33,16 +35,25 @@ def stream_hierarchy(wfile, jira_pat, component="AI Safety", top_level="rfe"):
         jira_pat: Personal Access Token
         component: Component name to filter by
         top_level: Top level to show ('rfe' or 'strat')
+        show_closed_rfes: Include closed RFEs in results
+        show_closed_strats: Include closed STRATs in results
+        show_closed_epics: Include closed Epics in results
+        show_closed_tasks: Include closed Tasks in results
     """
     print(f"Streaming {component} hierarchy from JIRA (top level: {top_level})...", file=sys.stderr)
 
     if top_level == 'strat':
-        stream_hierarchy_strat_first(wfile, jira_pat, component)
+        stream_hierarchy_strat_first(wfile, jira_pat, component,
+                                    show_closed_strats, show_closed_epics, show_closed_tasks)
     else:
-        stream_hierarchy_rfe_first(wfile, jira_pat, component)
+        stream_hierarchy_rfe_first(wfile, jira_pat, component,
+                                  show_closed_rfes, show_closed_strats,
+                                  show_closed_epics, show_closed_tasks)
 
 
-def stream_hierarchy_rfe_first(wfile, jira_pat, component="AI Safety"):
+def stream_hierarchy_rfe_first(wfile, jira_pat, component="AI Safety",
+                               show_closed_rfes=False, show_closed_strats=False,
+                               show_closed_epics=False, show_closed_tasks=False):
     """Stream hierarchy with RFEs as top level"""
 
     from .jira_client import run_jira_query
@@ -56,7 +67,7 @@ def stream_hierarchy_rfe_first(wfile, jira_pat, component="AI Safety"):
     # Step 1: Batch fetch all RFEs and stream them immediately
     print("Fetching all RFEs...", file=sys.stderr)
     send_sse_event(wfile, 'progress', {'message': 'Loading RFEs...'})
-    rfes = fetch_rfes(component, jira_pat)
+    rfes = fetch_rfes(component, jira_pat, show_closed=show_closed_rfes)
     print(f"Found {len(rfes)} RFEs", file=sys.stderr)
 
     if not rfes:
@@ -79,9 +90,10 @@ def stream_hierarchy_rfe_first(wfile, jira_pat, component="AI Safety"):
     strats_jql = (
         f'project = RHAISTRAT '
         f'AND (issueFunction in linkedIssuesOf("key in ({",".join(rfe_keys)})", "is cloned by") '
-        f'OR issueFunction in linkedIssuesOf("key in ({",".join(rfe_keys)})", "clones")) '
-        f'AND status NOT IN (Closed, Resolved)'
+        f'OR issueFunction in linkedIssuesOf("key in ({",".join(rfe_keys)})", "clones"))'
     )
+    if not show_closed_strats:
+        strats_jql += ' AND status NOT IN (Closed, Resolved)'
     field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,issuelinks'
     strat_issues = run_jira_query(strats_jql, field_list, jira_pat)
     print(f"Found {len(strat_issues)} STRATs total", file=sys.stderr)
@@ -140,9 +152,10 @@ def stream_hierarchy_rfe_first(wfile, jira_pat, component="AI Safety"):
         epics_jql = (
             f'project = RHOAIENG '
             f'AND issuetype = Epic '
-            f'AND "Parent Link" in ({",".join(strat_keys_list)}) '
-            f'AND status NOT IN (Closed, Resolved)'
+            f'AND "Parent Link" in ({",".join(strat_keys_list)})'
         )
+        if not show_closed_epics:
+            epics_jql += ' AND status NOT IN (Closed, Resolved)'
         # Include customfield_12313140 (Parent Link) in the field list
         epic_field_list = field_list + ',customfield_12313140'
         epic_issues = run_jira_query(epics_jql, epic_field_list, jira_pat)
@@ -167,7 +180,8 @@ def stream_hierarchy_rfe_first(wfile, jira_pat, component="AI Safety"):
                         epic_key = inward_issue.get('key')
                         status = inward_issue.get('fields', {}).get('status', {}).get('name')
                         print(f"      Epic {epic_key}, status={status}", file=sys.stderr)
-                        if epic_key and status not in ['Closed', 'Resolved']:
+                        # Include epic if show_closed_epics is True OR status is not closed
+                        if epic_key and (show_closed_epics or status not in ['Closed', 'Resolved']):
                             if epic_key not in documented_by_epics:
                                 documented_by_epics[epic_key] = []
                             documented_by_epics[epic_key].append(strat_key)
@@ -243,9 +257,10 @@ def stream_hierarchy_rfe_first(wfile, jira_pat, component="AI Safety"):
         send_sse_event(wfile, 'progress', {'message': 'Loading Tasks...'})
         tasks_jql = (
             f'"Epic Link" in ({",".join(epic_keys_list)}) '
-            f'AND issuetype NOT IN (Epic, Feature, "Feature Request") '
-            f'AND status NOT IN (Closed, Resolved)'
+            f'AND issuetype NOT IN (Epic, Feature, "Feature Request")'
         )
+        if not show_closed_tasks:
+            tasks_jql += ' AND status NOT IN (Closed, Resolved)'
         # Include customfield_12311140 (Epic Link) in the field list
         task_field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components,customfield_12311140'
         task_issues = run_jira_query(tasks_jql, task_field_list, jira_pat)
@@ -310,7 +325,9 @@ def stream_hierarchy_rfe_first(wfile, jira_pat, component="AI Safety"):
     print(f"  Tasks:  {total_tasks} (fetched {len(task_issues) if epic_keys_list else 0}, orphaned: {orphaned_tasks})", file=sys.stderr)
 
 
-def stream_hierarchy_strat_first(wfile, jira_pat, component="AI Safety"):
+def stream_hierarchy_strat_first(wfile, jira_pat, component="AI Safety",
+                                 show_closed_strats=False, show_closed_epics=False,
+                                 show_closed_tasks=False):
     """Stream hierarchy with STRATs as top level"""
 
     from .jira_client import run_jira_query
@@ -325,10 +342,12 @@ def stream_hierarchy_strat_first(wfile, jira_pat, component="AI Safety"):
     send_sse_event(wfile, 'progress', {'message': 'Loading STRATs...'})
     strats_jql = (
         f'project = RHAISTRAT '
-        f'AND component = "{component}" '
-        f'AND status NOT IN (Closed, Resolved) '
-        f'ORDER BY priority DESC, created DESC'
+        f'AND component = "{component}"'
     )
+    if not show_closed_strats:
+        strats_jql += ' AND status NOT IN (Closed, Resolved)'
+    strats_jql += ' ORDER BY priority DESC, created DESC'
+
     field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,issuelinks'
     strat_issues = run_jira_query(strats_jql, field_list, jira_pat)
     print(f"Found {len(strat_issues)} STRATs", file=sys.stderr)
@@ -362,9 +381,10 @@ def stream_hierarchy_strat_first(wfile, jira_pat, component="AI Safety"):
         epics_jql = (
             f'project = RHOAIENG '
             f'AND issuetype = Epic '
-            f'AND "Parent Link" in ({",".join(strat_keys_list)}) '
-            f'AND status NOT IN (Closed, Resolved)'
+            f'AND "Parent Link" in ({",".join(strat_keys_list)})'
         )
+        if not show_closed_epics:
+            epics_jql += ' AND status NOT IN (Closed, Resolved)'
         epic_field_list = field_list + ',customfield_12313140'
         epic_issues = run_jira_query(epics_jql, epic_field_list, jira_pat)
         print(f"Found {len(epic_issues)} Epics via Parent Link", file=sys.stderr)
@@ -382,7 +402,8 @@ def stream_hierarchy_strat_first(wfile, jira_pat, component="AI Safety"):
                     if inward_issue.get('fields', {}).get('issuetype', {}).get('name') == 'Epic':
                         epic_key = inward_issue.get('key')
                         status = inward_issue.get('fields', {}).get('status', {}).get('name')
-                        if epic_key and status not in ['Closed', 'Resolved']:
+                        # Include epic if show_closed_epics is True OR status is not closed
+                        if epic_key and (show_closed_epics or status not in ['Closed', 'Resolved']):
                             if epic_key not in documented_by_epics:
                                 documented_by_epics[epic_key] = []
                             documented_by_epics[epic_key].append(strat_key)
@@ -447,9 +468,10 @@ def stream_hierarchy_strat_first(wfile, jira_pat, component="AI Safety"):
         send_sse_event(wfile, 'progress', {'message': 'Loading Tasks...'})
         tasks_jql = (
             f'"Epic Link" in ({",".join(epic_keys_list)}) '
-            f'AND issuetype NOT IN (Epic, Feature, "Feature Request") '
-            f'AND status NOT IN (Closed, Resolved)'
+            f'AND issuetype NOT IN (Epic, Feature, "Feature Request")'
         )
+        if not show_closed_tasks:
+            tasks_jql += ' AND status NOT IN (Closed, Resolved)'
         task_field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components,customfield_12311140'
         task_issues = run_jira_query(tasks_jql, task_field_list, jira_pat)
         print(f"Found {len(task_issues)} Tasks total", file=sys.stderr)
