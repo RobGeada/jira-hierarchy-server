@@ -48,17 +48,27 @@ def fetch_rfes(component, jira_pat, show_closed=False):
     Fetch RFEs for a given component
 
     Args:
-        component: Component name to filter by
+        component: Component name(s) to filter by (comma-separated for multiple)
         jira_pat: Personal Access Token
         show_closed: Include closed RFEs in results
 
     Returns:
         List of RFE issue dicts
     """
+    # Handle comma-separated components
+    components = [c.strip() for c in component.split(',')]
+    if len(components) > 1:
+        # Multiple components: use IN clause
+        component_list = ', '.join([f'"{c}"' for c in components])
+        component_clause = f'component IN ({component_list})'
+    else:
+        # Single component: use equality
+        component_clause = f'component = "{components[0]}"'
+
     rfes_jql = (
         f'project = RHAIRFE '
         f'AND issuetype = "Feature Request" '
-        f'AND component = "{component}"'
+        f'AND {component_clause}'
     )
     if not show_closed:
         rfes_jql += ' AND status NOT IN (Closed, Resolved)'

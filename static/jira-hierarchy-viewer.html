@@ -1530,8 +1530,8 @@
                 </div>
                 <div class="form-group">
                     <label for="configComponent">Component Filter *</label>
-                    <input type="text" id="configComponent" required placeholder="e.g., AI Safety">
-                    <small style="color: #6B778C; font-size: 12px;">Filter RFEs by this component</small>
+                    <input type="text" id="configComponent" required placeholder="e.g., AI Safety, Trust & Safety">
+                    <small style="color: #6B778C; font-size: 12px;">Filter RFEs by component(s). Use comma-separated list for multiple (e.g., "AI Safety, Trust & Safety")</small>
                 </div>
                 <div class="form-group">
                     <label>Show Closed Items</label>
@@ -1766,7 +1766,7 @@
             document.getElementById('configModal').classList.add('active');
         }
 
-        function handleSaveConfig(event) {
+        async function handleSaveConfig(event) {
             event.preventDefault();
             const oldConfig = loadConfig();
             const pat = document.getElementById('configPAT').value;
@@ -1776,16 +1776,52 @@
             const showClosedEpics = document.getElementById('showClosedEpics').checked;
             const showClosedTasks = document.getElementById('showClosedTasks').checked;
 
-            saveConfig(pat, component, showClosedRFEs, showClosedSTRATs, showClosedEpics, showClosedTasks);
-            closeModal('configModal');
+            const submitBtn = document.getElementById('configSubmitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Validating...';
 
-            // Auto-refresh if component or closed items settings changed
-            if (oldConfig.component !== component ||
-                oldConfig.showClosedRFEs !== showClosedRFEs ||
-                oldConfig.showClosedSTRATs !== showClosedSTRATs ||
-                oldConfig.showClosedEpics !== showClosedEpics ||
-                oldConfig.showClosedTasks !== showClosedTasks) {
-                refreshData();
+            try {
+                // Validate components before saving
+                const params = new URLSearchParams({
+                    components: component,
+                    pat: pat
+                });
+
+                const response = await fetch('/api/validate-components?' + params.toString());
+                const result = await response.json();
+
+                if (!result.valid) {
+                    // Show error with invalid components
+                    const invalidList = result.invalid_components.join(', ');
+                    const availableList = result.available_components.slice(0, 10).join(', ');
+                    const moreCount = result.available_components.length - 10;
+                    const moreText = moreCount > 0 ? ` and ${moreCount} more` : '';
+
+                    showError(
+                        `Invalid component(s): <strong>${invalidList}</strong><br><br>` +
+                        `Available components: ${availableList}${moreText}`
+                    );
+                    return;
+                }
+
+                // Components are valid, save config
+                saveConfig(pat, component, showClosedRFEs, showClosedSTRATs, showClosedEpics, showClosedTasks);
+                closeModal('configModal');
+
+                // Auto-refresh if component or closed items settings changed
+                if (oldConfig.component !== component ||
+                    oldConfig.showClosedRFEs !== showClosedRFEs ||
+                    oldConfig.showClosedSTRATs !== showClosedSTRATs ||
+                    oldConfig.showClosedEpics !== showClosedEpics ||
+                    oldConfig.showClosedTasks !== showClosedTasks) {
+                    loadData();
+                }
+            } catch (error) {
+                console.error('Component validation error:', error);
+                showError('Failed to validate components: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Save Settings';
             }
         }
 

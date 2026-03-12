@@ -39,6 +39,8 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             self.reload_item()
         elif parsed_path.path == '/api/strats-by-assignee':
             self.get_strats_by_assignee()
+        elif parsed_path.path == '/api/validate-components':
+            self.validate_components()
         elif parsed_path.path == '/health':
             self.send_json({'status': 'ok'})
         else:
@@ -464,6 +466,83 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
 
         except Exception as e:
             print(f"Error fetching STRATs by assignee: {e}", file=sys.stderr)
+            traceback.print_exc()
+            self.send_json({'error': str(e)}, status=500)
+
+    def validate_components(self):
+        """Validate that components exist in JIRA"""
+        try:
+            parsed_path = urlparse(self.path)
+            params = parse_qs(parsed_path.query)
+
+            components_str = params.get('components', [None])[0]
+            pat = params.get('pat', [None])[0]
+
+            if not components_str:
+                self.send_json({'error': 'Missing components parameter'}, status=400)
+                return
+
+            if not pat:
+                pat = os.getenv('JIRA_PAT')
+
+            if not pat:
+                self.send_json({'error': 'Personal Access Token not provided'}, status=400)
+                return
+
+            # Split components and validate each one
+            components = [c.strip() for c in components_str.split(',')]
+
+            from .jira_client import run_jira_query
+
+            # Query both RFE and STRAT projects to get all components
+            rfe_components = set()
+            strat_components = set()
+
+            # Get components from RFE project
+            try:
+                rfe_jql = 'project = RHAIRFE AND component is not EMPTY ORDER BY component ASC'
+                rfe_issues = run_jira_query(rfe_jql, 'components', pat)
+                for issue in rfe_issues:
+                    components_list = issue.get('fields', {}).get('components', [])
+                    for comp in components_list:
+                        rfe_components.add(comp.get('name'))
+            except Exception as e:
+                print(f"Warning: Could not fetch RFE components: {e}", file=sys.stderr)
+
+            # Get components from STRAT project
+            try:
+                strat_jql = 'project = RHAISTRAT AND component is not EMPTY ORDER BY component ASC'
+                strat_issues = run_jira_query(strat_jql, 'components', pat)
+                for issue in strat_issues:
+                    components_list = issue.get('fields', {}).get('components', [])
+                    for comp in components_list:
+                        strat_components.add(comp.get('name'))
+            except Exception as e:
+                print(f"Warning: Could not fetch STRAT components: {e}", file=sys.stderr)
+
+            # Combine all valid components
+            all_components = rfe_components | strat_components
+
+            # Check each requested component
+            invalid_components = []
+            for component in components:
+                if component not in all_components:
+                    invalid_components.append(component)
+
+            if invalid_components:
+                self.send_json({
+                    'valid': False,
+                    'invalid_components': invalid_components,
+                    'available_components': sorted(list(all_components))
+                })
+            else:
+                self.send_json({
+                    'valid': True,
+                    'components': components
+                })
+
+        except Exception as e:
+            print(f"Error validating components: {e}", file=sys.stderr)
             traceback.print_exc()
             self.send_json({'error': str(e)}, status=500)
 

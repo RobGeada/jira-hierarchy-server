@@ -33,7 +33,7 @@ def stream_hierarchy(wfile, jira_pat, component="AI Safety", top_level="rfe",
     Args:
         wfile: Write file object
         jira_pat: Personal Access Token
-        component: Component name to filter by
+        component: Component name(s) to filter by (comma-separated for multiple)
         top_level: Top level to show ('rfe' or 'strat')
         show_closed_rfes: Include closed RFEs in results
         show_closed_strats: Include closed STRATs in results
@@ -54,7 +54,11 @@ def stream_hierarchy(wfile, jira_pat, component="AI Safety", top_level="rfe",
 def stream_hierarchy_rfe_first(wfile, jira_pat, component="AI Safety",
                                show_closed_rfes=False, show_closed_strats=False,
                                show_closed_epics=False, show_closed_tasks=False):
-    """Stream hierarchy with RFEs as top level"""
+    """Stream hierarchy with RFEs as top level
+
+    Args:
+        component: Component name(s) to filter by (comma-separated for multiple)
+    """
 
     from .jira_client import run_jira_query
 
@@ -328,7 +332,11 @@ def stream_hierarchy_rfe_first(wfile, jira_pat, component="AI Safety",
 def stream_hierarchy_strat_first(wfile, jira_pat, component="AI Safety",
                                  show_closed_strats=False, show_closed_epics=False,
                                  show_closed_tasks=False):
-    """Stream hierarchy with STRATs as top level"""
+    """Stream hierarchy with STRATs as top level
+
+    Args:
+        component: Component name(s) to filter by (comma-separated for multiple)
+    """
 
     from .jira_client import run_jira_query
 
@@ -340,9 +348,20 @@ def stream_hierarchy_strat_first(wfile, jira_pat, component="AI Safety",
     # Step 1: Batch fetch all STRATs with the component filter
     print("Fetching all STRATs...", file=sys.stderr)
     send_sse_event(wfile, 'progress', {'message': 'Loading STRATs...'})
+
+    # Handle comma-separated components
+    components = [c.strip() for c in component.split(',')]
+    if len(components) > 1:
+        # Multiple components: use IN clause
+        component_list = ', '.join([f'"{c}"' for c in components])
+        component_clause = f'component IN ({component_list})'
+    else:
+        # Single component: use equality
+        component_clause = f'component = "{components[0]}"'
+
     strats_jql = (
         f'project = RHAISTRAT '
-        f'AND component = "{component}"'
+        f'AND {component_clause}'
     )
     if not show_closed_strats:
         strats_jql += ' AND status NOT IN (Closed, Resolved)'
