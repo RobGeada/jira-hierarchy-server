@@ -51,6 +51,7 @@
             display: flex;
             gap: 12px;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .btn {
@@ -521,24 +522,50 @@
             max-width: 300px;
         }
 
-        .assignee-filter {
+        .assignee-filter, .filter-level {
             padding: 8px 12px;
             border: 1px solid #DFE1E6;
             border-radius: 4px;
             font-size: 14px;
             background: white;
             cursor: pointer;
-            min-width: 200px;
+            position: relative;
+            z-index: 1;
         }
 
-        .assignee-filter:hover {
+        .assignee-filter {
+            min-width: 180px;
+            max-width: 250px;
+        }
+
+        .filter-level {
+            min-width: 110px;
+            max-width: 150px;
+        }
+
+        .assignee-filter:hover, .filter-level:hover {
             border-color: #0052CC;
         }
 
-        .assignee-filter:focus {
+        .assignee-filter:focus, .filter-level:focus {
             outline: none;
             border-color: #0052CC;
             box-shadow: 0 0 0 2px rgba(0, 82, 204, 0.2);
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .filter-label {
+            font-size: 13px;
+            color: #6B778C;
+            font-weight: 500;
+            white-space: nowrap;
+            pointer-events: none;
         }
 
         .table-header {
@@ -1333,9 +1360,20 @@
             <button class="btn-secondary btn" onclick="collapseAll()">⬆️ Collapse All</button>
             <button class="btn-secondary btn" onclick="showConfigModal()">⚙️ Settings</button>
             <button class="btn-secondary btn" onclick="showStatusUpdateModal()">📝 Status Update</button>
-            <select id="assigneeFilter" onchange="filterByAssignee()" class="assignee-filter">
-                <option value="">All Assignees</option>
-            </select>
+            <div class="filter-group">
+                <span class="filter-label">Filter:</span>
+                <select id="filterLevel" onchange="filterByAssignee()" class="filter-level">
+                    <option value="">No Filter</option>
+                    <option value="rfe">RFEs</option>
+                    <option value="strat">STRATs</option>
+                    <option value="epic">Epics</option>
+                    <option value="task">Tasks</option>
+                </select>
+                <span class="filter-label">assigned to</span>
+                <select id="assigneeFilter" onchange="filterByAssignee()" class="assignee-filter">
+                    <option value="">Select assignee...</option>
+                </select>
+            </div>
             <input type="text" class="filter-input" id="searchInput" placeholder="Search issues..." onkeyup="filterIssues()">
             <span id="loadingIndicator" style="display: none; color: #0052CC; font-size: 14px;">⏳ Loading...</span>
         </div>
@@ -2127,7 +2165,7 @@
             trackAssignee(rfe.assignee, rfe.assignee_username);
             const rfeId = `rfe-${rfe.key}`;
             const rfeHtml = `
-                <div class="tree-item" id="item-${rfe.key}" data-assignee="${rfe.assignee_username || ''}">
+                <div class="tree-item" id="item-${rfe.key}" data-assignee="${rfe.assignee_username || ''}" data-type="rfe">
                     <div class="tree-node rfe empty" id="node-${rfe.key}" onclick="toggleNode('${rfeId}')">
                         <span class="expand-icon">▶</span>
                         <div class="tree-content">
@@ -2151,7 +2189,7 @@
             trackAssignee(strat.assignee, strat.assignee_username);
             const stratId = `strat-${strat.key}`;
             const stratHtml = `
-                <div class="tree-item" id="item-${strat.key}" data-assignee="${strat.assignee_username || ''}">
+                <div class="tree-item" id="item-${strat.key}" data-assignee="${strat.assignee_username || ''}" data-type="strat">
                     <div class="tree-node strat empty" id="node-${strat.key}" onclick="toggleNode('${stratId}')">
                         <span class="expand-icon">▶</span>
                         <div class="tree-content">
@@ -2239,7 +2277,7 @@
             // Create unique ID including parent STRAT to allow same Epic under multiple STRATs
             const epicId = `epic-${epic.strat_key}-${epic.key}`;
             const epicHtml = `
-                <div class="tree-item" id="item-${epic.strat_key}-${epic.key}">
+                <div class="tree-item" id="item-${epic.strat_key}-${epic.key}" data-assignee="${epic.assignee_username || ''}" data-type="epic">
                     <div class="tree-node epic" onclick="toggleNode('${epicId}')">
                         <span class="expand-icon">▶</span>
                         <div class="tree-content">
@@ -2276,7 +2314,7 @@
 
             const taskId = `task-${task.key}`;
             const taskHtml = `
-                <div class="tree-item" id="item-${task.key}">
+                <div class="tree-item" id="item-${task.key}" data-assignee="${task.assignee_username || ''}" data-type="task">
                     <div class="tree-node task" onclick="toggleNode('${taskId}')">
                         <span class="expand-icon">▶</span>
                         <div class="tree-content">
@@ -2887,24 +2925,51 @@
 
         function filterIssues() {
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const allNodes = document.querySelectorAll('.tree-item');
+            const filterLevel = document.getElementById('filterLevel').value;
+            const selectedAssignee = document.getElementById('assigneeFilter').value;
+            const tree = document.getElementById('tree');
+            const allNodes = tree.querySelectorAll('.tree-item');
 
-            allNodes.forEach(item => {
-                const text = item.textContent.toLowerCase();
-                if (text.includes(searchTerm)) {
-                    item.style.display = 'block';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
+            // If no search term, just apply assignee filter
+            if (!searchTerm) {
+                filterByAssignee();
+                return;
+            }
+
+            // Apply search filter
+            if (!filterLevel || !selectedAssignee) {
+                // Only search filter active
+                allNodes.forEach(item => {
+                    const text = item.textContent.toLowerCase();
+                    if (text.includes(searchTerm)) {
+                        item.style.display = 'block';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            } else {
+                // Both filters active - show items that match search AND (are at filter level with assignee OR are ancestors/descendants)
+                // First apply assignee filter
+                filterByAssignee();
+
+                // Then hide items that don't match search (but were shown by assignee filter)
+                allNodes.forEach(item => {
+                    if (item.style.display !== 'none') {
+                        const text = item.textContent.toLowerCase();
+                        if (!text.includes(searchTerm)) {
+                            item.style.display = 'none';
+                        }
+                    }
+                });
+            }
         }
 
         function populateAssigneeFilter() {
             const select = document.getElementById('assigneeFilter');
             if (!select) return;
 
-            // Keep the "All Assignees" option
-            select.innerHTML = '<option value="">All Assignees</option>';
+            // Keep the default option
+            select.innerHTML = '<option value="">Select assignee...</option>';
 
             // Add known assignees sorted by display name
             const sortedAssignees = Array.from(knownAssignees.entries())
@@ -2920,20 +2985,39 @@
 
         function filterByAssignee() {
             const selectedAssignee = document.getElementById('assigneeFilter').value;
+            const filterLevel = document.getElementById('filterLevel').value;
             const tree = document.getElementById('tree');
 
-            // Get all top-level items (direct children of #tree)
-            const topLevelItems = tree.querySelectorAll(':scope > .tree-item');
+            // If no filter level selected or no assignee selected, show everything
+            if (!filterLevel || !selectedAssignee) {
+                const allItems = tree.querySelectorAll('.tree-item');
+                allItems.forEach(item => item.style.display = 'block');
+                return;
+            }
 
-            topLevelItems.forEach(item => {
-                const itemAssignee = item.getAttribute('data-assignee') || '';
+            // Hide everything initially
+            const allItems = tree.querySelectorAll('.tree-item');
+            allItems.forEach(item => item.style.display = 'none');
 
-                if (!selectedAssignee || itemAssignee === selectedAssignee) {
-                    // Show this top-level item and all its children
-                    item.style.display = 'block';
-                } else {
-                    // Hide this top-level item and all its children
-                    item.style.display = 'none';
+            // Find all items at the selected level that match the assignee
+            const matchingItems = tree.querySelectorAll(`.tree-item[data-type="${filterLevel}"][data-assignee="${selectedAssignee}"]`);
+
+            // For each matching item, show it and all its ancestors
+            matchingItems.forEach(matchingItem => {
+                // Show the matching item itself
+                matchingItem.style.display = 'block';
+
+                // Show all its descendants (children at all levels)
+                const descendants = matchingItem.querySelectorAll('.tree-item');
+                descendants.forEach(desc => desc.style.display = 'block');
+
+                // Walk up the tree to show all ancestors
+                let currentElement = matchingItem.parentElement;
+                while (currentElement && currentElement !== tree) {
+                    if (currentElement.classList.contains('tree-item')) {
+                        currentElement.style.display = 'block';
+                    }
+                    currentElement = currentElement.parentElement;
                 }
             });
         }
