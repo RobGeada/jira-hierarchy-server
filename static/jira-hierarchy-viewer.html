@@ -3541,11 +3541,32 @@
                 if (response.ok && result.success) {
                     showSuccess(`Task ${result.task.key} created successfully!`);
                     closeModal('createTaskModal');
-                    // Add the new task directly to the tree
-                    addTaskToTree(result.task);
-                    // Update stats
-                    hierarchyData.metadata.total_tasks++;
-                    updateStats(hierarchyData);
+
+                    // Find the strat_key by looking for the epic container in the DOM
+                    // Epic containers have IDs like: epic-{strat_key}-{epic_key}
+                    const epicContainers = document.querySelectorAll(`[id^="epic-"][id$="-${currentEpicKey}"]`);
+
+                    if (epicContainers.length > 0) {
+                        // Extract strat_key from the container ID
+                        const containerId = epicContainers[0].id;
+                        const match = containerId.match(/^epic-(.+)-([A-Z]+-\d+)$/);
+                        if (match) {
+                            const strat_key = match[1];
+                            result.task.strat_key = strat_key;
+
+                            // Add the new task directly to the tree
+                            addTaskToTree(result.task);
+                            // Update stats
+                            hierarchyData.metadata.total_tasks++;
+                            updateStats(hierarchyData);
+                        } else {
+                            console.error('Could not parse strat_key from container ID:', containerId);
+                            showError('Task created but could not be displayed. Please refresh.');
+                        }
+                    } else {
+                        console.error('Could not find epic container for epic:', currentEpicKey);
+                        showError('Task created but could not be displayed. Please refresh.');
+                    }
                 } else {
                     showError(`Error creating task: ${result.error || 'Unknown error'}`);
                 }
