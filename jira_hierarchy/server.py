@@ -497,13 +497,9 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
                 self.send_json({'error': 'Missing components parameter'}, status=400)
                 return
 
-            if not email:
-                email = os.getenv('JIRA_EMAIL')
-            if not pat:
-                pat = os.getenv('JIRA_PAT')
-
+            # Always use the supplied credentials for validation, not saved ones
             if not email or not pat:
-                self.send_json({'error': 'Email and API Token not provided'}, status=400)
+                self.send_json({'error': 'Email and API Token must be provided for validation'}, status=400)
                 return
 
             # Split components and validate each one
