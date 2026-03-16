@@ -509,36 +509,59 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             # Split components and validate each one
             components = [c.strip() for c in components_str.split(',')]
 
-            from .jira_client import run_jira_query
+            import requests
+            import base64
+            from .config import JIRA_BASE_URL
 
-            # Query both RFE and STRAT projects to get all components
-            rfe_components = set()
-            strat_components = set()
+            # Create auth header
+            auth_string = f"{email}:{pat}"
+            encoded = base64.b64encode(auth_string.encode()).decode()
+            headers = {
+                'Authorization': f'Basic {encoded}',
+                'Accept': 'application/json'
+            }
 
-            # Get components from RFE project
+            # Get components directly from project API (much faster than querying all issues)
+            all_components = set()
+
+            # Get components from RHAIRFE project
             try:
-                rfe_jql = 'project = RHAIRFE AND component is not EMPTY ORDER BY component ASC'
-                rfe_issues = run_jira_query(rfe_jql, 'components', email, pat)
-                for issue in rfe_issues:
-                    components_list = issue.get('fields', {}).get('components', [])
-                    for comp in components_list:
-                        rfe_components.add(comp.get('name'))
+                url = f"{JIRA_BASE_URL}/rest/api/3/project/RHAIRFE/components"
+                response = requests.get(url, headers=headers)
+                if response.status_code == 200:
+                    rfe_comps = response.json()
+                    for comp in rfe_comps:
+                        all_components.add(comp.get('name'))
+                else:
+                    print(f"Warning: Could not fetch RFE components: {response.status_code}", file=sys.stderr)
             except Exception as e:
                 print(f"Warning: Could not fetch RFE components: {e}", file=sys.stderr)
 
-            # Get components from STRAT project
+            # Get components from RHAISTRAT project
             try:
-                strat_jql = 'project = RHAISTRAT AND component is not EMPTY ORDER BY component ASC'
-                strat_issues = run_jira_query(strat_jql, 'components', email, pat)
-                for issue in strat_issues:
-                    components_list = issue.get('fields', {}).get('components', [])
-                    for comp in components_list:
-                        strat_components.add(comp.get('name'))
+                url = f"{JIRA_BASE_URL}/rest/api/3/project/RHAISTRAT/components"
+                response = requests.get(url, headers=headers)
+                if response.status_code == 200:
+                    strat_comps = response.json()
+                    for comp in strat_comps:
+                        all_components.add(comp.get('name'))
+                else:
+                    print(f"Warning: Could not fetch STRAT components: {response.status_code}", file=sys.stderr)
             except Exception as e:
                 print(f"Warning: Could not fetch STRAT components: {e}", file=sys.stderr)
 
-            # Combine all valid components
-            all_components = rfe_components | strat_components
+            # Get components from RHOAIENG project (for tasks)
+            try:
+                url = f"{JIRA_BASE_URL}/rest/api/3/project/RHOAIENG/components"
+                response = requests.get(url, headers=headers)
+                if response.status_code == 200:
+                    eng_comps = response.json()
+                    for comp in eng_comps:
+                        all_components.add(comp.get('name'))
+                else:
+                    print(f"Warning: Could not fetch RHOAIENG components: {response.status_code}", file=sys.stderr)
+            except Exception as e:
+                print(f"Warning: Could not fetch RHOAIENG components: {e}", file=sys.stderr)
 
             # Check each requested component
             invalid_components = []

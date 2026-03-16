@@ -91,6 +91,9 @@ def stream_hierarchy_rfe_first(wfile, jira_email, jira_pat, component="AI Safety
         })
         return
 
+    # Sort RFEs by last update time (most recent first)
+    rfes.sort(key=lambda x: x.get('updated', ''), reverse=True)
+
     # Stream RFEs immediately as they're fetched
     for rfe_data in rfes:
         rfe_data['strats'] = []
@@ -121,6 +124,9 @@ def stream_hierarchy_rfe_first(wfile, jira_email, jira_pat, component="AI Safety
     field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,issuelinks'
     strat_issues = run_jira_query(strats_jql, field_list, jira_email, jira_pat)
     print(f"Found {len(strat_issues)} STRATs total", file=sys.stderr)
+
+    # Sort STRATs by last update time (most recent first)
+    strat_issues.sort(key=lambda x: x.get('fields', {}).get('updated', ''), reverse=True)
 
     rfe_keys = [rfe['key'] for rfe in rfes]
 
@@ -220,6 +226,9 @@ def stream_hierarchy_rfe_first(wfile, jira_email, jira_pat, component="AI Safety
 
         print(f"Found {len(epic_issues)} Epics total", file=sys.stderr)
 
+        # Sort Epics by last update time (most recent first)
+        epic_issues.sort(key=lambda x: x.get('fields', {}).get('updated', ''), reverse=True)
+
         for epic in epic_issues:
             from .data_fetcher import build_issue_data
             epic_data = build_issue_data(epic, 'epic')
@@ -307,6 +316,9 @@ def stream_hierarchy_rfe_first(wfile, jira_email, jira_pat, component="AI Safety
     task_field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components,customfield_10014'
     task_issues = run_jira_query(tasks_jql, task_field_list, jira_email, jira_pat, wfile=wfile, progress_message_prefix="Loading Tasks")
     print(f"Found {len(task_issues)} Tasks total for component", file=sys.stderr)
+
+    # Sort Tasks by last update time (most recent first)
+    task_issues.sort(key=lambda x: x.get('fields', {}).get('updated', ''), reverse=True)
 
     for task in task_issues:
         from .data_fetcher import build_issue_data
@@ -424,6 +436,9 @@ def stream_hierarchy_strat_first(wfile, jira_email, jira_pat, component="AI Safe
         })
         return
 
+    # Sort STRATs by last update time (most recent first)
+    strat_issues.sort(key=lambda x: x.get('fields', {}).get('updated', ''), reverse=True)
+
     # Stream STRATs immediately
     strat_keys_list = []
     for strat in strat_issues:
@@ -487,6 +502,9 @@ def stream_hierarchy_strat_first(wfile, jira_email, jira_pat, component="AI Safe
                     print(f"  Warning: Failed to fetch Epic {epic_key}: {e}", file=sys.stderr)
 
         print(f"Found {len(epic_issues)} Epics total", file=sys.stderr)
+
+        # Sort Epics by last update time (most recent first)
+        epic_issues.sort(key=lambda x: x.get('fields', {}).get('updated', ''), reverse=True)
 
         for epic in epic_issues:
             from .data_fetcher import build_issue_data
@@ -566,6 +584,9 @@ def stream_hierarchy_strat_first(wfile, jira_email, jira_pat, component="AI Safe
     task_field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components,customfield_10014'
     task_issues = run_jira_query(tasks_jql, task_field_list, jira_email, jira_pat, wfile=wfile, progress_message_prefix="Loading Tasks")
     print(f"Found {len(task_issues)} Tasks total for component", file=sys.stderr)
+
+    # Sort Tasks by last update time (most recent first)
+    task_issues.sort(key=lambda x: x.get('fields', {}).get('updated', ''), reverse=True)
 
     for task in task_issues:
         from .data_fetcher import build_issue_data
