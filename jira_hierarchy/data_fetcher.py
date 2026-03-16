@@ -1,6 +1,7 @@
 """Data fetching and hierarchy building logic"""
 
 import sys
+from datetime import datetime, timedelta
 from .jira_client import run_jira_query, create_jira_issue, get_jira_issue
 
 
@@ -25,7 +26,7 @@ def build_issue_data(issue, issue_type='rfe'):
         "status": fields.get('status', {}).get('name', 'Unknown'),
         "priority": fields.get('priority', {}).get('name', 'Undefined'),
         "assignee": assignee.get('displayName', 'Unassigned') if assignee else 'Unassigned',
-        "assignee_username": assignee.get('name') if assignee else None,
+        "assignee_username": assignee.get('accountId') if assignee else None,  # JIRA Cloud uses accountId
         "reporter": reporter.get('displayName', 'Unknown') if reporter else 'Unknown',
         "description": fields.get('description', ''),
         "labels": fields.get('labels', []),
@@ -43,18 +44,23 @@ def build_issue_data(issue, issue_type='rfe'):
     }
 
 
-def fetch_rfes(component, jira_pat, show_closed=False):
+def fetch_rfes(component, jira_email, jira_pat, show_closed=False, max_age_days=365):
     """
     Fetch RFEs for a given component
 
     Args:
         component: Component name(s) to filter by (comma-separated for multiple)
-        jira_pat: Personal Access Token
+        jira_email: User email address
+        jira_pat: API token
         show_closed: Include closed RFEs in results
+        max_age_days: Maximum age in days for tickets to include
 
     Returns:
         List of RFE issue dicts
     """
+    # Calculate cutoff date for age filter
+    cutoff_date = (datetime.now() - timedelta(days=max_age_days)).strftime('%Y-%m-%d')
+
     # Handle comma-separated components
     components = [c.strip() for c in component.split(',')]
     if len(components) > 1:
@@ -68,25 +74,27 @@ def fetch_rfes(component, jira_pat, show_closed=False):
     rfes_jql = (
         f'project = RHAIRFE '
         f'AND issuetype = "Feature Request" '
-        f'AND {component_clause}'
+        f'AND {component_clause} '
+        f'AND created >= {cutoff_date}'
     )
     if not show_closed:
         rfes_jql += ' AND status NOT IN (Closed, Resolved)'
     rfes_jql += ' ORDER BY priority DESC, created DESC'
 
     field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components'
-    rfe_issues = run_jira_query(rfes_jql, field_list, jira_pat)
+    rfe_issues = run_jira_query(rfes_jql, field_list, jira_email, jira_pat)
 
     return [build_issue_data(rfe, 'rfe') for rfe in rfe_issues]
 
 
-def fetch_strats_for_rfe(rfe_key, jira_pat):
+def fetch_strats_for_rfe(rfe_key, jira_email, jira_pat):
     """
     Fetch STRATs linked to an RFE (all issue types in RHAISTRAT project)
 
     Args:
         rfe_key: RFE issue key
-        jira_pat: Personal Access Token
+        jira_email: User email address
+        jira_pat: API token
 
     Returns:
         List of STRAT issue dicts
@@ -99,23 +107,24 @@ def fetch_strats_for_rfe(rfe_key, jira_pat):
     )
 
     field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components'
-    strat_issues = run_jira_query(strats_jql, field_list, jira_pat)
+    strat_issues = run_jira_query(strats_jql, field_list, jira_email, jira_pat)
 
     return [build_issue_data(strat, 'strat') for strat in strat_issues]
 
 
-def fetch_epics_for_strat(strat_key, jira_pat):
+def fetch_epics_for_strat(strat_key, jira_email, jira_pat):
     """
     Fetch Epics linked to a STRAT via Parent Link or "Is Documented By" relationship
 
     Args:
         strat_key: STRAT issue key
-        jira_pat: Personal Access Token
+        jira_email: User email address
+        jira_pat: API token
 
     Returns:
         List of Epic issue dicts
     """
-    # Query by Parent Link custom field since Epics link to STRATs via customfield_12313140
+    # Query by Parent Link - use standard 'parent' field in JIRA Cloud
     epics_jql = (
         f'project = RHOAIENG '
         f'AND issuetype = Epic '
@@ -123,9 +132,9 @@ def fetch_epics_for_strat(strat_key, jira_pat):
         f'AND status NOT IN (Closed, Resolved)'
     )
 
-    # Include customfield_12313140 (Parent Link) in the field list
-    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,customfield_12313140'
-    epic_issues = run_jira_query(epics_jql, field_list, jira_pat)
+    # Include parent field (standard field in JIRA Cloud)
+    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,parent'
+    epic_issues = run_jira_query(epics_jql, field_list, jira_email, jira_pat)
 
     # Track epic keys we've already found to avoid duplicates
     existing_epic_keys = {epic['key'] for epic in epic_issues}
@@ -133,7 +142,7 @@ def fetch_epics_for_strat(strat_key, jira_pat):
     # Also fetch the STRAT to check for "Is Documented By" issue links
     # Request issuelinks with expand to get linked issue details
     try:
-        strat_data = get_jira_issue(strat_key, fields='issuelinks', jira_pat=jira_pat)
+        strat_data = get_jira_issue(strat_key, fields='issuelinks', jira_email=jira_email, jira_pat=jira_pat)
     except Exception as e:
         print(f"Warning: Failed to fetch issuelinks for {strat_key}: {e}", file=sys.stderr)
         strat_data = None
@@ -161,7 +170,7 @@ def fetch_epics_for_strat(strat_key, jira_pat):
                     if epic_key and status not in ['Closed', 'Resolved'] and epic_key not in existing_epic_keys:
                         # Fetch full Epic details with all fields we need
                         try:
-                            epic_data = get_jira_issue(epic_key, fields=field_list, jira_pat=jira_pat)
+                            epic_data = get_jira_issue(epic_key, fields=field_list, jira_email=jira_email, jira_pat=jira_pat)
                             if epic_data:
                                 epic_issues.append(epic_data)
                                 existing_epic_keys.add(epic_key)
@@ -171,13 +180,14 @@ def fetch_epics_for_strat(strat_key, jira_pat):
     return [build_issue_data(epic, 'epic') for epic in epic_issues]
 
 
-def fetch_tasks_for_epic(epic_key, jira_pat):
+def fetch_tasks_for_epic(epic_key, jira_email, jira_pat):
     """
     Fetch Tasks linked to an Epic
 
     Args:
         epic_key: Epic issue key
-        jira_pat: Personal Access Token
+        jira_email: User email address
+        jira_pat: API token
 
     Returns:
         List of Task issue dicts
@@ -188,11 +198,11 @@ def fetch_tasks_for_epic(epic_key, jira_pat):
         f'AND status NOT IN (Closed, Resolved)'
     )
 
-    # Include customfield_12311140 (Epic Link) in the field list
-    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components,customfield_12311140'
+    # Include customfield_10014 (Epic Link) in the field list
+    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components,customfield_10014'
 
     try:
-        task_issues = run_jira_query(tasks_jql, field_list, jira_pat)
+        task_issues = run_jira_query(tasks_jql, field_list, jira_email, jira_pat)
         tasks = []
         for task in task_issues:
             task_data = build_issue_data(task, 'task')
@@ -204,7 +214,7 @@ def fetch_tasks_for_epic(epic_key, jira_pat):
         return []
 
 
-def create_epic(summary, description, strat_key, component=None, assignee=None, jira_pat=None):
+def create_epic(summary, description, strat_key, component=None, assignee=None, jira_email=None, jira_pat=None):
     """
     Create a new Epic and link it to a STRAT
 
@@ -214,14 +224,14 @@ def create_epic(summary, description, strat_key, component=None, assignee=None, 
         strat_key: Parent STRAT key
         component: Component name to assign
         assignee: Assignee email or username
-        jira_pat: Personal Access Token
+        jira_email: User email address
+        jira_pat: API token
 
     Returns:
         Epic data dict
     """
     custom_fields = {
-        "customfield_12311141": summary,  # Epic Name
-        "customfield_12313140": strat_key  # Parent Link to STRAT
+        "parent": {"key": strat_key}  # Parent Link to STRAT (standard field in JIRA Cloud)
     }
 
     # Add component if provided
@@ -238,20 +248,21 @@ def create_epic(summary, description, strat_key, component=None, assignee=None, 
         description=description,
         issue_type="Epic",
         custom_fields=custom_fields,
+        jira_email=jira_email,
         jira_pat=jira_pat
     )
 
     print(f"Created epic {epic_key} linked to STRAT {strat_key}", file=sys.stderr)
 
     # Fetch and return full issue data
-    issue_data = get_jira_issue(epic_key, 'summary,status,priority,assignee,reporter,description,labels,components,created,updated', jira_pat)
+    issue_data = get_jira_issue(epic_key, 'summary,status,priority,assignee,reporter,description,labels,components,created,updated', jira_email, jira_pat)
     epic_data = build_issue_data(issue_data, 'epic')
     epic_data['strat_key'] = strat_key
 
     return epic_data
 
 
-def create_task(summary, description, epic_key, issue_type, component=None, assignee=None, jira_pat=None):
+def create_task(summary, description, epic_key, issue_type, component=None, assignee=None, jira_email=None, jira_pat=None):
     """
     Create a new Task and link it to an Epic
 
@@ -262,13 +273,14 @@ def create_task(summary, description, epic_key, issue_type, component=None, assi
         issue_type: Issue type (Story, Spike, etc.)
         component: Component name to assign
         assignee: Assignee email or username
-        jira_pat: Personal Access Token
+        jira_email: User email address
+        jira_pat: API token
 
     Returns:
         Task data dict
     """
     custom_fields = {
-        "customfield_12311140": epic_key  # Epic Link
+        "customfield_10014": epic_key  # Epic Link (JIRA Cloud)
     }
 
     # Add component if provided
@@ -285,13 +297,14 @@ def create_task(summary, description, epic_key, issue_type, component=None, assi
         description=description,
         issue_type=issue_type,
         custom_fields=custom_fields,
+        jira_email=jira_email,
         jira_pat=jira_pat
     )
 
     print(f"Created task {task_key} under epic {epic_key}", file=sys.stderr)
 
     # Fetch and return full issue data
-    issue_data = get_jira_issue(task_key, 'summary,status,priority,assignee,reporter,description,labels,components,created,updated,issuetype', jira_pat)
+    issue_data = get_jira_issue(task_key, 'summary,status,priority,assignee,reporter,description,labels,components,created,updated,issuetype', jira_email, jira_pat)
     task_data = build_issue_data(issue_data, 'task')
     task_data['epic_key'] = epic_key
     task_data['issuetype'] = issue_data['fields'].get('issuetype', {}).get('name', 'Task')

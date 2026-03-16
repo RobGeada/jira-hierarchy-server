@@ -684,6 +684,78 @@
             margin-bottom: 8px;
         }
 
+        .modal-tabs {
+            display: flex;
+            border-bottom: 2px solid #DFE1E6;
+            margin-bottom: 20px;
+            gap: 4px;
+        }
+
+        .modal-tab {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #6B778C;
+            transition: all 0.2s;
+        }
+
+        .modal-tab:hover {
+            color: #172B4D;
+            background: #F4F5F7;
+        }
+
+        .modal-tab.active {
+            color: #0052CC;
+            border-bottom-color: #0052CC;
+        }
+
+        .modal-tab-content {
+            display: none;
+        }
+
+        .modal-tab-content.active {
+            display: block;
+        }
+
+        .assignee-checkbox-list {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #F4F5F7;
+            border-radius: 3px;
+            padding: 12px;
+        }
+
+        .assignee-checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .assignee-checkbox-item:hover {
+            background: #EBECF0;
+        }
+
+        .assignee-checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        .assignee-checkbox-item label {
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: normal;
+            flex: 1;
+        }
+
         .form-group {
             margin-bottom: 16px;
         }
@@ -1341,6 +1413,126 @@
             font-weight: 600;
             margin-bottom: 4px;
         }
+
+        /* Standup View Styles */
+        .standup-view {
+            padding: 24px;
+        }
+
+        .assignee-group {
+            margin-bottom: 32px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #DFE1E6;
+            overflow: hidden;
+        }
+
+        .assignee-header {
+            background: #F4F5F7;
+            padding: 16px 20px;
+            border-bottom: 2px solid #DFE1E6;
+            font-size: 18px;
+            font-weight: 600;
+            color: #172B4D;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .assignee-header:hover {
+            background: #EBECF0;
+        }
+
+        .assignee-header-text {
+            flex: 1;
+        }
+
+        .assignee-collapse-icon {
+            font-size: 14px;
+            color: #6B778C;
+            transition: transform 0.2s;
+        }
+
+        .assignee-collapse-icon.expanded {
+            transform: rotate(180deg);
+        }
+
+        .assignee-task-list {
+            padding: 16px 20px;
+            display: none;
+        }
+
+        .assignee-task-list.expanded {
+            display: block;
+        }
+
+        .standup-task {
+            margin-bottom: 20px;
+            padding: 16px;
+            background: #F4F5F7;
+            border-radius: 4px;
+            border-left: 4px solid #0052CC;
+        }
+
+        .standup-task:last-child {
+            margin-bottom: 0;
+        }
+
+        .standup-task-key {
+            font-weight: 600;
+            font-size: 14px;
+            color: #0052CC;
+            margin-bottom: 8px;
+        }
+
+        .standup-task-summary {
+            font-size: 15px;
+            font-weight: 500;
+            color: #172B4D;
+            margin-bottom: 12px;
+        }
+
+        .standup-hierarchy {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 13px;
+            color: #6B778C;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #DFE1E6;
+        }
+
+        .standup-hierarchy-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .standup-hierarchy-label {
+            font-weight: 600;
+            min-width: 60px;
+        }
+
+        .standup-hierarchy-value {
+            color: #172B4D;
+        }
+
+        .standup-task-meta {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        .standup-empty {
+            padding: 40px;
+            text-align: center;
+            color: #6B778C;
+        }
     </style>
 </head>
 <body>
@@ -1355,6 +1547,7 @@
 
         <div class="controls">
             <button class="btn" onclick="loadData()" id="refreshBtn">🔄 Refresh Data</button>
+            <button class="btn-secondary btn" onclick="toggleView()" id="viewToggleBtn">View: Hierarchy</button>
             <button class="btn-secondary btn" onclick="toggleTopLevel()" id="topLevelBtn">Group By: RFEs</button>
             <button class="btn-secondary btn" onclick="expandAll()">⬇️ Expand All</button>
             <button class="btn-secondary btn" onclick="collapseAll()">⬆️ Collapse All</button>
@@ -1364,10 +1557,10 @@
                 <span class="filter-label">Filter:</span>
                 <select id="filterLevel" onchange="filterByAssignee()" class="filter-level">
                     <option value="">No Filter</option>
-                    <option value="rfe">RFEs</option>
-                    <option value="strat">STRATs</option>
-                    <option value="epic">Epics</option>
-                    <option value="task">Tasks</option>
+                    <option value="task">Tasks & Up</option>
+                    <option value="epic">Epics & Up</option>
+                    <option value="strat">STRATs & Up</option>
+                    <option value="rfe">RFEs Only</option>
                 </select>
                 <span class="filter-label">assigned to</span>
                 <select id="assigneeFilter" onchange="filterByAssignee()" class="assignee-filter">
@@ -1522,16 +1715,33 @@
                 <h2>Settings</h2>
                 <p>Configure your JIRA connection and filters</p>
             </div>
+
+            <div class="modal-tabs">
+                <button type="button" class="modal-tab active" onclick="switchSettingsTab('general')">General</button>
+                <button type="button" class="modal-tab" onclick="switchSettingsTab('assignees')">Assignees</button>
+            </div>
+
             <form id="configForm" onsubmit="handleSaveConfig(event)">
+                <div id="tab-general" class="modal-tab-content active">
                 <div class="form-group">
-                    <label for="configPAT">Personal Access Token *</label>
-                    <input type="password" id="configPAT" required placeholder="Enter your JIRA PAT">
-                    <small style="color: #6B778C; font-size: 12px;">Stored locally in your browser only</small>
+                    <label for="configEmail">Email Address *</label>
+                    <input type="email" id="configEmail" required placeholder="your.email@redhat.com">
+                    <small style="color: #6B778C; font-size: 12px;">Your JIRA account email address</small>
+                </div>
+                <div class="form-group">
+                    <label for="configPAT">API Token *</label>
+                    <input type="password" id="configPAT" required placeholder="Enter your JIRA API token">
+                    <small style="color: #6B778C; font-size: 12px;">Stored locally in your browser only. Generate at https://id.atlassian.com/manage-profile/security/api-tokens</small>
                 </div>
                 <div class="form-group">
                     <label for="configComponent">Component Filter *</label>
                     <input type="text" id="configComponent" required placeholder="e.g., AI Safety, Trust & Safety">
                     <small style="color: #6B778C; font-size: 12px;">Filter RFEs by component(s). Use comma-separated list for multiple (e.g., "AI Safety, Trust & Safety")</small>
+                </div>
+                <div class="form-group">
+                    <label for="configMaxAgeDays">Maximum Ticket Age (days)</label>
+                    <input type="number" id="configMaxAgeDays" min="1" max="3650" placeholder="365">
+                    <small style="color: #6B778C; font-size: 12px;">Only show tickets created within the last N days. Default: 365 (1 year)</small>
                 </div>
                 <div class="form-group">
                     <label>Show Closed Items</label>
@@ -1555,6 +1765,34 @@
                         </label>
                     </div>
                 </div>
+                </div>
+
+                <div id="tab-assignees" class="modal-tab-content">
+                    <div class="form-group">
+                        <label>Visible Assignees</label>
+                        <small style="color: #6B778C; font-size: 12px; display: block; margin-bottom: 12px;">
+                            Select which assignees to show in filters and standup view. Only tasks assigned to selected people will be fetched from JIRA. Leave all unchecked to fetch all tasks.
+                        </small>
+                        <div class="assignee-checkbox-list" id="assigneeCheckboxList">
+                            <p style="color: #6B778C; font-style: italic; padding: 20px; text-align: center;">
+                                Load data first to see available assignees
+                            </p>
+                        </div>
+                        <div style="margin-top: 12px; display: flex; gap: 8px;">
+                            <button type="button" class="btn-secondary btn" onclick="selectAllAssignees()" style="flex: 1;">Select All</button>
+                            <button type="button" class="btn-secondary btn" onclick="deselectAllAssignees()" style="flex: 1;">Deselect All</button>
+                        </div>
+                        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #DFE1E6;">
+                            <button type="button" class="btn-secondary btn" onclick="refreshAssigneeList()" style="width: 100%;" id="refreshAssigneesBtn">
+                                🔄 Refresh Assignee List (fetch all assignees)
+                            </button>
+                            <small style="color: #6B778C; font-size: 11px; display: block; margin-top: 8px;">
+                                Fetches all tasks without assignee filter to discover all possible assignees.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="modal-footer">
                     <button type="button" class="btn-cancel" onclick="closeModal('configModal')">Cancel</button>
                     <button type="submit" class="btn-submit" id="configSubmitBtn">Save Settings</button>
@@ -1629,14 +1867,15 @@
     <script>
         // JIRA Configuration
         const JIRA_CONFIG = {
-            baseUrl: 'https://issues.redhat.com',
+            baseUrl: 'https://redhat.atlassian.net',
             // User will need to provide authentication
             // For now, we'll use a proxy or generate static data
         };
 
-        let hierarchyData = {rfes: [], strats: [], metadata: {total_rfes: 0, total_strats: 0, total_epics: 0, total_tasks: 0}};
+        let hierarchyData = {rfes: [], strats: [], allTasks: [], metadata: {total_rfes: 0, total_strats: 0, total_epics: 0, total_tasks: 0}};
         let eventSource = null;
         let knownAssignees = new Map(); // Track assignees: username -> display name
+        let currentView = 'hierarchy'; // 'hierarchy' or 'standup'
 
         // Track if we're currently loading
         let isLoading = false;
@@ -1698,27 +1937,47 @@
 
         // Configuration management
         function loadConfig() {
+            const email = localStorage.getItem('jira_email');
             const pat = localStorage.getItem('jira_pat');
             const component = localStorage.getItem('jira_component') || 'AI Safety';
             const topLevel = localStorage.getItem('jira_top_level') || 'rfe';
+            const maxAgeDays = parseInt(localStorage.getItem('jira_max_age_days') || '365', 10);
             const showClosedRFEs = localStorage.getItem('show_closed_rfes') === 'true';
             const showClosedSTRATs = localStorage.getItem('show_closed_strats') === 'true';
             const showClosedEpics = localStorage.getItem('show_closed_epics') === 'true';
             const showClosedTasks = localStorage.getItem('show_closed_tasks') === 'true';
+
+            // Load selected assignees from jira_config JSON
+            let selectedAssignees = [];
+            try {
+                const configJson = localStorage.getItem('jira_config');
+                if (configJson) {
+                    const config = JSON.parse(configJson);
+                    selectedAssignees = config.selectedAssignees || [];
+                }
+            } catch (e) {
+                console.warn('Error loading jira_config:', e);
+            }
+
             return {
+                email,
                 pat,
                 component,
                 topLevel,
+                maxAgeDays,
                 showClosedRFEs,
                 showClosedSTRATs,
                 showClosedEpics,
-                showClosedTasks
+                showClosedTasks,
+                selectedAssignees
             };
         }
 
-        function saveConfig(pat, component, showClosedRFEs, showClosedSTRATs, showClosedEpics, showClosedTasks) {
+        function saveConfig(email, pat, component, maxAgeDays, showClosedRFEs, showClosedSTRATs, showClosedEpics, showClosedTasks) {
+            localStorage.setItem('jira_email', email);
             localStorage.setItem('jira_pat', pat);
             localStorage.setItem('jira_component', component);
+            localStorage.setItem('jira_max_age_days', maxAgeDays);
             localStorage.setItem('show_closed_rfes', showClosedRFEs);
             localStorage.setItem('show_closed_strats', showClosedSTRATs);
             localStorage.setItem('show_closed_epics', showClosedEpics);
@@ -1727,6 +1986,272 @@
 
         function saveTopLevel(topLevel) {
             localStorage.setItem('jira_top_level', topLevel);
+        }
+
+        function toggleView() {
+            currentView = currentView === 'hierarchy' ? 'standup' : 'hierarchy';
+
+            const viewBtn = document.getElementById('viewToggleBtn');
+            const topLevelBtn = document.getElementById('topLevelBtn');
+            const tableHeader = document.getElementById('tableHeader');
+            const expandAllBtn = document.querySelector('button[onclick="expandAll()"]');
+            const collapseAllBtn = document.querySelector('button[onclick="collapseAll()"]');
+            const filterGroup = document.querySelector('.filter-group');
+            const searchInput = document.getElementById('searchInput');
+
+            if (currentView === 'standup') {
+                viewBtn.textContent = 'View: Standup';
+                topLevelBtn.style.display = 'none';
+                tableHeader.style.display = 'none';
+                if (expandAllBtn) expandAllBtn.style.display = 'none';
+                if (collapseAllBtn) collapseAllBtn.style.display = 'none';
+                if (filterGroup) filterGroup.style.display = 'none';
+                if (searchInput) searchInput.style.display = 'none';
+                renderStandupView();
+            } else {
+                viewBtn.textContent = 'View: Hierarchy';
+                topLevelBtn.style.display = '';
+                tableHeader.style.display = 'flex';
+                if (expandAllBtn) expandAllBtn.style.display = '';
+                if (collapseAllBtn) collapseAllBtn.style.display = '';
+                if (filterGroup) filterGroup.style.display = 'flex';
+                if (searchInput) searchInput.style.display = '';
+                renderHierarchyView();
+            }
+        }
+
+        function renderStandupView() {
+            const content = document.getElementById('content');
+
+            // Collect all tasks with their hierarchy context
+            const tasksByAssignee = new Map();
+
+            // Helper function to find epic, strat, and rfe for a task
+            const findTaskContext = (task) => {
+                let epic = null;
+                let strat = null;
+                let rfe = null;
+
+                if (currentTopLevel === 'strat') {
+                    // STRAT mode
+                    strat = hierarchyData.strats?.find(s => s.key === task.strat_key);
+                    if (strat) {
+                        epic = strat.epics?.find(e => e.key === task.epic_key);
+                    }
+                } else {
+                    // RFE mode
+                    rfe = hierarchyData.rfes?.find(r => r.key === task.rfe_key);
+                    if (rfe) {
+                        strat = rfe.strats?.find(s => s.key === task.strat_key);
+                        if (strat) {
+                            epic = strat.epics?.find(e => e.key === task.epic_key);
+                        }
+                    }
+                }
+
+                return { epic, strat, rfe };
+            };
+
+            // Process all tasks from the flat allTasks array
+            hierarchyData.allTasks?.forEach(task => {
+                const assignee = task.assignee_username || 'unassigned';
+                const displayName = task.assignee || 'Unassigned';
+
+                if (!tasksByAssignee.has(assignee)) {
+                    tasksByAssignee.set(assignee, {
+                        displayName: displayName,
+                        tasks: []
+                    });
+                }
+
+                // Find the task's context in the hierarchy
+                const { epic, strat, rfe } = findTaskContext(task);
+
+                tasksByAssignee.get(assignee).tasks.push({
+                    ...task,
+                    epic: epic,
+                    strat: strat,
+                    rfe: rfe
+                });
+            });
+
+            // Build HTML
+            if (tasksByAssignee.size === 0) {
+                content.innerHTML = `
+                    <div class="standup-view">
+                        <div class="standup-empty">
+                            <h3>No Tasks Found</h3>
+                            <p>No tasks were found in the current view.</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort assignees by display name and filter by selected assignees
+            const sortedAssignees = Array.from(tasksByAssignee.entries())
+                .filter(([username]) => isAssigneeVisible(username))
+                .sort((a, b) => a[1].displayName.localeCompare(b[1].displayName));
+
+            // Check if we have any visible assignees
+            if (sortedAssignees.length === 0) {
+                content.innerHTML = `
+                    <div class="standup-view">
+                        <div class="standup-empty">
+                            <h3>No Visible Assignees</h3>
+                            <p>No tasks found for selected assignees. Check Settings → Assignees to adjust visibility.</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '<div class="standup-view">';
+
+            sortedAssignees.forEach(([assigneeUsername, data]) => {
+                // Sort tasks by last update time (most recent first)
+                const sortedTasks = data.tasks.sort((a, b) => {
+                    const dateA = new Date(a.updated || 0);
+                    const dateB = new Date(b.updated || 0);
+                    return dateB - dateA; // Descending order (newest first)
+                });
+
+                html += `
+                    <div class="assignee-group">
+                        <div class="assignee-header" onclick="toggleAssigneeSection('${assigneeUsername}')">
+                            <div class="assignee-header-text">
+                                ${data.displayName} (${data.tasks.length} ${data.tasks.length === 1 ? 'task' : 'tasks'})
+                            </div>
+                            <span class="assignee-collapse-icon" id="icon-${assigneeUsername}">▼</span>
+                        </div>
+                        <div class="assignee-task-list" id="tasks-${assigneeUsername}">
+                `;
+
+                sortedTasks.forEach(task => {
+                    html += `
+                        <div class="standup-task">
+                            <div class="standup-task-key">
+                                <a href="${JIRA_CONFIG.baseUrl}/browse/${task.key}" target="_blank" style="color: #0052CC; text-decoration: none;">${task.key}</a>
+                            </div>
+                            <div class="standup-task-summary">${task.summary}</div>
+                            <div class="standup-task-meta">
+                                <span class="issue-status ${getStatusClass(task.status)}" onclick="event.stopPropagation(); showStatusDropdown('${task.key}', this)">${task.status}</span>
+                                <span class="issue-priority ${getPriorityClass(task.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${task.key}', this)">${task.priority}</span>
+                            </div>
+                            <div class="standup-hierarchy">
+                    `;
+
+                    if (task.epic) {
+                        html += `
+                                <div class="standup-hierarchy-item">
+                                    <span class="standup-hierarchy-label">Epic:</span>
+                                    <span class="standup-hierarchy-value">
+                                        <a href="${JIRA_CONFIG.baseUrl}/browse/${task.epic.key}" target="_blank" style="color: #172B4D; text-decoration: none;">${task.epic.key}</a> - ${task.epic.summary}
+                                    </span>
+                                </div>
+                        `;
+                    }
+
+                    if (task.strat) {
+                        html += `
+                                <div class="standup-hierarchy-item">
+                                    <span class="standup-hierarchy-label">STRAT:</span>
+                                    <span class="standup-hierarchy-value">
+                                        <a href="${JIRA_CONFIG.baseUrl}/browse/${task.strat.key}" target="_blank" style="color: #172B4D; text-decoration: none;">${task.strat.key}</a> - ${task.strat.summary}
+                                    </span>
+                                </div>
+                        `;
+                    }
+
+                    if (task.rfe) {
+                        html += `
+                                <div class="standup-hierarchy-item">
+                                    <span class="standup-hierarchy-label">RFE:</span>
+                                    <span class="standup-hierarchy-value">
+                                        <a href="${JIRA_CONFIG.baseUrl}/browse/${task.rfe.key}" target="_blank" style="color: #172B4D; text-decoration: none;">${task.rfe.key}</a> - ${task.rfe.summary}
+                                    </span>
+                                </div>
+                        `;
+                    }
+
+                    if (!task.epic && !task.strat && !task.rfe) {
+                        html += `
+                                <div class="standup-hierarchy-item">
+                                    <span class="standup-hierarchy-value" style="color: #6B778C; font-style: italic;">No hierarchy information</span>
+                                </div>
+                        `;
+                    }
+
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            content.innerHTML = html;
+        }
+
+        function toggleAssigneeSection(assigneeUsername) {
+            const taskList = document.getElementById(`tasks-${assigneeUsername}`);
+            const icon = document.getElementById(`icon-${assigneeUsername}`);
+
+            // Check if this section is currently expanded
+            const isExpanded = taskList.classList.contains('expanded');
+
+            // Collapse all sections
+            document.querySelectorAll('.assignee-task-list').forEach(list => {
+                list.classList.remove('expanded');
+            });
+            document.querySelectorAll('.assignee-collapse-icon').forEach(ic => {
+                ic.classList.remove('expanded');
+            });
+
+            // If this section was not expanded, expand it
+            if (!isExpanded) {
+                taskList.classList.add('expanded');
+                icon.classList.add('expanded');
+            }
+        }
+
+        function renderHierarchyView() {
+            // Clear content and rebuild tree from hierarchyData
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="tree" id="tree"></div>';
+            const tree = document.getElementById('tree');
+
+            if (currentTopLevel === 'strat') {
+                // Render STRAT-first view
+                hierarchyData.strats?.forEach(strat => {
+                    addStratToTree(strat, true);
+                    strat.epics?.forEach(epic => {
+                        addEpicToTree(epic);
+                        epic.tasks?.forEach(task => {
+                            addTaskToTree(task);
+                        });
+                    });
+                });
+            } else {
+                // Render RFE-first view
+                hierarchyData.rfes?.forEach(rfe => {
+                    addRfeToTree(tree, rfe);
+                    rfe.strats?.forEach(strat => {
+                        addStratToTree(strat, false);
+                        strat.epics?.forEach(epic => {
+                            addEpicToTree(epic);
+                            epic.tasks?.forEach(task => {
+                                addTaskToTree(task);
+                            });
+                        });
+                    });
+                });
+            }
         }
 
         function toggleTopLevel() {
@@ -1755,22 +2280,179 @@
             loadData();
         }
 
+        function switchSettingsTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.modal-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.modal-tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        function populateAssigneeCheckboxList() {
+            const container = document.getElementById('assigneeCheckboxList');
+            const config = loadConfig();
+            const selectedAssignees = config.selectedAssignees || [];
+
+            if (knownAssignees.size === 0) {
+                container.innerHTML = `
+                    <p style="color: #6B778C; font-style: italic; padding: 20px; text-align: center;">
+                        Load data first to see available assignees
+                    </p>
+                `;
+                return;
+            }
+
+            const sortedAssignees = Array.from(knownAssignees.entries())
+                .sort((a, b) => a[1].localeCompare(b[1]));
+
+            let html = '';
+            sortedAssignees.forEach(([username, displayName]) => {
+                const isChecked = selectedAssignees.length === 0 || selectedAssignees.includes(username);
+                html += `
+                    <div class="assignee-checkbox-item">
+                        <input type="checkbox"
+                               id="assignee-${username}"
+                               value="${username}"
+                               ${isChecked ? 'checked' : ''}
+                               onchange="saveSelectedAssignees()">
+                        <label for="assignee-${username}">${displayName} (${username})</label>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function selectAllAssignees() {
+            document.querySelectorAll('#assigneeCheckboxList input[type="checkbox"]').forEach(cb => {
+                cb.checked = true;
+            });
+            saveSelectedAssignees();
+        }
+
+        function deselectAllAssignees() {
+            document.querySelectorAll('#assigneeCheckboxList input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+            });
+            saveSelectedAssignees();
+        }
+
+        async function refreshAssigneeList() {
+            const btn = document.getElementById('refreshAssigneesBtn');
+            const config = loadConfig();
+
+            if (!config.pat) {
+                showError('Please configure your Personal Access Token first');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Fetching all assignees...';
+
+            try {
+                // Fetch tasks without assignee filter to discover all assignees
+                const params = new URLSearchParams({
+                    email: config.email,
+                    pat: config.pat,
+                    component: config.component,
+                    top_level: config.topLevel,
+                    max_age_days: config.maxAgeDays || 365,
+                    show_closed_tasks: false,
+                    fetch_assignees_only: 'true'  // Special flag to only fetch task assignees
+                });
+
+                const response = await fetch('/api/fetch-assignees?' + params.toString());
+                const result = await response.json();
+
+                if (response.ok && result.assignees) {
+                    // Merge with existing known assignees
+                    result.assignees.forEach(({username, displayName}) => {
+                        trackAssignee(displayName, username);
+                    });
+
+                    // Refresh the checkbox list
+                    refreshAssigneeCheckboxList();
+
+                    showSuccess(`Found ${result.assignees.length} assignees`);
+                } else {
+                    showError(`Error fetching assignees: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Error fetching assignees: ${error.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 Refresh Assignee List (fetch all assignees)';
+            }
+        }
+
+        function refreshAssigneeCheckboxList() {
+            // Wrapper to refresh the assignee checkbox list
+            populateAssigneeCheckboxList();
+        }
+
+        function saveSelectedAssignees() {
+            const selected = [];
+            document.querySelectorAll('#assigneeCheckboxList input[type="checkbox"]:checked').forEach(cb => {
+                selected.push(cb.value);
+            });
+
+            const config = loadConfig();
+            config.selectedAssignees = selected;
+            localStorage.setItem('jira_config', JSON.stringify(config));
+
+            // Re-populate assignee filter to reflect changes
+            populateAssigneeFilter();
+        }
+
+        function getSelectedAssignees() {
+            const config = loadConfig();
+            return config.selectedAssignees || [];
+        }
+
+        function isAssigneeVisible(username) {
+            const selected = getSelectedAssignees();
+            // If nothing is selected, show all
+            if (selected.length === 0) return true;
+            // Otherwise, only show selected assignees
+            return selected.includes(username);
+        }
+
         function showConfigModal() {
             const config = loadConfig();
+            document.getElementById('configEmail').value = config.email || '';
             document.getElementById('configPAT').value = config.pat || '';
             document.getElementById('configComponent').value = config.component || 'AI Safety';
+            document.getElementById('configMaxAgeDays').value = config.maxAgeDays || 365;
             document.getElementById('showClosedRFEs').checked = config.showClosedRFEs || false;
             document.getElementById('showClosedSTRATs').checked = config.showClosedSTRATs || false;
             document.getElementById('showClosedEpics').checked = config.showClosedEpics || false;
             document.getElementById('showClosedTasks').checked = config.showClosedTasks || false;
+
+            // Populate assignee list
+            populateAssigneeCheckboxList();
+
+            // Reset to general tab
+            document.querySelectorAll('.modal-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.modal-tab-content').forEach(content => content.classList.remove('active'));
+            document.querySelector('.modal-tab').classList.add('active');
+            document.getElementById('tab-general').classList.add('active');
+
             document.getElementById('configModal').classList.add('active');
         }
 
-        async function handleSaveConfig(event) {
+        async function handleSaveConfig(event, skipValidation = false) {
             event.preventDefault();
             const oldConfig = loadConfig();
+            const email = document.getElementById('configEmail').value;
             const pat = document.getElementById('configPAT').value;
             const component = document.getElementById('configComponent').value;
+            const maxAgeDays = parseInt(document.getElementById('configMaxAgeDays').value || '365', 10);
             const showClosedRFEs = document.getElementById('showClosedRFEs').checked;
             const showClosedSTRATs = document.getElementById('showClosedSTRATs').checked;
             const showClosedEpics = document.getElementById('showClosedEpics').checked;
@@ -1778,47 +2460,70 @@
 
             const submitBtn = document.getElementById('configSubmitBtn');
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Validating...';
+            submitBtn.textContent = skipValidation ? 'Saving...' : 'Validating...';
 
             try {
-                // Validate components before saving
-                const params = new URLSearchParams({
-                    components: component,
-                    pat: pat
-                });
+                // Skip validation if requested
+                if (!skipValidation) {
+                    // Try to validate components
+                    const params = new URLSearchParams({
+                        components: component,
+                        email: email,
+                        pat: pat
+                    });
 
-                const response = await fetch('/api/validate-components?' + params.toString());
-                const result = await response.json();
+                    try {
+                        const response = await fetch('/api/validate-components?' + params.toString());
+                        const result = await response.json();
 
-                if (!result.valid) {
-                    // Show error with invalid components
-                    const invalidList = result.invalid_components.join(', ');
-                    const availableList = result.available_components.slice(0, 10).join(', ');
-                    const moreCount = result.available_components.length - 10;
-                    const moreText = moreCount > 0 ? ` and ${moreCount} more` : '';
+                        if (!result.valid) {
+                            // Show warning with invalid components and option to save anyway
+                            const invalidList = result.invalid_components.join(', ');
+                            const availableList = result.available_components.slice(0, 10).join(', ');
+                            const moreCount = result.available_components.length - 10;
+                            const moreText = moreCount > 0 ? ` and ${moreCount} more` : '';
 
-                    showError(
-                        `Invalid component(s): <strong>${invalidList}</strong><br><br>` +
-                        `Available components: ${availableList}${moreText}`
-                    );
-                    return;
+                            // Ask user if they want to save anyway
+                            if (confirm(
+                                `WARNING: Invalid component(s): ${invalidList}\n\n` +
+                                `Available components: ${availableList}${moreText}\n\n` +
+                                `Do you want to save these settings anyway?`
+                            )) {
+                                // User confirmed, proceed with save
+                            } else {
+                                // User cancelled
+                                return;
+                            }
+                        }
+                    } catch (validationError) {
+                        // Validation failed (likely auth issue) - warn but allow saving
+                        console.warn('Component validation failed:', validationError);
+                        if (confirm(
+                            `Could not validate components (possibly authentication issue).\n\n` +
+                            `Do you want to save these settings anyway?`
+                        )) {
+                            // User confirmed, proceed with save
+                        } else {
+                            // User cancelled
+                            return;
+                        }
+                    }
                 }
 
-                // Components are valid, save config
-                saveConfig(pat, component, showClosedRFEs, showClosedSTRATs, showClosedEpics, showClosedTasks);
+                // Save config
+                saveConfig(email, pat, component, maxAgeDays, showClosedRFEs, showClosedSTRATs, showClosedEpics, showClosedTasks);
                 closeModal('configModal');
+                showSuccess('Settings saved successfully!');
 
-                // Auto-refresh if component or closed items settings changed
+                // Auto-refresh if component, max age, or closed items settings changed
                 if (oldConfig.component !== component ||
+                    oldConfig.maxAgeDays !== maxAgeDays ||
                     oldConfig.showClosedRFEs !== showClosedRFEs ||
                     oldConfig.showClosedSTRATs !== showClosedSTRATs ||
                     oldConfig.showClosedEpics !== showClosedEpics ||
                     oldConfig.showClosedTasks !== showClosedTasks) {
                     loadData();
                 }
-            } catch (error) {
-                console.error('Component validation error:', error);
-                showError('Failed to validate components: ' + error.message);
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Save Settings';
@@ -1859,6 +2564,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
+                        email: config.email,
                         pat: config.pat,
                         issue_key: currentCommentIssueKey,
                         comment: commentBody
@@ -1986,7 +2692,7 @@
             const oldData = hierarchyData;
 
             // Reset data
-            hierarchyData = {rfes: [], strats: [], metadata: {total_rfes: 0, total_strats: 0, total_epics: 0, total_tasks: 0}};
+            hierarchyData = {rfes: [], strats: [], allTasks: [], metadata: {total_rfes: 0, total_strats: 0, total_epics: 0, total_tasks: 0}};
 
             // Track current mode
             currentTopLevel = config.topLevel;
@@ -1994,14 +2700,20 @@
             // Hide table header during refresh
             document.getElementById('tableHeader').style.display = 'none';
 
-            // Initialize tree structure
-            if (!document.getElementById('tree')) {
-                content.innerHTML = '<div class="tree" id="tree"></div>';
+            // Initialize tree structure only if in hierarchy view
+            let tree = null;
+            if (currentView === 'hierarchy') {
+                if (!document.getElementById('tree')) {
+                    content.innerHTML = '<div class="tree" id="tree"></div>';
+                } else {
+                    // Clear existing tree for refresh
+                    document.getElementById('tree').innerHTML = '';
+                }
+                tree = document.getElementById('tree');
             } else {
-                // Clear existing tree for refresh
-                document.getElementById('tree').innerHTML = '';
+                // In standup view, just show a loading message
+                content.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">Loading data...</div>';
             }
-            const tree = document.getElementById('tree');
             if (!config.pat) {
                 showError('Please configure your Personal Access Token in Settings');
                 loadingIndicator.style.display = 'none';
@@ -2019,24 +2731,43 @@
             const topLevelBtn = document.getElementById('topLevelBtn');
             topLevelBtn.textContent = `Group By: ${config.topLevel === 'rfe' ? 'RFEs' : 'STRATs'}`;
 
-            // Show table header immediately when loading starts
-            document.getElementById('tableHeader').style.display = 'flex';
+            // Show table header immediately when loading starts (only in hierarchy view)
+            if (currentView === 'hierarchy') {
+                document.getElementById('tableHeader').style.display = 'flex';
+            }
 
             // Create EventSource to stream data with config as query params
             const params = new URLSearchParams({
+                email: config.email,
                 pat: config.pat,
                 component: config.component,
                 top_level: config.topLevel,
+                max_age_days: config.maxAgeDays || 365,
                 show_closed_rfes: config.showClosedRFEs || false,
                 show_closed_strats: config.showClosedSTRATs || false,
                 show_closed_epics: config.showClosedEpics || false,
                 show_closed_tasks: config.showClosedTasks || false
             });
+
+            // Add selected assignees if any are selected
+            if (config.selectedAssignees && config.selectedAssignees.length > 0) {
+                params.append('assignees', config.selectedAssignees.join(','));
+            }
+
             eventSource = new EventSource('/api/hierarchy/stream?' + params.toString());
+
+            let isLoadingTasks = false;
 
             eventSource.addEventListener('progress', function(e) {
                 const progress = JSON.parse(e.data);
-                loadingIndicator.textContent = `⏳ ${progress.message}`;
+                // Mark when we start loading tasks and display the progress message
+                if (progress.message.includes('Loading Tasks')) {
+                    isLoadingTasks = true;
+                    loadingIndicator.textContent = `⏳ ${progress.message}`;
+                } else {
+                    isLoadingTasks = false;
+                    loadingIndicator.textContent = `⏳ ${progress.message}`;
+                }
             });
 
             eventSource.addEventListener('rfe', function(e) {
@@ -2044,9 +2775,11 @@
                 hierarchyData.rfes.push(rfe);
                 hierarchyData.metadata.total_rfes++;
 
-                // Add RFE to tree immediately
-                addRfeToTree(tree, rfe);
-                updateStats(hierarchyData);
+                // Add RFE to tree immediately (only in hierarchy view)
+                if (tree) {
+                    addRfeToTree(tree, rfe);
+                    updateStats(hierarchyData);
+                }
             });
 
             eventSource.addEventListener('strat', function(e) {
@@ -2056,8 +2789,10 @@
                 if (currentTopLevel === 'strat') {
                     // STRAT mode: STRATs are top-level
                     hierarchyData.strats.push(strat);
-                    addStratToTree(strat, true);  // Pass true to indicate top-level
-                    updateStats(hierarchyData);
+                    if (tree) {
+                        addStratToTree(strat, true);  // Pass true to indicate top-level
+                        updateStats(hierarchyData);
+                    }
                 } else {
                     // RFE mode: STRATs are children of RFEs
                     const rfe = hierarchyData.rfes.find(r => r.key === strat.rfe_key);
@@ -2065,16 +2800,17 @@
                         if (!rfe.strats) rfe.strats = [];
                         rfe.strats.push(strat);
 
-                        // Add STRAT to tree immediately
-                        addStratToTree(strat);
-                        updateStats(hierarchyData);
+                        // Add STRAT to tree immediately (only in hierarchy view)
+                        if (tree) {
+                            addStratToTree(strat);
+                            updateStats(hierarchyData);
+                        }
                     }
                 }
             });
 
             eventSource.addEventListener('epic', function(e) {
                 const epic = JSON.parse(e.data);
-                console.log('Epic received:', epic.key, 'components:', epic.components);
                 hierarchyData.metadata.total_epics++;
 
                 if (currentTopLevel === 'strat') {
@@ -2084,9 +2820,11 @@
                         if (!strat.epics) strat.epics = [];
                         strat.epics.push(epic);
 
-                        // Add epic to tree immediately
-                        addEpicToTree(epic);
-                        updateStats(hierarchyData);
+                        // Add epic to tree immediately (only in hierarchy view)
+                        if (tree) {
+                            addEpicToTree(epic);
+                            updateStats(hierarchyData);
+                        }
                     }
                 } else {
                     // RFE mode: Find parent RFE and STRAT, then add epic
@@ -2097,9 +2835,11 @@
                             if (!strat.epics) strat.epics = [];
                             strat.epics.push(epic);
 
-                            // Add epic to tree immediately
-                            addEpicToTree(epic);
-                            updateStats(hierarchyData);
+                            // Add epic to tree immediately (only in hierarchy view)
+                            if (tree) {
+                                addEpicToTree(epic);
+                                updateStats(hierarchyData);
+                            }
                         }
                     }
                 }
@@ -2107,8 +2847,13 @@
 
             eventSource.addEventListener('task', function(e) {
                 const task = JSON.parse(e.data);
-                console.log('Task received:', task.key, 'components:', task.components);
                 hierarchyData.metadata.total_tasks++;
+
+                // Add to allTasks array for standup view
+                hierarchyData.allTasks.push(task);
+
+                // Track assignee for all tasks (including those outside hierarchy)
+                trackAssignee(task.assignee, task.assignee_username);
 
                 if (currentTopLevel === 'strat') {
                     // STRAT mode: Find parent STRAT and epic
@@ -2119,9 +2864,11 @@
                             if (!epic.tasks) epic.tasks = [];
                             epic.tasks.push(task);
 
-                            // Add task to tree immediately
-                            addTaskToTree(task);
-                            updateStats(hierarchyData);
+                            // Add task to tree immediately (only in hierarchy view)
+                            if (tree) {
+                                addTaskToTree(task);
+                                updateStats(hierarchyData);
+                            }
                         }
                     }
                 } else {
@@ -2135,9 +2882,11 @@
                                 if (!epic.tasks) epic.tasks = [];
                                 epic.tasks.push(task);
 
-                                // Add task to tree immediately
-                                addTaskToTree(task);
-                                updateStats(hierarchyData);
+                                // Add task to tree immediately (only in hierarchy view)
+                                if (tree) {
+                                    addTaskToTree(task);
+                                    updateStats(hierarchyData);
+                                }
                             }
                         }
                     }
@@ -2151,6 +2900,11 @@
 
                 updateStats(hierarchyData);
                 populateAssigneeFilter();
+
+                // Refresh the current view if in standup mode
+                if (currentView === 'standup') {
+                    renderStandupView();
+                }
 
                 // Hide loading indicator
                 loadingIndicator.style.display = 'none';
@@ -2181,7 +2935,13 @@
         // Helper function to track assignees
         function trackAssignee(displayName, username) {
             if (username && displayName && displayName !== 'Unassigned') {
+                const wasNew = !knownAssignees.has(username);
                 knownAssignees.set(username, displayName);
+
+                // If settings modal is open and we added a new assignee, update the list
+                if (wasNew && document.getElementById('configModal').classList.contains('active')) {
+                    populateAssigneeCheckboxList();
+                }
             }
         }
 
@@ -2460,8 +3220,136 @@
             content.innerHTML = html;
         }
 
+        function convertAdfToHtml(adf) {
+            if (!adf || !adf.content) return '';
+
+            function processNode(node) {
+                if (!node) return '';
+
+                const type = node.type;
+                const content = node.content || [];
+                const marks = node.marks || [];
+
+                let html = '';
+
+                // Process content recursively
+                const innerHtml = content.map(processNode).join('');
+
+                // Handle different node types
+                switch (type) {
+                    case 'doc':
+                        return innerHtml;
+
+                    case 'paragraph':
+                        return innerHtml ? `<p>${innerHtml}</p>` : '<p></p>';
+
+                    case 'text':
+                        let text = node.text || '';
+                        // Apply marks (bold, italic, etc.)
+                        marks.forEach(mark => {
+                            switch (mark.type) {
+                                case 'strong':
+                                    text = `<strong>${text}</strong>`;
+                                    break;
+                                case 'em':
+                                    text = `<em>${text}</em>`;
+                                    break;
+                                case 'code':
+                                    text = `<code>${text}</code>`;
+                                    break;
+                                case 'link':
+                                    const href = mark.attrs?.href || '#';
+                                    text = `<a href="${href}" target="_blank">${text}</a>`;
+                                    break;
+                                case 'strike':
+                                    text = `<s>${text}</s>`;
+                                    break;
+                                case 'underline':
+                                    text = `<u>${text}</u>`;
+                                    break;
+                            }
+                        });
+                        return text;
+
+                    case 'heading':
+                        const level = node.attrs?.level || 1;
+                        return `<h${level}>${innerHtml}</h${level}>`;
+
+                    case 'bulletList':
+                        return `<ul>${innerHtml}</ul>`;
+
+                    case 'orderedList':
+                        return `<ol>${innerHtml}</ol>`;
+
+                    case 'listItem':
+                        return `<li>${innerHtml}</li>`;
+
+                    case 'codeBlock':
+                        const language = node.attrs?.language || '';
+                        return `<pre><code class="language-${language}">${innerHtml}</code></pre>`;
+
+                    case 'blockquote':
+                        return `<blockquote>${innerHtml}</blockquote>`;
+
+                    case 'hardBreak':
+                        return '<br>';
+
+                    case 'rule':
+                        return '<hr>';
+
+                    case 'mention':
+                        const mentionText = node.attrs?.text || '@unknown';
+                        return `<span class="mention">${mentionText}</span>`;
+
+                    case 'emoji':
+                        const shortName = node.attrs?.shortName || '';
+                        const emojiText = node.attrs?.text || shortName;
+                        return emojiText;
+
+                    case 'inlineCard':
+                    case 'blockCard':
+                        const url = node.attrs?.url || '#';
+                        return `<a href="${url}" target="_blank">${url}</a>`;
+
+                    case 'table':
+                        return `<table border="1">${innerHtml}</table>`;
+
+                    case 'tableRow':
+                        return `<tr>${innerHtml}</tr>`;
+
+                    case 'tableHeader':
+                        return `<th>${innerHtml}</th>`;
+
+                    case 'tableCell':
+                        return `<td>${innerHtml}</td>`;
+
+                    case 'panel':
+                        const panelType = node.attrs?.panelType || 'info';
+                        return `<div class="panel panel-${panelType}">${innerHtml}</div>`;
+
+                    default:
+                        console.warn('Unhandled ADF node type:', type, node);
+                        return innerHtml;
+                }
+            }
+
+            return processNode(adf);
+        }
+
         function renderJiraText(text) {
             if (!text) return '';
+
+            // Handle JIRA Cloud ADF (Atlassian Document Format) - it's a JSON object
+            if (typeof text === 'object' && text.type === 'doc') {
+                return convertAdfToHtml(text);
+            }
+
+            // Handle plain text (JIRA Server/Data Center or already a string)
+            if (typeof text !== 'string') {
+                // If it's some other object type, try to stringify it
+                console.warn('Unexpected text type:', typeof text, text);
+                return String(text);
+            }
 
             // Normalize line endings (convert \r\n to \n)
             let result = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
@@ -3007,8 +3895,9 @@
             // Keep the default option
             select.innerHTML = '<option value="">Select assignee...</option>';
 
-            // Add known assignees sorted by display name
+            // Add known assignees sorted by display name, filtered by selected assignees
             const sortedAssignees = Array.from(knownAssignees.entries())
+                .filter(([username]) => isAssigneeVisible(username))
                 .sort((a, b) => a[1].localeCompare(b[1]));  // Sort by display name
 
             sortedAssignees.forEach(([username, displayName]) => {
@@ -3035,10 +3924,21 @@
             const allItems = tree.querySelectorAll('.tree-item');
             allItems.forEach(item => item.style.display = 'none');
 
-            // Find all items at the selected level that match the assignee
-            const matchingItems = tree.querySelectorAll(`.tree-item[data-type="${filterLevel}"][data-assignee="${selectedAssignee}"]`);
+            // Define hierarchy levels in order (bottom to top)
+            const hierarchyLevels = ['task', 'epic', 'strat', 'rfe'];
+            const selectedLevelIndex = hierarchyLevels.indexOf(filterLevel);
 
-            // For each matching item, show it and all its ancestors
+            // Get all levels from selected level up to top
+            const levelsToFilter = hierarchyLevels.slice(selectedLevelIndex);
+
+            // Find all items at the selected level and above that match the assignee
+            const matchingItems = [];
+            levelsToFilter.forEach(level => {
+                const items = tree.querySelectorAll(`.tree-item[data-type="${level}"][data-assignee="${selectedAssignee}"]`);
+                items.forEach(item => matchingItems.push(item));
+            });
+
+            // For each matching item, show it and all its ancestors and descendants
             matchingItems.forEach(matchingItem => {
                 // Show the matching item itself
                 matchingItem.style.display = 'block';
@@ -3103,7 +4003,7 @@
             // Keep only the "Unassigned" option
             select.innerHTML = '<option value="">Unassigned</option>';
 
-            // Add known assignees sorted by display name
+            // Add all known assignees sorted by display name (don't filter in creation modals)
             const sortedAssignees = Array.from(knownAssignees.entries())
                 .sort((a, b) => a[1].localeCompare(b[1])); // Sort by display name
 
@@ -3143,11 +4043,12 @@
 
         // Status Update Modal Functions
         function showStatusUpdateModal() {
-            // Populate assignee dropdown
+            // Populate assignee dropdown (filtered by selected assignees)
             const select = document.getElementById('statusUpdateAssignee');
             select.innerHTML = '<option value="">Select assignee...</option>';
 
             const sortedAssignees = Array.from(knownAssignees.entries())
+                .filter(([username]) => isAssigneeVisible(username))
                 .sort((a, b) => a[1].localeCompare(b[1]));
 
             sortedAssignees.forEach(([username, displayName]) => {
@@ -3314,6 +4215,7 @@
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
+                            email: config.email,
                             pat: config.pat,
                             comments: commentsData
                         })
@@ -3416,6 +4318,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
+                        email: config.email,
                         pat: config.pat,
                         issue_key: issueKey,
                         description: newDescription
@@ -3468,6 +4371,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
+                        email: config.email,
                         pat: config.pat,
                         strat_key: currentStratKey,
                         summary: summary,
@@ -3526,6 +4430,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
+                        email: config.email,
                         pat: config.pat,
                         epic_key: currentEpicKey,
                         issue_type: taskType,
@@ -3553,6 +4458,35 @@
                         if (match) {
                             const strat_key = match[1];
                             result.task.strat_key = strat_key;
+
+                            // Add to allTasks array for standup view
+                            hierarchyData.allTasks.push(result.task);
+
+                            // Add to the hierarchy data structure
+                            if (currentTopLevel === 'strat') {
+                                const strat = hierarchyData.strats.find(s => s.key === strat_key);
+                                if (strat && strat.epics) {
+                                    const epic = strat.epics.find(e => e.key === currentEpicKey);
+                                    if (epic) {
+                                        if (!epic.tasks) epic.tasks = [];
+                                        epic.tasks.push(result.task);
+                                    }
+                                }
+                            } else {
+                                // RFE mode - need to find the RFE
+                                hierarchyData.rfes.forEach(rfe => {
+                                    if (rfe.strats) {
+                                        const strat = rfe.strats.find(s => s.key === strat_key);
+                                        if (strat && strat.epics) {
+                                            const epic = strat.epics.find(e => e.key === currentEpicKey);
+                                            if (epic) {
+                                                if (!epic.tasks) epic.tasks = [];
+                                                epic.tasks.push(result.task);
+                                            }
+                                        }
+                                    }
+                                });
+                            }
 
                             // Add the new task directly to the tree
                             addTaskToTree(result.task);
@@ -3599,6 +4533,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        email: config.email,
                         pat: config.pat,
                         issue_key: issueKey,
                         action: 'add',
@@ -3633,6 +4568,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        email: config.email,
                         pat: config.pat,
                         issue_key: issueKey,
                         action: 'remove',
@@ -3702,7 +4638,7 @@
                     return;
                 }
 
-                const response = await fetch(`/api/transitions?issue_key=${issueKey}&pat=${config.pat}`);
+                const response = await fetch(`/api/transitions?issue_key=${issueKey}&email=${encodeURIComponent(config.email)}&pat=${config.pat}`);
                 const result = await response.json();
 
                 if (response.ok && result.transitions) {
@@ -3758,6 +4694,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        email: config.email,
                         pat: config.pat,
                         issue_key: issueKey,
                         transition_id: transitionId
@@ -3786,11 +4723,23 @@
                 issue.status = newStatus;
             });
 
-            // Update all status badges in DOM
+            // Update all status badges in DOM (hierarchy view)
             document.querySelectorAll('.tree-node').forEach(node => {
                 const keySpan = node.querySelector('.issue-key');
                 if (keySpan && keySpan.textContent === issueKey) {
                     const statusSpan = node.querySelector('.issue-status');
+                    if (statusSpan) {
+                        statusSpan.textContent = newStatus;
+                        statusSpan.className = `issue-status ${getStatusClass(newStatus)}`;
+                    }
+                }
+            });
+
+            // Update all status badges in standup view
+            document.querySelectorAll('.standup-task').forEach(task => {
+                const keyLink = task.querySelector('.standup-task-key a');
+                if (keyLink && keyLink.textContent === issueKey) {
+                    const statusSpan = task.querySelector('.issue-status');
                     if (statusSpan) {
                         statusSpan.textContent = newStatus;
                         statusSpan.className = `issue-status ${getStatusClass(newStatus)}`;
@@ -3858,6 +4807,7 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
+                        email: config.email,
                         issue_key: issueKey,
                         priority: priorityName,
                         pat: config.pat
@@ -3886,11 +4836,23 @@
                 issue.priority = newPriority;
             });
 
-            // Update all priority badges in DOM
+            // Update all priority badges in DOM (hierarchy view)
             document.querySelectorAll('.tree-node').forEach(node => {
                 const keySpan = node.querySelector('.issue-key');
                 if (keySpan && keySpan.textContent === issueKey) {
                     const prioritySpan = node.querySelector('.issue-priority');
+                    if (prioritySpan) {
+                        prioritySpan.textContent = newPriority;
+                        prioritySpan.className = `issue-priority ${getPriorityClass(newPriority)}`;
+                    }
+                }
+            });
+
+            // Update all priority badges in standup view
+            document.querySelectorAll('.standup-task').forEach(task => {
+                const keyLink = task.querySelector('.standup-task-key a');
+                if (keyLink && keyLink.textContent === issueKey) {
+                    const prioritySpan = task.querySelector('.issue-priority');
                     if (prioritySpan) {
                         prioritySpan.textContent = newPriority;
                         prioritySpan.className = `issue-priority ${getPriorityClass(newPriority)}`;
@@ -3982,6 +4944,7 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
+                        email: config.email,
                         issue_key: issueKey,
                         assignee: assigneeUsername,
                         pat: config.pat
