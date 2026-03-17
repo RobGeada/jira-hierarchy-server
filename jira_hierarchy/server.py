@@ -449,6 +449,7 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             email = params.get('email', [None])[0]
             pat = params.get('pat', [None])[0]
             component = params.get('component', [None])[0]
+            max_age_days = int(params.get('max_age_days', ['365'])[0])
 
             if not assignee:
                 self.send_json({'error': 'Missing assignee parameter'}, status=400)
@@ -456,23 +457,38 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
 
             from .jira_client import run_jira_query
             from .data_fetcher import build_issue_data
+            from datetime import datetime, timedelta
+
+            # Calculate cutoff date for age filter
+            cutoff_date = (datetime.now() - timedelta(days=max_age_days)).strftime('%Y-%m-%d')
 
             # Build JQL query for STRATs assigned to this user
             jql_parts = [
                 f'project = RHAISTRAT',
                 f'AND assignee = "{assignee}"',
-                f'AND status NOT IN (Closed, Resolved)'
+                f'AND status NOT IN (Closed, Resolved)',
+                f'AND created >= {cutoff_date}'
             ]
 
             if component:
-                jql_parts.append(f'AND component = "{component}"')
+                # Handle comma-separated components
+                components = [c.strip() for c in component.split(',')]
+                if len(components) > 1:
+                    component_list = ', '.join([f'"{c}"' for c in components])
+                    jql_parts.append(f'AND component IN ({component_list})')
+                else:
+                    jql_parts.append(f'AND component = "{components[0]}"')
 
             jql_parts.append('ORDER BY priority DESC, created DESC')
 
             strats_jql = ' '.join(jql_parts)
 
+            print(f"Fetching STRATs with JQL: {strats_jql}", file=sys.stderr)
+
             field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components'
             strat_issues = run_jira_query(strats_jql, field_list, email, pat)
+
+            print(f"Found {len(strat_issues)} STRATs for assignee {assignee}", file=sys.stderr)
 
             strats = [build_issue_data(strat, 'strat') for strat in strat_issues]
 

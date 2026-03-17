@@ -126,7 +126,7 @@ def create_jira_issue(project_key, summary, description, issue_type, custom_fiel
     Args:
         project_key: JIRA project key
         summary: Issue summary
-        description: Issue description
+        description: Issue description (plain text, will be converted to ADF)
         issue_type: Issue type (Epic, Story, etc.)
         custom_fields: Dict of custom field values
         jira_email: User email address
@@ -140,11 +140,28 @@ def create_jira_issue(project_key, summary, description, issue_type, custom_fiel
         'Content-Type': 'application/json'
     }
 
+    # Convert description to Atlassian Document Format (ADF)
+    description_adf = {
+        "type": "doc",
+        "version": 1,
+        "content": [
+            {
+                "type": "paragraph",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": description or ""
+                    }
+                ]
+            }
+        ]
+    }
+
     payload = {
         "fields": {
             "project": {"key": project_key},
             "summary": summary,
-            "description": description,
+            "description": description_adf,
             "issuetype": {"name": issue_type}
         }
     }
@@ -157,7 +174,19 @@ def create_jira_issue(project_key, summary, description, issue_type, custom_fiel
     response = requests.post(create_url, headers=headers, json=payload)
 
     if response.status_code != 201:
-        raise Exception(f"Failed to create issue: {response.status_code} - {response.text}")
+        # If we got a component permission error, try again without components
+        if response.status_code == 400 and 'components' in response.text:
+            import sys
+            print(f"Warning: Component assignment failed, retrying without components", file=sys.stderr)
+            if 'components' in payload['fields']:
+                del payload['fields']['components']
+                response = requests.post(create_url, headers=headers, json=payload)
+                if response.status_code != 201:
+                    raise Exception(f"Failed to create issue: {response.status_code} - {response.text}")
+            else:
+                raise Exception(f"Failed to create issue: {response.status_code} - {response.text}")
+        else:
+            raise Exception(f"Failed to create issue: {response.status_code} - {response.text}")
 
     return response.json()['key']
 
@@ -204,7 +233,24 @@ def add_jira_comment(issue_key, comment, jira_email=None, jira_pat=None):
         'Content-Type': 'application/json'
     }
 
-    comment_payload = {"body": comment}
+    # JIRA Cloud API v3 requires Atlassian Document Format (ADF)
+    comment_payload = {
+        "body": {
+            "type": "doc",
+            "version": 1,
+            "content": [
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": comment
+                        }
+                    ]
+                }
+            ]
+        }
+    }
     comment_url = f"{JIRA_BASE_URL}/rest/api/3/issue/{issue_key}/comment"
     response = requests.post(comment_url, headers=headers, json=comment_payload)
 
@@ -262,7 +308,7 @@ def update_jira_issue(issue_key, fields, jira_email=None, jira_pat=None):
 
     Args:
         issue_key: JIRA issue key
-        fields: Dictionary of fields to update
+        fields: Dictionary of fields to update (plain text for description will be converted to ADF)
         jira_email: User email address
         jira_pat: API token
 
@@ -273,6 +319,24 @@ def update_jira_issue(issue_key, fields, jira_email=None, jira_pat=None):
         'Authorization': _get_auth_header(jira_email, jira_pat),
         'Content-Type': 'application/json'
     }
+
+    # Convert description to ADF if it's being updated
+    if 'description' in fields and isinstance(fields['description'], str):
+        fields['description'] = {
+            "type": "doc",
+            "version": 1,
+            "content": [
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": fields['description']
+                        }
+                    ]
+                }
+            ]
+        }
 
     update_url = f"{JIRA_BASE_URL}/rest/api/3/issue/{issue_key}"
     payload = {"fields": fields}

@@ -1838,8 +1838,8 @@
                 <button type="button" class="btn-cancel" onclick="closeModal('statusUpdateModal')">Cancel</button>
             </div>
             <div id="statusUpdateStratsContainer" style="display: none;">
-                <div id="statusUpdateStratsList"></div>
-                <div class="modal-footer" style="margin-top: 20px;">
+                <div id="statusUpdateStratsList" style="max-height: 75vh; overflow-y: auto; margin-bottom: 20px;"></div>
+                <div class="modal-footer">
                     <button type="button" class="btn-cancel" onclick="closeModal('statusUpdateModal')">Cancel</button>
                     <button type="button" class="btn-submit" onclick="generateStatusReport()">Generate Report</button>
                 </div>
@@ -4083,7 +4083,8 @@
             document.getElementById('statusUpdateStratsContainer').style.display = 'block';
 
             try {
-                const response = await fetch(`/api/strats-by-assignee?assignee=${encodeURIComponent(assignee)}&pat=${encodeURIComponent(config.pat)}&component=${encodeURIComponent(config.component)}`);
+                // Fetch all STRATs for this assignee (no component filter for status updates)
+                const response = await fetch(`/api/strats-by-assignee?assignee=${encodeURIComponent(assignee)}&email=${encodeURIComponent(config.email)}&pat=${encodeURIComponent(config.pat)}&max_age_days=${config.maxAgeDays || 365}`);
                 const result = await response.json();
 
                 if (response.ok && result.success) {
@@ -4116,6 +4117,7 @@
                                 class="status-update-comment-input"
                                 id="comment-input-${strat.key}"
                                 data-strat-key="${strat.key}"
+                                data-strat-summary="${strat.summary}"
                                 data-last-comment="${hasLastComment ? 'true' : 'false'}"
                                 data-used-last-comment="false"
                                 placeholder="Add status update for ${strat.key}..."
@@ -4177,6 +4179,7 @@
 
             commentInputs.forEach(input => {
                 const stratKey = input.getAttribute('data-strat-key');
+                const stratSummary = input.getAttribute('data-strat-summary');
                 const comment = input.value.trim();
                 const isSkipped = input.disabled; // Disabled means skipped
                 const usedLastComment = input.getAttribute('data-used-last-comment') === 'true';
@@ -4197,6 +4200,7 @@
                 // Add to report - ticket key as link and rendered comment
                 reportLines.push({
                     key: stratKey,
+                    summary: stratSummary,
                     comment: comment
                 });
             });
@@ -4244,7 +4248,7 @@
                 const reportHTML = reportLines.map(item => `
                     <div style="margin-bottom: 24px;">
                         <div style="margin-bottom: 8px;">
-                            <a href="${JIRA_CONFIG.baseUrl}/browse/${item.key}" target="_blank" style="font-weight: 600; color: #0052CC; text-decoration: none; font-size: 14px;">${item.key}</a>
+                            <a href="${JIRA_CONFIG.baseUrl}/browse/${item.key}" target="_blank" style="font-weight: 600; color: #0052CC; text-decoration: none; font-size: 14px;">${item.key}: ${item.summary}</a>
                         </div>
                         <div class="comment-body">${renderJiraText(item.comment)}</div>
                         <br>
