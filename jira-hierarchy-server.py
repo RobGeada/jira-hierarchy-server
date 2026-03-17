@@ -20,6 +20,7 @@ except ImportError:
     sys.exit(1)
 
 from jira_hierarchy.server import run_server
+from jira_hierarchy.version_check import check_version
 
 
 def check_requirements():
@@ -27,6 +28,10 @@ def check_requirements():
     print("=" * 70)
     print("JIRA Hierarchy Viewer Server")
     print("=" * 70)
+    print()
+
+    # Check version and warn if updates available
+    check_version()
     print()
 
     # Check for JIRA PAT

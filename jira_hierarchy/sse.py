@@ -312,8 +312,8 @@ def stream_hierarchy_rfe_first(wfile, jira_email, jira_pat, component="AI Safety
         assignee_list = ', '.join([f'"{a}"' for a in assignees])
         tasks_jql += f' AND assignee IN ({assignee_list})'
 
-    # Include customfield_10014 (Epic Link) in the field list
-    task_field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components,customfield_10014'
+    # Include customfield_10014 (Epic Link) and customfield_10875 (Git Pull Request) in the field list
+    task_field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components,customfield_10014,customfield_10875'
     task_issues = run_jira_query(tasks_jql, task_field_list, jira_email, jira_pat, wfile=wfile, progress_message_prefix="Loading Tasks")
     print(f"Found {len(task_issues)} Tasks total for component", file=sys.stderr)
 
@@ -581,7 +581,7 @@ def stream_hierarchy_strat_first(wfile, jira_email, jira_pat, component="AI Safe
         assignee_list = ', '.join([f'"{a}"' for a in assignees])
         tasks_jql += f' AND assignee IN ({assignee_list})'
 
-    task_field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components,customfield_10014'
+    task_field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components,customfield_10014,customfield_10875'
     task_issues = run_jira_query(tasks_jql, task_field_list, jira_email, jira_pat, wfile=wfile, progress_message_prefix="Loading Tasks")
     print(f"Found {len(task_issues)} Tasks total for component", file=sys.stderr)
 

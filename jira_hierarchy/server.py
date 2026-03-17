@@ -70,6 +70,8 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             self.handle_update_description()
         elif parsed_path.path == '/api/batch-add-comments':
             self.handle_batch_add_comments()
+        elif parsed_path.path == '/api/update-pull-request':
+            self.handle_update_pull_request()
         else:
             self.send_error(404, 'Not Found')
 
@@ -111,12 +113,13 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             assignee = data.get('assignee')
             description = data.get('description', '')
             issue_type = data.get('issue_type', 'Story')
+            pull_request = data.get('pull_request', '')
 
             if not epic_key or not summary:
                 self.send_json({'error': 'Missing required fields'}, status=400)
                 return
 
-            task_data = create_task(summary, description, epic_key, issue_type, component, assignee, email, pat)
+            task_data = create_task(summary, description, epic_key, issue_type, component, assignee, pull_request, email, pat)
             self.send_json({'success': True, 'task': task_data})
 
         except Exception as e:
@@ -201,6 +204,67 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
 
         except Exception as e:
             print(f"Error updating labels: {e}", file=sys.stderr)
+            traceback.print_exc()
+            self.send_json({'error': str(e)}, status=500)
+
+    def handle_update_pull_request(self):
+        """Update or remove a pull request URL on a JIRA issue"""
+        try:
+            data = self.read_json_body()
+
+            email = data.get('email')
+            pat = data.get('pat')
+            issue_key = data.get('issue_key')
+            pull_request = data.get('pull_request', '')
+
+            if not issue_key:
+                self.send_json({'error': 'Missing issue_key'}, status=400)
+                return
+
+            from .jira_client import update_jira_issue
+
+            # Build the ADF format for customfield_10875
+            if pull_request.strip():
+                # Set PR URL in ADF format
+                pr_field = {
+                    "type": "doc",
+                    "version": 1,
+                    "content": [
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": pull_request,
+                                    "marks": [
+                                        {
+                                            "type": "link",
+                                            "attrs": {
+                                                "href": pull_request
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            else:
+                # Clear the PR field
+                pr_field = None
+
+            # Update the issue
+            update_jira_issue(
+                issue_key=issue_key,
+                fields={'customfield_10875': pr_field},
+                jira_email=email,
+                jira_pat=pat
+            )
+
+            self.send_json({'success': True})
+
+        except Exception as e:
+            print(f"Error updating pull request: {e}", file=sys.stderr)
             traceback.print_exc()
             self.send_json({'error': str(e)}, status=500)
 
@@ -420,7 +484,7 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             elif item_type == 'task':
                 # Fetch this specific Task
                 jql = f'key = {issue_key}'
-                field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components'
+                field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components,customfield_10875'
                 task_issues = run_jira_query(jql, field_list, email, pat)
                 if not task_issues:
                     self.send_json({'error': 'Task not found'}, status=404)

@@ -240,6 +240,8 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.25);
             z-index: 10000;  /* Much higher z-index */
             min-width: 150px;
+            max-height: 300px;  /* Limit dropdown height */
+            overflow-y: auto;  /* Make it scrollable */
             display: none;
             opacity: 1 !important;  /* Override inherited opacity from .tree-node.empty */
         }
@@ -1699,6 +1701,11 @@
                 <div class="form-group">
                     <label for="taskDescription">Description</label>
                     <textarea id="taskDescription"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="taskPullRequest">Pull Request URL</label>
+                    <input type="url" id="taskPullRequest" placeholder="https://github.com/org/repo/pull/123">
+                    <small style="color: #6B778C; font-size: 12px;">Link to the pull request for this task</small>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-cancel" onclick="closeModal('createTaskModal')">Cancel</button>
@@ -3608,6 +3615,33 @@
                         <strong>Components:</strong> <div class="labels">${componentsHTML}</div>
                     </div>
                     <div class="detail-row">
+                        <strong>Git Pull Request:</strong>
+                        <div id="pr-container-${issue.key}">
+                            ${issue.pull_request && issue.pull_request.trim() ? `
+                                <div id="pr-display-${issue.key}">
+                                    <a href="${issue.pull_request}" target="_blank" style="color: #0052CC; text-decoration: none;">${issue.pull_request}</a>
+                                    <button onclick="editPullRequestMode('${issue.key}')" style="margin-left: 8px; padding: 2px 8px; background: #F4F5F7; border: 1px solid #DFE1E6; border-radius: 3px; cursor: pointer; font-size: 12px;">Edit</button>
+                                </div>
+                                <div id="pr-edit-${issue.key}" style="display: none;" class="label-input-container">
+                                    <input type="text" class="label-input" id="pr-input-${issue.key}" placeholder="Enter PR URL" value="${issue.pull_request}" style="flex: 1;">
+                                    <button class="btn-add-label" onclick="updatePullRequest('${issue.key}')">Update</button>
+                                    <button class="btn-add-label" onclick="clearPullRequest('${issue.key}')" style="background: #FF5630; color: white;">Clear</button>
+                                    <button class="btn-add-label" onclick="cancelEditPullRequest('${issue.key}')" style="background: #6B778C; color: white;">Cancel</button>
+                                </div>
+                            ` : `
+                                <div id="pr-display-${issue.key}">
+                                    <span style="color: #6B778C;">None</span>
+                                    <button onclick="editPullRequestMode('${issue.key}')" style="margin-left: 8px; padding: 2px 8px; background: #F4F5F7; border: 1px solid #DFE1E6; border-radius: 3px; cursor: pointer; font-size: 12px;">Add</button>
+                                </div>
+                                <div id="pr-edit-${issue.key}" style="display: none;" class="label-input-container">
+                                    <input type="text" class="label-input" id="pr-input-${issue.key}" placeholder="Enter PR URL" value="" style="flex: 1;">
+                                    <button class="btn-add-label" onclick="updatePullRequest('${issue.key}')">Add</button>
+                                    <button class="btn-add-label" onclick="cancelEditPullRequest('${issue.key}')" style="background: #6B778C; color: white;">Cancel</button>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                    <div class="detail-row">
                         <strong>Description:</strong>
                         <button class="btn-edit-description" onclick="editDescription('${issue.key}')" style="margin-left: 8px; font-size: 12px; padding: 2px 8px;">Edit</button>
                         <div class="description" id="description-view-${issue.key}">${descriptionHTML}</div>
@@ -4033,6 +4067,7 @@
             document.getElementById('taskSummary').value = '';
             document.getElementById('taskComponent').value = config.component || 'AI Safety';
             document.getElementById('taskDescription').value = '';
+            document.getElementById('taskPullRequest').value = '';
             populateAssigneeDropdown('taskAssignee');
             document.getElementById('createTaskModal').classList.add('active');
         }
@@ -4427,6 +4462,7 @@
                 const component = document.getElementById('taskComponent').value;
                 const assignee = document.getElementById('taskAssignee').value;
                 const description = document.getElementById('taskDescription').value;
+                const pullRequest = document.getElementById('taskPullRequest').value;
 
                 const response = await fetch('/api/create-task', {
                     method: 'POST',
@@ -4441,7 +4477,8 @@
                         summary: summary,
                         component: component,
                         assignee: assignee,
-                        description: description
+                        description: description,
+                        pull_request: pullRequest
                     })
                 });
 
@@ -4450,6 +4487,7 @@
                 if (response.ok && result.success) {
                     showSuccess(`Task ${result.task.key} created successfully!`);
                     closeModal('createTaskModal');
+                    document.getElementById('createTaskForm').reset();
 
                     // Find the strat_key by looking for the epic container in the DOM
                     // Epic containers have IDs like: epic-{strat_key}-{epic_key}
@@ -5052,7 +5090,7 @@
                     btn.disabled = true;
                 });
 
-                const response = await fetch(`/api/reload-item?issue_key=${issueKey}&item_type=${itemType}&pat=${config.pat}&component=${config.component}`);
+                const response = await fetch(`/api/reload-item?issue_key=${issueKey}&item_type=${itemType}&email=${encodeURIComponent(config.email)}&pat=${encodeURIComponent(config.pat)}&component=${encodeURIComponent(config.component)}`);
                 const result = await response.json();
 
                 if (response.ok && result.success) {
@@ -5071,6 +5109,160 @@
                     btn.textContent = '↻';
                     btn.disabled = false;
                 });
+            }
+        }
+
+        function editPullRequestMode(issueKey) {
+            const displayDiv = document.getElementById(`pr-display-${issueKey}`);
+            const editDiv = document.getElementById(`pr-edit-${issueKey}`);
+
+            if (displayDiv && editDiv) {
+                displayDiv.style.display = 'none';
+                editDiv.style.display = 'flex';
+            }
+        }
+
+        function cancelEditPullRequest(issueKey) {
+            const displayDiv = document.getElementById(`pr-display-${issueKey}`);
+            const editDiv = document.getElementById(`pr-edit-${issueKey}`);
+
+            if (displayDiv && editDiv) {
+                displayDiv.style.display = 'block';
+                editDiv.style.display = 'none';
+            }
+        }
+
+        async function updatePullRequest(issueKey) {
+            const input = document.getElementById(`pr-input-${issueKey}`);
+            const prUrl = input.value.trim();
+
+            if (!prUrl) {
+                showError('Please enter a pull request URL');
+                return;
+            }
+
+            try {
+                const config = loadConfig();
+                if (!config.email || !config.pat) {
+                    showError('Please configure your credentials in Settings');
+                    return;
+                }
+
+                const response = await fetch('/api/update-pull-request', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        issue_key: issueKey,
+                        pull_request: prUrl,
+                        email: config.email,
+                        pat: config.pat
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // Update the container to show the new link in display mode
+                    const container = document.getElementById(`pr-container-${issueKey}`);
+                    if (container) {
+                        container.innerHTML = `
+                            <div id="pr-display-${issueKey}">
+                                <a href="${prUrl}" target="_blank" style="color: #0052CC; text-decoration: none;">${prUrl}</a>
+                                <button onclick="editPullRequestMode('${issueKey}')" style="margin-left: 8px; padding: 2px 8px; background: #F4F5F7; border: 1px solid #DFE1E6; border-radius: 3px; cursor: pointer; font-size: 12px;">Edit</button>
+                            </div>
+                            <div id="pr-edit-${issueKey}" style="display: none;" class="label-input-container">
+                                <input type="text" class="label-input" id="pr-input-${issueKey}" placeholder="Enter PR URL" value="${prUrl}" style="flex: 1;">
+                                <button class="btn-add-label" onclick="updatePullRequest('${issueKey}')">Update</button>
+                                <button class="btn-add-label" onclick="clearPullRequest('${issueKey}')" style="background: #FF5630; color: white;">Clear</button>
+                                <button class="btn-add-label" onclick="cancelEditPullRequest('${issueKey}')" style="background: #6B778C; color: white;">Cancel</button>
+                            </div>
+                        `;
+                    }
+
+                    // Update hierarchyData
+                    updatePullRequestInHierarchy(issueKey, prUrl);
+
+                    showSuccess('Pull request updated successfully');
+                } else {
+                    showError(`Error updating pull request: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Error updating pull request: ${error.message}`);
+            }
+        }
+
+        async function clearPullRequest(issueKey) {
+            try {
+                const config = loadConfig();
+                if (!config.email || !config.pat) {
+                    showError('Please configure your credentials in Settings');
+                    return;
+                }
+
+                const response = await fetch('/api/update-pull-request', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        issue_key: issueKey,
+                        pull_request: '',
+                        email: config.email,
+                        pat: config.pat
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // Update the container to show "None" with Add button
+                    const container = document.getElementById(`pr-container-${issueKey}`);
+                    if (container) {
+                        container.innerHTML = `
+                            <div id="pr-display-${issueKey}">
+                                <span style="color: #6B778C;">None</span>
+                                <button onclick="editPullRequestMode('${issueKey}')" style="margin-left: 8px; padding: 2px 8px; background: #F4F5F7; border: 1px solid #DFE1E6; border-radius: 3px; cursor: pointer; font-size: 12px;">Add</button>
+                            </div>
+                            <div id="pr-edit-${issueKey}" style="display: none;" class="label-input-container">
+                                <input type="text" class="label-input" id="pr-input-${issueKey}" placeholder="Enter PR URL" value="" style="flex: 1;">
+                                <button class="btn-add-label" onclick="updatePullRequest('${issueKey}')">Add</button>
+                                <button class="btn-add-label" onclick="cancelEditPullRequest('${issueKey}')" style="background: #6B778C; color: white;">Cancel</button>
+                            </div>
+                        `;
+                    }
+
+                    // Update hierarchyData
+                    updatePullRequestInHierarchy(issueKey, '');
+
+                    showSuccess('Pull request removed successfully');
+                } else {
+                    showError(`Error removing pull request: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Error removing pull request: ${error.message}`);
+            }
+        }
+
+        function updatePullRequestInHierarchy(issueKey, prUrl) {
+            if (!hierarchyData.rfes) return;
+
+            // Find and update the task in hierarchyData
+            for (const rfe of hierarchyData.rfes) {
+                if (!rfe.strats) continue;
+                for (const strat of rfe.strats) {
+                    if (!strat.epics) continue;
+                    for (const epic of strat.epics) {
+                        if (!epic.tasks) continue;
+                        for (const task of epic.tasks) {
+                            if (task.key === issueKey) {
+                                task.pull_request = prUrl;
+                                return;
+                            }
+                        }
+                    }
+                }
             }
         }
 

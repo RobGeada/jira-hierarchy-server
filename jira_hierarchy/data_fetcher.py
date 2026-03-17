@@ -5,6 +5,45 @@ from datetime import datetime, timedelta
 from .jira_client import run_jira_query, create_jira_issue, get_jira_issue
 
 
+def extract_pr_url_from_adf(adf_content):
+    """
+    Extract PR URL from ADF (Atlassian Document Format) content
+
+    Args:
+        adf_content: ADF dict or None
+
+    Returns:
+        URL string or empty string
+    """
+    if not adf_content or not isinstance(adf_content, dict):
+        return ''
+
+    try:
+        # Navigate the ADF structure to find the link
+        content = adf_content.get('content', [])
+        if content and len(content) > 0:
+            paragraph = content[0]
+            if paragraph.get('type') == 'paragraph':
+                para_content = paragraph.get('content', [])
+                if para_content and len(para_content) > 0:
+                    # Check each content node
+                    for node in para_content:
+                        # Handle inlineCard type (newer format)
+                        if node.get('type') == 'inlineCard':
+                            url = node.get('attrs', {}).get('url', '')
+                            if url:
+                                return url
+
+                        # Handle text with link marks (older format)
+                        marks = node.get('marks', [])
+                        for mark in marks:
+                            if mark.get('type') == 'link':
+                                return mark.get('attrs', {}).get('href', '')
+        return ''
+    except Exception:
+        return ''
+
+
 def build_issue_data(issue, issue_type='rfe'):
     """
     Build standardized issue data dict from JIRA response
@@ -19,6 +58,9 @@ def build_issue_data(issue, issue_type='rfe'):
     fields = issue['fields']
     assignee = fields.get('assignee')
     reporter = fields.get('reporter')
+
+    # Extract PR URL from customfield_10875 (Git Pull Request field)
+    pr_url = extract_pr_url_from_adf(fields.get('customfield_10875'))
 
     return {
         "key": issue['key'],
@@ -41,6 +83,7 @@ def build_issue_data(issue, issue_type='rfe'):
         ],
         "created": fields.get('created', ''),
         "updated": fields.get('updated', ''),
+        "pull_request": pr_url,
     }
 
 
@@ -262,7 +305,7 @@ def create_epic(summary, description, strat_key, component=None, assignee=None, 
     return epic_data
 
 
-def create_task(summary, description, epic_key, issue_type, component=None, assignee=None, jira_email=None, jira_pat=None):
+def create_task(summary, description, epic_key, issue_type, component=None, assignee=None, pull_request=None, jira_email=None, jira_pat=None):
     """
     Create a new Task and link it to an Epic
 
@@ -275,6 +318,7 @@ def create_task(summary, description, epic_key, issue_type, component=None, assi
         assignee: Assignee email or username
         jira_email: User email address
         jira_pat: API token
+        pull_request: Pull request URL
 
     Returns:
         Task data dict
@@ -291,6 +335,32 @@ def create_task(summary, description, epic_key, issue_type, component=None, assi
     if assignee:
         custom_fields["assignee"] = {"name": assignee}
 
+    # Add Git Pull Request URL if provided (customfield_10875 in ADF format)
+    if pull_request:
+        custom_fields["customfield_10875"] = {
+            "type": "doc",
+            "version": 1,
+            "content": [
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": pull_request,
+                            "marks": [
+                                {
+                                    "type": "link",
+                                    "attrs": {
+                                        "href": pull_request
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+
     task_key = create_jira_issue(
         project_key="RHOAIENG",
         summary=summary,
@@ -303,8 +373,8 @@ def create_task(summary, description, epic_key, issue_type, component=None, assi
 
     print(f"Created task {task_key} under epic {epic_key}", file=sys.stderr)
 
-    # Fetch and return full issue data
-    issue_data = get_jira_issue(task_key, 'summary,status,priority,assignee,reporter,description,labels,components,created,updated,issuetype', jira_email, jira_pat)
+    # Fetch and return full issue data (including the PR field)
+    issue_data = get_jira_issue(task_key, 'summary,status,priority,assignee,reporter,description,labels,components,created,updated,issuetype,customfield_10875', jira_email, jira_pat)
     task_data = build_issue_data(issue_data, 'task')
     task_data['epic_key'] = epic_key
     task_data['issuetype'] = issue_data['fields'].get('issuetype', {}).get('name', 'Task')
