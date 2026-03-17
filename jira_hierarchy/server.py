@@ -43,6 +43,8 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             self.get_strats_by_assignee()
         elif parsed_path.path == '/api/validate-components':
             self.validate_components()
+        elif parsed_path.path == '/api/version-status':
+            self.get_version_status()
         elif parsed_path.path == '/health':
             self.send_json({'status': 'ok'})
         else:
@@ -659,6 +661,17 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
 
         except Exception as e:
             print(f"Error validating components: {e}", file=sys.stderr)
+            traceback.print_exc()
+            self.send_json({'error': str(e)}, status=500)
+
+    def get_version_status(self):
+        """Get the current version status"""
+        try:
+            from .version_check import get_version_status
+            status = get_version_status()
+            self.send_json(status)
+        except Exception as e:
+            print(f"Error getting version status: {e}", file=sys.stderr)
             traceback.print_exc()
             self.send_json({'error': str(e)}, status=500)
 

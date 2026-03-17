@@ -1541,6 +1541,12 @@
     <!-- Toast notification container -->
     <div class="toast-container" id="toastContainer"></div>
 
+    <!-- Version update banner -->
+    <div id="versionBanner" style="display: none; position: fixed; top: 0; left: 0; right: 0; background: #FFAB00; color: #172B4D; padding: 12px; text-align: center; z-index: 10001; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+        ⚠️ Server is out of date. Please pull the latest changes from GitHub: <code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 3px; font-family: monospace;">git pull origin main</code>
+        <button onclick="dismissVersionBanner()" style="margin-left: 16px; padding: 4px 12px; background: #172B4D; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Dismiss</button>
+    </div>
+
     <div class="container">
         <div class="header">
             <h1 id="pageTitle">🛡️ JIRA Hierarchy Viewer</h1>
@@ -5597,9 +5603,56 @@
         // Modals can only be closed via Cancel/Close buttons (not by clicking outside)
         // This prevents accidental data loss
 
-        // Load sample data on page load for demonstration
+        // Version checking
+        let versionBannerDismissed = false;
+
+        async function checkVersionStatus() {
+            try {
+                const response = await fetch('/api/version-status');
+                const status = await response.json();
+
+                // Don't show banner if version checking is disabled
+                if (!status.enabled) {
+                    return;
+                }
+
+                if (status.is_outdated && !versionBannerDismissed) {
+                    const banner = document.getElementById('versionBanner');
+                    if (banner) {
+                        banner.style.display = 'block';
+                        // Add padding to body to account for banner
+                        document.body.style.paddingTop = '48px';
+                    }
+                } else if (!status.is_outdated) {
+                    // If version is up to date, hide banner and reset dismissal
+                    versionBannerDismissed = false;
+                    const banner = document.getElementById('versionBanner');
+                    if (banner) {
+                        banner.style.display = 'none';
+                        document.body.style.paddingTop = '0';
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking version status:', error);
+            }
+        }
+
+        function dismissVersionBanner() {
+            versionBannerDismissed = true;
+            const banner = document.getElementById('versionBanner');
+            if (banner) {
+                banner.style.display = 'none';
+                document.body.style.paddingTop = '0';
+            }
+        }
+
+        // Check version on page load
         window.addEventListener('DOMContentLoaded', () => {
             loadData();
+            checkVersionStatus();
+
+            // Check version every 5 minutes
+            setInterval(checkVersionStatus, 5 * 60 * 1000);
         });
     </script>
 </body>

@@ -20,10 +20,10 @@ except ImportError:
     sys.exit(1)
 
 from jira_hierarchy.server import run_server
-from jira_hierarchy.version_check import check_version
+from jira_hierarchy.version_check import check_version, start_periodic_check, set_version_check_enabled
 
 
-def check_requirements():
+def check_requirements(enable_version_check=True):
     """Check for required environment variables and files"""
     print("=" * 70)
     print("JIRA Hierarchy Viewer Server")
@@ -31,7 +31,14 @@ def check_requirements():
     print()
 
     # Check version and warn if updates available
-    check_version()
+    if enable_version_check:
+        set_version_check_enabled(True)
+        check_version()
+        # Start periodic version checking (once per hour)
+        start_periodic_check()
+    else:
+        set_version_check_enabled(False)
+        print("Version checking disabled (--no-version-check)")
     print()
 
     # Check for JIRA PAT
@@ -74,10 +81,15 @@ def main():
         action='store_true',
         help='Do not automatically open browser window on startup'
     )
+    parser.add_argument(
+        '--no-version-check',
+        action='store_true',
+        help='Disable version checking (useful for development on feature branches)'
+    )
 
     args = parser.parse_args()
 
-    check_requirements()
+    check_requirements(enable_version_check=not args.no_version_check)
     run_server(open_browser_window=not args.no_browser)
 
 
