@@ -1685,6 +1685,7 @@
                     <select id="taskType" required>
                         <option value="Story">Story</option>
                         <option value="Task" selected>Task</option>
+                        <option value="Bug">Bug</option>
                         <option value="Spike">Spike</option>
                     </select>
                 </div>
@@ -2148,6 +2149,7 @@
                             </div>
                             <div class="standup-task-summary">${task.summary}</div>
                             <div class="standup-task-meta">
+                                <span class="issue-type" style="background: #DFE1E6; color: #42526E; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; text-transform: uppercase;">${task.issuetype || 'Task'}</span>
                                 <span class="issue-status ${getStatusClass(task.status)}" onclick="event.stopPropagation(); showStatusDropdown('${task.key}', this)">${task.status}</span>
                                 <span class="issue-priority ${getPriorityClass(task.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${task.key}', this)">${task.priority}</span>
                             </div>
