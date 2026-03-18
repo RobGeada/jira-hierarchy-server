@@ -87,7 +87,7 @@
         }
 
         .tree {
-            padding: 24px;
+            padding: 0 24px 24px 24px;
         }
 
         .tree-item {
@@ -195,6 +195,29 @@
             font-weight: 600;
             width: 120px;
             flex-shrink: 0;
+        }
+
+        .issue-version {
+            font-size: 11px;
+            padding: 3px 8px;
+            background: #E3FCEF;
+            color: #006644;
+            border-radius: 3px;
+            font-weight: 600;
+            white-space: nowrap;
+            width: 100px;
+            flex-shrink: 0;
+            text-align: center;
+        }
+
+        .issue-version:empty {
+            background: transparent;
+        }
+
+        .issue-version.no-version {
+            background: #F4F5F7;
+            color: #6B778C;
+            font-style: italic;
         }
 
         .issue-summary {
@@ -570,16 +593,62 @@
             pointer-events: none;
         }
 
-        .table-header {
-            display: flex;
+        .hierarchy-table-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
             background: #F4F5F7;
             border-bottom: 2px solid #DFE1E6;
-            padding: 12px 24px 12px 36px;
-            gap: 12px;
-            font-weight: 600;
-            font-size: 13px;
-            color: #172B4D;
+            padding: 12px 24px 12px 72px;
+            margin: 0 0px 4px 0px;
+            display: flex;
             align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            color: #172B4D;
+        }
+
+        .hierarchy-table-header .expand-icon-spacer {
+            width: 20px;
+            flex-shrink: 0;
+        }
+
+        .hierarchy-table-header .header-row {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .hierarchy-table-header .header-sortable {
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .hierarchy-table-header .header-sortable:hover {
+            color: #0052CC;
+        }
+
+        /* Standardize all header cell formatting */
+        .hierarchy-table-header .issue-key,
+        .hierarchy-table-header .issue-version,
+        .hierarchy-table-header .issue-summary-link,
+        .hierarchy-table-header .issue-status,
+        .hierarchy-table-header .issue-priority,
+        .hierarchy-table-header .issue-assignee,
+        .hierarchy-table-header .issue-updated {
+            background: none;
+            padding: 0;
+            border-radius: 0;
+            font-weight: 600;
+            color: #172B4D;
+            font-size: 14px;
+            font-family: inherit;
         }
 
         .header-cell {
@@ -599,15 +668,17 @@
         }
 
         .header-cell:nth-child(1) { width: 120px; } /* Key */
-        .header-cell:nth-child(2) { flex: 1; } /* Summary */
-        .header-cell:nth-child(3) { width: 100px; } /* Status */
-        .header-cell:nth-child(4) { width: 80px; } /* Priority */
-        .header-cell:nth-child(5) { width: 140px; } /* Assignee */
-        .header-cell:nth-child(6) { width: 110px; } /* Created */
+        .header-cell:nth-child(2) { width: 100px; } /* Version */
+        .header-cell:nth-child(3) { flex: 1; } /* Summary */
+        .header-cell:nth-child(4) { width: 100px; } /* Status */
+        .header-cell:nth-child(5) { width: 80px; } /* Priority */
+        .header-cell:nth-child(6) { width: 140px; } /* Assignee */
+        .header-cell:nth-child(7) { width: 110px; } /* Updated */
 
         .sort-indicator {
-            font-size: 11px;
+            font-size: 10px;
             color: #6B778C;
+            margin-left: 2px;
         }
 
         .sort-indicator.active {
@@ -783,6 +854,54 @@
         .form-group textarea {
             min-height: 100px;
             resize: vertical;
+        }
+
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #DFE1E6;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .autocomplete-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            border-bottom: 1px solid #F4F5F7;
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-item:hover {
+            background: #F4F5F7;
+        }
+
+        .autocomplete-item.selected {
+            background: #DEEBFF;
+        }
+
+        .autocomplete-loading {
+            padding: 8px 12px;
+            color: #6B778C;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .autocomplete-no-results {
+            padding: 8px 12px;
+            color: #6B778C;
+            font-size: 14px;
+            text-align: center;
         }
 
         .modal-footer {
@@ -1579,33 +1698,6 @@
             <span id="loadingIndicator" style="display: none; color: #0052CC; font-size: 14px;">⏳ Loading...</span>
         </div>
 
-        <div class="table-header" id="tableHeader" style="display: none;">
-            <div class="header-cell sortable" onclick="handleColumnSort('key')">
-                <span>Key</span>
-                <span class="sort-indicator" id="sort-key"></span>
-            </div>
-            <div class="header-cell sortable" onclick="handleColumnSort('summary')">
-                <span>Summary</span>
-                <span class="sort-indicator" id="sort-summary"></span>
-            </div>
-            <div class="header-cell sortable" onclick="handleColumnSort('status')">
-                <span>Status</span>
-                <span class="sort-indicator" id="sort-status"></span>
-            </div>
-            <div class="header-cell sortable" onclick="handleColumnSort('priority')">
-                <span>Priority</span>
-                <span class="sort-indicator" id="sort-priority"></span>
-            </div>
-            <div class="header-cell sortable" onclick="handleColumnSort('assignee')">
-                <span>Assignee</span>
-                <span class="sort-indicator" id="sort-assignee"></span>
-            </div>
-            <div class="header-cell sortable" onclick="handleColumnSort('updated')">
-                <span>Updated</span>
-                <span class="sort-indicator" id="sort-updated"></span>
-            </div>
-        </div>
-
         <div id="content">
             <div class="loading">
                 Click "Refresh Data" to load AI Safety hierarchy from JIRA
@@ -1749,8 +1841,22 @@
                 </div>
                 <div class="form-group">
                     <label for="configComponent">Component Filter *</label>
-                    <input type="text" id="configComponent" required placeholder="e.g., AI Safety, Trust & Safety">
-                    <small style="color: #6B778C; font-size: 12px;">Filter RFEs by component(s). Use comma-separated list for multiple (e.g., "AI Safety, Trust & Safety")</small>
+                    <div class="autocomplete-container" style="position: relative;">
+                        <input type="text" id="configComponent" required placeholder="Start typing to search components..." autocomplete="off">
+                        <div id="componentDropdown" class="autocomplete-dropdown" style="display: none;"></div>
+                    </div>
+                    <small style="color: #6B778C; font-size: 12px;">Start typing to search. Use comma-separated list for multiple components (e.g., "AI Safety, Trust & Safety")</small>
+                </div>
+                <div class="form-group">
+                    <label for="configTeam">Team</label>
+                    <div class="autocomplete-container" style="position: relative;">
+                        <input type="text" id="configTeam" placeholder="Start typing to search teams..." autocomplete="off">
+                        <div id="teamDropdown" class="autocomplete-dropdown" style="display: none;"></div>
+                        <input type="hidden" id="configTeamId">
+                    </div>
+                    <small style="color: #6B778C; font-size: 12px;">
+                        Team automatically set on all newly created tickets. Start typing to search for your team.
+                    </small>
                 </div>
                 <div class="form-group">
                     <label for="configMaxAgeDays">Maximum Ticket Age (days)</label>
@@ -1954,6 +2060,8 @@
             const email = localStorage.getItem('jira_email');
             const pat = localStorage.getItem('jira_pat');
             const component = localStorage.getItem('jira_component') || 'AI Safety';
+            const team = localStorage.getItem('jira_team') || '';
+            const teamId = localStorage.getItem('jira_team_id') || '';
             const topLevel = localStorage.getItem('jira_top_level') || 'rfe';
             const maxAgeDays = parseInt(localStorage.getItem('jira_max_age_days') || '365', 10);
             const showClosedRFEs = localStorage.getItem('show_closed_rfes') === 'true';
@@ -1977,6 +2085,8 @@
                 email,
                 pat,
                 component,
+                team,
+                teamId,
                 topLevel,
                 maxAgeDays,
                 showClosedRFEs,
@@ -1987,10 +2097,12 @@
             };
         }
 
-        function saveConfig(email, pat, component, maxAgeDays, showClosedRFEs, showClosedSTRATs, showClosedEpics, showClosedTasks) {
+        function saveConfig(email, pat, component, team, teamId, maxAgeDays, showClosedRFEs, showClosedSTRATs, showClosedEpics, showClosedTasks) {
             localStorage.setItem('jira_email', email);
             localStorage.setItem('jira_pat', pat);
             localStorage.setItem('jira_component', component);
+            localStorage.setItem('jira_team', team);
+            localStorage.setItem('jira_team_id', teamId);
             localStorage.setItem('jira_max_age_days', maxAgeDays);
             localStorage.setItem('show_closed_rfes', showClosedRFEs);
             localStorage.setItem('show_closed_strats', showClosedSTRATs);
@@ -2007,7 +2119,6 @@
 
             const viewBtn = document.getElementById('viewToggleBtn');
             const topLevelBtn = document.getElementById('topLevelBtn');
-            const tableHeader = document.getElementById('tableHeader');
             const expandAllBtn = document.querySelector('button[onclick="expandAll()"]');
             const collapseAllBtn = document.querySelector('button[onclick="collapseAll()"]');
             const filterGroup = document.querySelector('.filter-group');
@@ -2016,7 +2127,6 @@
             if (currentView === 'standup') {
                 viewBtn.textContent = 'View: Standup';
                 topLevelBtn.style.display = 'none';
-                tableHeader.style.display = 'none';
                 if (expandAllBtn) expandAllBtn.style.display = 'none';
                 if (collapseAllBtn) collapseAllBtn.style.display = 'none';
                 if (filterGroup) filterGroup.style.display = 'none';
@@ -2025,7 +2135,6 @@
             } else {
                 viewBtn.textContent = 'View: Hierarchy';
                 topLevelBtn.style.display = '';
-                tableHeader.style.display = 'flex';
                 if (expandAllBtn) expandAllBtn.style.display = '';
                 if (collapseAllBtn) collapseAllBtn.style.display = '';
                 if (filterGroup) filterGroup.style.display = 'flex';
@@ -2238,7 +2347,22 @@
         function renderHierarchyView() {
             // Clear content and rebuild tree from hierarchyData
             const content = document.getElementById('content');
-            content.innerHTML = '<div class="tree" id="tree"></div>';
+            content.innerHTML = `
+                <div class="hierarchy-table-header">
+                    <span class="expand-icon-spacer"></span>
+                    <div class="header-row">
+                        <span class="issue-key header-sortable" onclick="handleColumnSort('key')">Key<span class="sort-indicator" id="sort-key"></span></span>
+                        <span class="issue-summary-link header-sortable" onclick="handleColumnSort('summary')">Summary<span class="sort-indicator" id="sort-summary"></span></span>
+                        <span class="issue-version header-sortable" onclick="handleColumnSort('version')">Version<span class="sort-indicator" id="sort-version"></span></span>
+                        <span class="issue-status header-sortable" onclick="handleColumnSort('status')">Status<span class="sort-indicator" id="sort-status"></span></span>
+                        <span class="issue-priority header-sortable" onclick="handleColumnSort('priority')">Priority<span class="sort-indicator" id="sort-priority"></span></span>
+                        <span class="issue-assignee header-sortable" onclick="handleColumnSort('assignee')">Assignee<span class="sort-indicator" id="sort-assignee"></span></span>
+                        <span class="issue-updated header-sortable" onclick="handleColumnSort('updated')">Updated<span class="sort-indicator" id="sort-updated"></span></span>
+                        <span style="width: 32px; flex-shrink: 0;"></span>
+                    </div>
+                </div>
+                <div class="tree" id="tree"></div>
+            `;
             const tree = document.getElementById('tree');
 
             if (currentTopLevel === 'strat') {
@@ -2438,11 +2562,231 @@
             return selected.includes(username);
         }
 
+        let teamSearchTimeout = null;
+        let componentSearchTimeout = null;
+
+        function initComponentAutocomplete() {
+            const input = document.getElementById('configComponent');
+            const dropdown = document.getElementById('componentDropdown');
+
+            // Clear previous event listeners by cloning
+            const newInput = input.cloneNode(true);
+            input.parentNode.replaceChild(newInput, input);
+
+            // Re-get references after cloning
+            const componentInput = document.getElementById('configComponent');
+            const componentDropdown = document.getElementById('componentDropdown');
+
+            // Handle input changes
+            componentInput.addEventListener('input', async function() {
+                const fullValue = this.value;
+                const cursorPos = this.selectionStart;
+
+                // Get the text up to cursor and find the last comma
+                const textBeforeCursor = fullValue.substring(0, cursorPos);
+                const lastCommaIndex = textBeforeCursor.lastIndexOf(',');
+
+                // Get the current partial component being typed
+                const currentComponent = lastCommaIndex >= 0
+                    ? textBeforeCursor.substring(lastCommaIndex + 1).trim()
+                    : textBeforeCursor.trim();
+
+                // Hide dropdown if query too short
+                if (currentComponent.length < 1) {
+                    componentDropdown.style.display = 'none';
+                    return;
+                }
+
+                // Debounce search
+                clearTimeout(componentSearchTimeout);
+                componentSearchTimeout = setTimeout(async () => {
+                    await searchComponents(currentComponent, cursorPos);
+                }, 300);
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!componentInput.contains(e.target) && !componentDropdown.contains(e.target)) {
+                    componentDropdown.style.display = 'none';
+                }
+            });
+        }
+
+        async function searchComponents(query, cursorPos) {
+            const dropdown = document.getElementById('componentDropdown');
+            const input = document.getElementById('configComponent');
+            const config = loadConfig();
+
+            if (!config.email || !config.pat) {
+                dropdown.innerHTML = '<div class="autocomplete-no-results">Please configure email and API token first</div>';
+                dropdown.style.display = 'block';
+                return;
+            }
+
+            // Show loading
+            dropdown.innerHTML = '<div class="autocomplete-loading">Searching components...</div>';
+            dropdown.style.display = 'block';
+
+            try {
+                const params = new URLSearchParams({
+                    query: query,
+                    email: config.email,
+                    pat: config.pat
+                });
+
+                const response = await fetch('/api/search-components?' + params.toString());
+                const result = await response.json();
+
+                if (result.components && result.components.length > 0) {
+                    // Display components
+                    dropdown.innerHTML = result.components.map(comp =>
+                        `<div class="autocomplete-item" data-component-name="${comp.name}">
+                            ${comp.name}
+                        </div>`
+                    ).join('');
+
+                    // Add click handlers
+                    dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+                        item.addEventListener('click', function() {
+                            const componentName = this.getAttribute('data-component-name');
+                            const fullValue = input.value;
+                            const currentCursorPos = input.selectionStart;
+
+                            // Find where to insert the component
+                            const textBeforeCursor = fullValue.substring(0, currentCursorPos);
+                            const textAfterCursor = fullValue.substring(currentCursorPos);
+                            const lastCommaIndex = textBeforeCursor.lastIndexOf(',');
+
+                            let newValue;
+                            if (lastCommaIndex >= 0) {
+                                // Replace text after last comma
+                                const beforeComma = fullValue.substring(0, lastCommaIndex + 1);
+                                newValue = beforeComma + ' ' + componentName + textAfterCursor;
+                            } else {
+                                // Replace entire value
+                                newValue = componentName + textAfterCursor;
+                            }
+
+                            input.value = newValue;
+                            dropdown.style.display = 'none';
+
+                            // Move cursor to end of inserted component
+                            const newCursorPos = lastCommaIndex >= 0
+                                ? lastCommaIndex + 2 + componentName.length
+                                : componentName.length;
+                            input.setSelectionRange(newCursorPos, newCursorPos);
+                            input.focus();
+                        });
+                    });
+                } else {
+                    dropdown.innerHTML = '<div class="autocomplete-no-results">No components found</div>';
+                }
+            } catch (error) {
+                console.error('Component search error:', error);
+                dropdown.innerHTML = '<div class="autocomplete-no-results">Error searching components</div>';
+            }
+        }
+
+        function initTeamAutocomplete() {
+            const input = document.getElementById('configTeam');
+            const dropdown = document.getElementById('teamDropdown');
+            const hiddenId = document.getElementById('configTeamId');
+
+            // Clear previous event listeners by cloning
+            const newInput = input.cloneNode(true);
+            input.parentNode.replaceChild(newInput, input);
+
+            // Re-get references after cloning
+            const teamInput = document.getElementById('configTeam');
+            const teamDropdown = document.getElementById('teamDropdown');
+
+            // Handle input changes
+            teamInput.addEventListener('input', async function() {
+                const query = this.value.trim();
+
+                // Clear team ID when input changes
+                hiddenId.value = '';
+
+                // Hide dropdown if query too short
+                if (query.length < 2) {
+                    teamDropdown.style.display = 'none';
+                    return;
+                }
+
+                // Debounce search
+                clearTimeout(teamSearchTimeout);
+                teamSearchTimeout = setTimeout(async () => {
+                    await searchTeams(query);
+                }, 300);
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!teamInput.contains(e.target) && !teamDropdown.contains(e.target)) {
+                    teamDropdown.style.display = 'none';
+                }
+            });
+        }
+
+        async function searchTeams(query) {
+            const dropdown = document.getElementById('teamDropdown');
+            const config = loadConfig();
+
+            if (!config.email || !config.pat) {
+                dropdown.innerHTML = '<div class="autocomplete-no-results">Please configure email and API token first</div>';
+                dropdown.style.display = 'block';
+                return;
+            }
+
+            // Show loading
+            dropdown.innerHTML = '<div class="autocomplete-loading">Searching teams...</div>';
+            dropdown.style.display = 'block';
+
+            try {
+                const params = new URLSearchParams({
+                    query: query,
+                    email: config.email,
+                    pat: config.pat
+                });
+
+                const response = await fetch('/api/search-teams?' + params.toString());
+                const result = await response.json();
+
+                if (result.teams && result.teams.length > 0) {
+                    // Display teams
+                    dropdown.innerHTML = result.teams.map(team =>
+                        `<div class="autocomplete-item" data-team-id="${team.id}" data-team-name="${team.name}">
+                            ${team.name}
+                        </div>`
+                    ).join('');
+
+                    // Add click handlers
+                    dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+                        item.addEventListener('click', function() {
+                            const teamId = this.getAttribute('data-team-id');
+                            const teamName = this.getAttribute('data-team-name');
+
+                            document.getElementById('configTeam').value = teamName;
+                            document.getElementById('configTeamId').value = teamId;
+                            dropdown.style.display = 'none';
+                        });
+                    });
+                } else {
+                    dropdown.innerHTML = '<div class="autocomplete-no-results">No teams found</div>';
+                }
+            } catch (error) {
+                console.error('Team search error:', error);
+                dropdown.innerHTML = '<div class="autocomplete-no-results">Error searching teams</div>';
+            }
+        }
+
         function showConfigModal() {
             const config = loadConfig();
             document.getElementById('configEmail').value = config.email || '';
             document.getElementById('configPAT').value = config.pat || '';
             document.getElementById('configComponent').value = config.component || 'AI Safety';
+            document.getElementById('configTeam').value = config.team || '';
+            document.getElementById('configTeamId').value = config.teamId || '';
             document.getElementById('configMaxAgeDays').value = config.maxAgeDays || 365;
             document.getElementById('showClosedRFEs').checked = config.showClosedRFEs || false;
             document.getElementById('showClosedSTRATs').checked = config.showClosedSTRATs || false;
@@ -2451,6 +2795,10 @@
 
             // Populate assignee list
             populateAssigneeCheckboxList();
+
+            // Initialize autocomplete fields
+            initComponentAutocomplete();
+            initTeamAutocomplete();
 
             // Reset to general tab
             document.querySelectorAll('.modal-tab').forEach(tab => tab.classList.remove('active'));
@@ -2467,6 +2815,7 @@
             const email = document.getElementById('configEmail').value;
             const pat = document.getElementById('configPAT').value;
             const component = document.getElementById('configComponent').value;
+            let team = document.getElementById('configTeam').value;
             const maxAgeDays = parseInt(document.getElementById('configMaxAgeDays').value || '365', 10);
             const showClosedRFEs = document.getElementById('showClosedRFEs').checked;
             const showClosedSTRATs = document.getElementById('showClosedSTRATs').checked;
@@ -2476,6 +2825,9 @@
             const submitBtn = document.getElementById('configSubmitBtn');
             submitBtn.disabled = true;
             submitBtn.textContent = skipValidation ? 'Saving...' : 'Validating...';
+
+            // Get team ID from hidden field (already set by autocomplete)
+            let teamId = document.getElementById('configTeamId').value || '';
 
             try {
                 // Skip validation if requested
@@ -2523,10 +2875,32 @@
                             return;
                         }
                     }
+
+                    // Warn if team name is entered but no team ID (user didn't select from dropdown or has old cached value)
+                    // Only warn if team name has changed from the cached value (meaning user typed it)
+                    const cachedTeam = oldConfig.team || '';
+                    const teamChanged = team !== cachedTeam;
+
+                    if (team && !teamId && teamChanged) {
+                        if (!confirm(
+                            `WARNING: You entered a team name but didn't select it from the dropdown.\n\n` +
+                            `The team won't be set on new tickets.\n\n` +
+                            `Continue anyway? (You can set it later)`
+                        )) {
+                            return;
+                        }
+                    }
+
+                    // If team hasn't changed but there's no team ID (old cached value), clear the team name
+                    if (team && !teamId && !teamChanged) {
+                        console.log('Clearing old team name without ID:', team);
+                        team = '';
+                        teamId = '';
+                    }
                 }
 
-                // Save config
-                saveConfig(email, pat, component, maxAgeDays, showClosedRFEs, showClosedSTRATs, showClosedEpics, showClosedTasks);
+                // Save config (including team ID)
+                saveConfig(email, pat, component, team, teamId, maxAgeDays, showClosedRFEs, showClosedSTRATs, showClosedEpics, showClosedTasks);
                 closeModal('configModal');
                 showSuccess('Settings saved successfully!');
 
@@ -2712,14 +3086,26 @@
             // Track current mode
             currentTopLevel = config.topLevel;
 
-            // Hide table header during refresh
-            document.getElementById('tableHeader').style.display = 'none';
-
             // Initialize tree structure only if in hierarchy view
             let tree = null;
             if (currentView === 'hierarchy') {
                 if (!document.getElementById('tree')) {
-                    content.innerHTML = '<div class="tree" id="tree"></div>';
+                    content.innerHTML = `
+                        <div class="hierarchy-table-header">
+                            <span class="expand-icon-spacer"></span>
+                            <div class="header-row">
+                                <span class="issue-key header-sortable" onclick="handleColumnSort('key')">Key<span class="sort-indicator" id="sort-key"></span></span>
+                                <span class="issue-summary-link header-sortable" onclick="handleColumnSort('summary')">Summary<span class="sort-indicator" id="sort-summary"></span></span>
+                                <span class="issue-version header-sortable" onclick="handleColumnSort('version')">Version<span class="sort-indicator" id="sort-version"></span></span>
+                                <span class="issue-status header-sortable" onclick="handleColumnSort('status')">Status<span class="sort-indicator" id="sort-status"></span></span>
+                                <span class="issue-priority header-sortable" onclick="handleColumnSort('priority')">Priority<span class="sort-indicator" id="sort-priority"></span></span>
+                                <span class="issue-assignee header-sortable" onclick="handleColumnSort('assignee')">Assignee<span class="sort-indicator" id="sort-assignee"></span></span>
+                                <span class="issue-updated header-sortable" onclick="handleColumnSort('updated')">Updated<span class="sort-indicator" id="sort-updated"></span></span>
+                                <span style="width: 32px; flex-shrink: 0;"></span>
+                            </div>
+                        </div>
+                        <div class="tree" id="tree"></div>
+                    `;
                 } else {
                     // Clear existing tree for refresh
                     document.getElementById('tree').innerHTML = '';
@@ -2745,11 +3131,6 @@
             // Update top level button text
             const topLevelBtn = document.getElementById('topLevelBtn');
             topLevelBtn.textContent = `Group By: ${config.topLevel === 'rfe' ? 'RFEs' : 'STRATs'}`;
-
-            // Show table header immediately when loading starts (only in hierarchy view)
-            if (currentView === 'hierarchy') {
-                document.getElementById('tableHeader').style.display = 'flex';
-            }
 
             // Create EventSource to stream data with config as query params
             const params = new URLSearchParams({
@@ -2975,13 +3356,16 @@
         function addRfeToTree(tree, rfe) {
             trackAssignee(rfe.assignee, rfe.assignee_username);
             const rfeId = `rfe-${rfe.key}`;
+            const versionInfo = extractVersionLabel(rfe.labels);
+            const versionClass = versionInfo.display === 'No version label' ? 'issue-version no-version' : 'issue-version';
             const rfeHtml = `
-                <div class="tree-item" id="item-${rfe.key}" data-assignee="${rfe.assignee_username || ''}" data-type="rfe">
+                <div class="tree-item" id="item-${rfe.key}" data-assignee="${rfe.assignee_username || ''}" data-type="rfe" data-version="${versionInfo.sortValue}">
                     <div class="tree-node rfe empty" id="node-${rfe.key}" onclick="toggleNode('${rfeId}')">
                         <span class="expand-icon">▶</span>
                         <div class="tree-content">
                             <span class="issue-key">${rfe.key}</span>
                             <a href="${JIRA_CONFIG.baseUrl}/browse/${rfe.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${rfe.summary}</a>
+                            <span class="${versionClass}">${versionInfo.display}</span>
                             <span class="issue-status ${getStatusClass(rfe.status)}" onclick="event.stopPropagation(); showStatusDropdown('${rfe.key}', this)">${rfe.status}</span>
                             <span class="issue-priority ${getPriorityClass(rfe.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${rfe.key}', this)">${rfe.priority}</span>
                             <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${rfe.key}', this)">${rfe.assignee || 'Unassigned'}</span>
@@ -2999,13 +3383,16 @@
         function addStratToTree(strat, isTopLevel = false) {
             trackAssignee(strat.assignee, strat.assignee_username);
             const stratId = `strat-${strat.key}`;
+            const versionInfo = extractVersionLabel(strat.labels);
+            const versionClass = versionInfo.display === 'No version label' ? 'issue-version no-version' : 'issue-version';
             const stratHtml = `
-                <div class="tree-item" id="item-${strat.key}" data-assignee="${strat.assignee_username || ''}" data-type="strat">
+                <div class="tree-item" id="item-${strat.key}" data-assignee="${strat.assignee_username || ''}" data-type="strat" data-version="${versionInfo.sortValue}">
                     <div class="tree-node strat empty" id="node-${strat.key}" onclick="toggleNode('${stratId}')">
                         <span class="expand-icon">▶</span>
                         <div class="tree-content">
                             <span class="issue-key">${strat.key}</span>
                             <a href="${JIRA_CONFIG.baseUrl}/browse/${strat.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${strat.summary}</a>
+                            <span class="${versionClass}">${versionInfo.display}</span>
                             <span class="issue-status ${getStatusClass(strat.status)}" onclick="event.stopPropagation(); showStatusDropdown('${strat.key}', this)">${strat.status}</span>
                             <span class="issue-priority ${getPriorityClass(strat.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${strat.key}', this)">${strat.priority}</span>
                             <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${strat.key}', this)">${strat.assignee || 'Unassigned'}</span>
@@ -3094,6 +3481,7 @@
                         <div class="tree-content">
                             <span class="issue-key">${epic.key}</span>
                             <a href="${JIRA_CONFIG.baseUrl}/browse/${epic.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${epic.summary}</a>
+                            <span class="issue-version"></span>
                             <span class="issue-status ${getStatusClass(epic.status)}" onclick="event.stopPropagation(); showStatusDropdown('${epic.key}', this)">${epic.status}</span>
                             <span class="issue-priority ${getPriorityClass(epic.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${epic.key}', this)">${epic.priority}</span>
                             <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${epic.key}', this)">${epic.assignee || 'Unassigned'}</span>
@@ -3131,6 +3519,7 @@
                         <div class="tree-content">
                             <span class="issue-key">${task.key}</span>
                             <a href="${JIRA_CONFIG.baseUrl}/browse/${task.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${task.summary}</a>
+                            <span class="issue-version"></span>
                             <span class="issue-status ${getStatusClass(task.status)}" onclick="event.stopPropagation(); showStatusDropdown('${task.key}', this)">${task.status}</span>
                             <span class="issue-priority ${getPriorityClass(task.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${task.key}', this)">${task.priority}</span>
                             <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${task.key}', this)">${task.assignee || 'Unassigned'}</span>
@@ -3341,6 +3730,12 @@
                     case 'panel':
                         const panelType = node.attrs?.panelType || 'info';
                         return `<div class="panel panel-${panelType}">${innerHtml}</div>`;
+
+                    case 'media':
+                    case 'mediaSingle':
+                    case 'mediaInline':
+                        // Skip media elements (images, attachments) in descriptions
+                        return '';
 
                     default:
                         console.warn('Unhandled ADF node type:', type, node);
@@ -3744,6 +4139,10 @@
                     aVal = a.updated ? new Date(a.updated).getTime() : 0;
                     bVal = b.updated ? new Date(b.updated).getTime() : 0;
                     break;
+                case 'version':
+                    aVal = extractVersionLabel(a.labels).sortValue;
+                    bVal = extractVersionLabel(b.labels).sortValue;
+                    break;
                 default:
                     return 0;
             }
@@ -3826,26 +4225,30 @@
                 currentSortOrder = 'asc';
             }
 
-            // Update sort indicators
-            document.querySelectorAll('.sort-indicator').forEach(indicator => {
-                indicator.textContent = '';
-                indicator.classList.remove('active');
-            });
-
-            const indicator = document.getElementById(`sort-${field}`);
-            if (indicator) {
-                indicator.textContent = currentSortOrder === 'asc' ? '▲' : '▼';
-                indicator.classList.add('active');
-            }
-
             // Sort the hierarchy data
             sortHierarchyData(hierarchyData, currentSortField, currentSortOrder);
 
-            // Re-render the tree based on current view
-            const tree = document.getElementById('tree');
-            if (!tree) return;
+            // Re-render the entire hierarchy view
+            const content = document.getElementById('content');
+            if (!content) return;
 
-            tree.innerHTML = '';
+            content.innerHTML = `
+                <div class="hierarchy-table-header">
+                    <span class="expand-icon-spacer"></span>
+                    <div class="header-row">
+                        <span class="issue-key header-sortable" onclick="handleColumnSort('key')">Key<span class="sort-indicator" id="sort-key"></span></span>
+                        <span class="issue-summary-link header-sortable" onclick="handleColumnSort('summary')">Summary<span class="sort-indicator" id="sort-summary"></span></span>
+                        <span class="issue-version header-sortable" onclick="handleColumnSort('version')">Version<span class="sort-indicator" id="sort-version"></span></span>
+                        <span class="issue-status header-sortable" onclick="handleColumnSort('status')">Status<span class="sort-indicator" id="sort-status"></span></span>
+                        <span class="issue-priority header-sortable" onclick="handleColumnSort('priority')">Priority<span class="sort-indicator" id="sort-priority"></span></span>
+                        <span class="issue-assignee header-sortable" onclick="handleColumnSort('assignee')">Assignee<span class="sort-indicator" id="sort-assignee"></span></span>
+                        <span class="issue-updated header-sortable" onclick="handleColumnSort('updated')">Updated<span class="sort-indicator" id="sort-updated"></span></span>
+                        <span style="width: 32px; flex-shrink: 0;"></span>
+                    </div>
+                </div>
+                <div class="tree" id="tree"></div>
+            `;
+            const tree = document.getElementById('tree');
 
             if (currentTopLevel === 'strat') {
                 // STRAT-first view
@@ -3886,6 +4289,18 @@
                         }
                     });
                 }
+            }
+
+            // Update sort indicators after re-rendering
+            document.querySelectorAll('.sort-indicator').forEach(indicator => {
+                indicator.textContent = '';
+                indicator.classList.remove('active');
+            });
+
+            const indicator = document.getElementById(`sort-${field}`);
+            if (indicator) {
+                indicator.textContent = currentSortOrder === 'asc' ? '▲' : '▼';
+                indicator.classList.add('active');
             }
         }
 
@@ -3998,6 +4413,15 @@
                     currentElement = currentElement.parentElement;
                 }
             });
+
+            // Always show add-item buttons regardless of filter
+            const addItemButtons = tree.querySelectorAll('.tree-item .add-item-tree-node');
+            addItemButtons.forEach(button => {
+                const treeItem = button.closest('.tree-item');
+                if (treeItem) {
+                    treeItem.style.display = 'block';
+                }
+            });
         }
 
         function getStatusClass(status) {
@@ -4023,6 +4447,67 @@
             const day = String(date.getDate()).padStart(2, '0');
             const year = date.getFullYear();
             return `${month}/${day}/${year}`;
+        }
+
+        function extractVersionLabel(labels) {
+            if (!labels || !Array.isArray(labels) || labels.length === 0) {
+                return { display: 'No version label', sortValue: 999999 };
+            }
+
+            // Pattern to match version labels like "3.4-candidate", "3.5-committed", "rhoai-3.0"
+            const versionPattern = /^(?:(rhoai)-)?(\d+)\.(\d+)(?:-(committed|candidate))?$/i;
+            const versions = [];
+
+            labels.forEach(label => {
+                const match = label.match(versionPattern);
+                if (match) {
+                    const hasRhoai = match[1] !== undefined;
+                    const major = parseInt(match[2], 10);
+                    const minor = parseInt(match[3], 10);
+                    const suffix = match[4] ? match[4].toLowerCase() : '';
+
+                    // Sort order: higher version first, then committed > rhoai > candidate > no suffix
+                    // For version: 3.5 = 305, 3.4 = 304, etc. (negate to sort descending)
+                    const versionValue = -(major * 100 + minor);
+
+                    // Suffix priority: committed=3, rhoai=2 (no suffix), candidate=1, no match=0
+                    let suffixPriority = 0;
+                    if (suffix === 'committed') {
+                        suffixPriority = 3;
+                    } else if (hasRhoai) {
+                        suffixPriority = 2;
+                    } else if (suffix === 'candidate') {
+                        suffixPriority = 1;
+                    }
+
+                    // Combine: version * 10 - suffix priority (subtract to get committed first)
+                    // e.g., 3.5-committed = -305*10 - 3 = -3053 (sorts first for 3.5)
+                    //       rhoai-3.5 = -305*10 - 2 = -3052
+                    //       3.5-candidate = -305*10 - 1 = -3051
+                    //       3.4-committed = -304*10 - 3 = -3043
+                    const sortValue = versionValue * 10 - suffixPriority;
+
+                    versions.push({
+                        label: label,
+                        major: major,
+                        minor: minor,
+                        sortValue: sortValue
+                    });
+                }
+            });
+
+            if (versions.length === 0) {
+                return { display: 'No version label', sortValue: 999999 };
+            }
+
+            // Sort by sortValue and take the highest priority (lowest sortValue due to negation)
+            versions.sort((a, b) => a.sortValue - b.sortValue);
+            const highest = versions[0];
+
+            return {
+                display: highest.label,
+                sortValue: highest.sortValue
+            };
         }
 
         function updateStats(data) {
@@ -4424,7 +4909,8 @@
                         summary: summary,
                         component: component,
                         assignee: assignee,
-                        description: description
+                        description: description,
+                        team_id: config.teamId
                     })
                 });
 
@@ -4486,7 +4972,8 @@
                         component: component,
                         assignee: assignee,
                         description: description,
-                        pull_request: pullRequest
+                        pull_request: pullRequest,
+                        team_id: config.teamId
                     })
                 });
 

@@ -43,6 +43,10 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             self.get_strats_by_assignee()
         elif parsed_path.path == '/api/validate-components':
             self.validate_components()
+        elif parsed_path.path == '/api/search-teams':
+            self.search_teams()
+        elif parsed_path.path == '/api/search-components':
+            self.search_components()
         elif parsed_path.path == '/api/version-status':
             self.get_version_status()
         elif parsed_path.path == '/health':
@@ -89,12 +93,13 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             component = data.get('component')
             assignee = data.get('assignee')
             description = data.get('description', '')
+            team_id = data.get('team_id', '')
 
             if not strat_key or not summary:
                 self.send_json({'error': 'Missing required fields'}, status=400)
                 return
 
-            epic_data = create_epic(summary, description, strat_key, component, assignee, email, pat)
+            epic_data = create_epic(summary, description, strat_key, component, assignee, team_id, email, pat)
             self.send_json({'success': True, 'epic': epic_data})
 
         except Exception as e:
@@ -116,12 +121,13 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             description = data.get('description', '')
             issue_type = data.get('issue_type', 'Story')
             pull_request = data.get('pull_request', '')
+            team_id = data.get('team_id', '')
 
             if not epic_key or not summary:
                 self.send_json({'error': 'Missing required fields'}, status=400)
                 return
 
-            task_data = create_task(summary, description, epic_key, issue_type, component, assignee, pull_request, email, pat)
+            task_data = create_task(summary, description, epic_key, issue_type, component, assignee, pull_request, team_id, email, pat)
             self.send_json({'success': True, 'task': task_data})
 
         except Exception as e:
@@ -663,6 +669,146 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             print(f"Error validating components: {e}", file=sys.stderr)
             traceback.print_exc()
             self.send_json({'error': str(e)}, status=500)
+
+    def search_components(self):
+        """Search for components in JIRA (for autocomplete dropdown)"""
+        try:
+            parsed_path = urlparse(self.path)
+            params = parse_qs(parsed_path.query)
+
+            query = params.get('query', [''])[0].strip()
+            email = params.get('email', [None])[0]
+            pat = params.get('pat', [None])[0]
+
+            # Credentials required
+            if not email or not pat:
+                self.send_json({'error': 'Email and API Token required'}, status=400)
+                return
+
+            # Return empty list if query is too short
+            if len(query) < 1:
+                self.send_json({'components': []})
+                return
+
+            import requests
+            import base64
+            import re
+            from .config import JIRA_BASE_URL
+
+            # Create auth header
+            auth_string = f"{email}:{pat}"
+            encoded = base64.b64encode(auth_string.encode()).decode()
+            headers = {
+                'Authorization': f'Basic {encoded}',
+                'Accept': 'application/json'
+            }
+
+            # Use JIRA's JQL autocomplete endpoint for Component field
+            url = f"{JIRA_BASE_URL}/rest/api/latest/jql/autocompletedata/suggestions"
+
+            params = {
+                'fieldName': 'component',
+                'fieldValue': query
+            }
+
+            response = requests.get(url, headers=headers, params=params, timeout=10)
+
+            if response.status_code == 200:
+                data = response.json()
+                components = []
+
+                # Extract components from autocomplete response
+                results = data.get('results', [])
+                for result in results:
+                    comp_name = result.get('displayName', '') or result.get('value', '')
+
+                    # Remove HTML bold tags from displayName
+                    comp_name = re.sub(r'</?b>', '', comp_name)
+
+                    if comp_name:
+                        components.append({'name': comp_name})
+
+                self.send_json({'components': components})
+
+            else:
+                print(f"Component autocomplete API returned {response.status_code}: {response.text[:500]}", file=sys.stderr)
+                self.send_json({'components': []})
+
+        except Exception as e:
+            print(f"Error searching components: {e}", file=sys.stderr)
+            traceback.print_exc()
+            self.send_json({'components': []}, status=500)
+
+    def search_teams(self):
+        """Search for teams in JIRA (for autocomplete dropdown)"""
+        try:
+            parsed_path = urlparse(self.path)
+            params = parse_qs(parsed_path.query)
+
+            query = params.get('query', [''])[0].strip()
+            email = params.get('email', [None])[0]
+            pat = params.get('pat', [None])[0]
+
+            # Credentials required
+            if not email or not pat:
+                self.send_json({'error': 'Email and API Token required'}, status=400)
+                return
+
+            # Return empty list if query is too short
+            if len(query) < 2:
+                self.send_json({'teams': []})
+                return
+
+            import requests
+            import base64
+            import re
+            from .config import JIRA_BASE_URL
+
+            # Create auth header
+            auth_string = f"{email}:{pat}"
+            encoded = base64.b64encode(auth_string.encode()).decode()
+            headers = {
+                'Authorization': f'Basic {encoded}',
+                'Accept': 'application/json'
+            }
+
+            # Use JIRA's JQL autocomplete endpoint for Team field
+            url = f"{JIRA_BASE_URL}/rest/api/latest/jql/autocompletedata/suggestions"
+
+            params = {
+                'fieldName': 'Team[Team]',
+                'fieldValue': query
+            }
+
+            response = requests.get(url, headers=headers, params=params, timeout=10)
+
+            if response.status_code == 200:
+                data = response.json()
+                teams = []
+
+                # Extract teams from autocomplete response
+                results = data.get('results', [])
+                for result in results:
+                    team_id = result.get('value', '')
+                    team_name = result.get('displayName', '')
+
+                    # Remove HTML bold tags from displayName
+                    import re
+                    team_name = re.sub(r'</?b>', '', team_name)
+
+                    if team_id and team_name:
+                        teams.append({'id': team_id, 'name': team_name})
+
+                self.send_json({'teams': teams})
+
+            else:
+                print(f"Team autocomplete API returned {response.status_code}: {response.text[:500]}", file=sys.stderr)
+                self.send_json({'teams': []})
+
+        except Exception as e:
+            print(f"Error searching teams: {e}", file=sys.stderr)
+            traceback.print_exc()
+            self.send_json({'teams': []}, status=500)
 
     def get_version_status(self):
         """Get the current version status"""
