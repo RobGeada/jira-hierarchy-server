@@ -2261,6 +2261,7 @@
                                 <span class="issue-type" style="background: #DFE1E6; color: #42526E; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; text-transform: uppercase;">${task.issuetype || 'Task'}</span>
                                 <span class="issue-status ${getStatusClass(task.status)}" onclick="event.stopPropagation(); showStatusDropdown('${task.key}', this)">${task.status}</span>
                                 <span class="issue-priority ${getPriorityClass(task.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${task.key}', this)">${task.priority}</span>
+                                <span class="issue-updated" style="background: #F4F5F7; color: #42526E; padding: 2px 8px; border-radius: 3px; font-size: 11px;" title="Updated ${formatDate(task.updated)}">Updated ${formatRelativeTime(task.updated)}</span>
                             </div>
                             <div class="standup-hierarchy">
                     `;
@@ -4447,6 +4448,25 @@
             const day = String(date.getDate()).padStart(2, '0');
             const year = date.getFullYear();
             return `${month}/${day}/${year}`;
+        }
+
+        function formatRelativeTime(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+            if (diffMinutes < 1) return 'just now';
+            if (diffMinutes < 60) return `${diffMinutes}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays === 1) return 'yesterday';
+            if (diffDays < 7) return `${diffDays}d ago`;
+            if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+            if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
+            return `${Math.floor(diffDays / 365)}y ago`;
         }
 
         function extractVersionLabel(labels) {
