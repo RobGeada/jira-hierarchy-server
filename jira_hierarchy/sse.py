@@ -71,7 +71,7 @@ def stream_hierarchy_rfe_first(wfile, jira_email, jira_pat, component="AI Safety
 
     # Calculate cutoff date for age filter
     cutoff_date = (datetime.now() - timedelta(days=max_age_days)).strftime('%Y-%m-%d')
-    print(f"Filtering tickets created on or after: {cutoff_date}", file=sys.stderr)
+    print(f"Filtering tickets updated on or after: {cutoff_date}", file=sys.stderr)
 
     # Counters
     total_rfes = 0
@@ -115,7 +115,7 @@ def stream_hierarchy_rfe_first(wfile, jira_email, jira_pat, component="AI Safety
     strats_jql = (
         f'project = RHAISTRAT '
         f'AND {component_clause} '
-        f'AND created >= {cutoff_date}'
+        f'AND updated >= {cutoff_date}'
     )
     if not show_closed_strats:
         strats_jql += ' AND status NOT IN (Closed, Resolved)'
@@ -184,7 +184,7 @@ def stream_hierarchy_rfe_first(wfile, jira_email, jira_pat, component="AI Safety
             f'project = RHOAIENG '
             f'AND issuetype = Epic '
             f'AND "Parent Link" in ({",".join(strat_keys_list)}) '
-            f'AND created >= {cutoff_date}'
+            f'AND updated >= {cutoff_date}'
         )
         if not show_closed_epics:
             epics_jql += ' AND status NOT IN (Closed, Resolved)'
@@ -302,7 +302,7 @@ def stream_hierarchy_rfe_first(wfile, jira_email, jira_pat, component="AI Safety
         f'project = RHOAIENG '
         f'AND {component_clause} '
         f'AND issuetype NOT IN (Epic, Feature, "Feature Request") '
-        f'AND created >= {cutoff_date}'
+        f'AND updated >= {cutoff_date}'
     )
     if not show_closed_tasks:
         tasks_jql += ' AND status NOT IN (Closed, Resolved)'
@@ -396,7 +396,7 @@ def stream_hierarchy_strat_first(wfile, jira_email, jira_pat, component="AI Safe
 
     # Calculate cutoff date for age filter
     cutoff_date = (datetime.now() - timedelta(days=max_age_days)).strftime('%Y-%m-%d')
-    print(f"Filtering tickets created on or after: {cutoff_date}", file=sys.stderr)
+    print(f"Filtering tickets updated on or after: {cutoff_date}", file=sys.stderr)
 
     # Counters
     total_strats = 0
@@ -420,7 +420,7 @@ def stream_hierarchy_strat_first(wfile, jira_email, jira_pat, component="AI Safe
     strats_jql = (
         f'project = RHAISTRAT '
         f'AND {component_clause} '
-        f'AND created >= {cutoff_date}'
+        f'AND updated >= {cutoff_date}'
     )
     if not show_closed_strats:
         strats_jql += ' AND status NOT IN (Closed, Resolved)'
@@ -462,7 +462,7 @@ def stream_hierarchy_strat_first(wfile, jira_email, jira_pat, component="AI Safe
             f'project = RHOAIENG '
             f'AND issuetype = Epic '
             f'AND "Parent Link" in ({",".join(strat_keys_list)}) '
-            f'AND created >= {cutoff_date}'
+            f'AND updated >= {cutoff_date}'
         )
         if not show_closed_epics:
             epics_jql += ' AND status NOT IN (Closed, Resolved)'
@@ -571,7 +571,7 @@ def stream_hierarchy_strat_first(wfile, jira_email, jira_pat, component="AI Safe
         f'project = RHOAIENG '
         f'AND {component_clause} '
         f'AND issuetype NOT IN (Epic, Feature, "Feature Request") '
-        f'AND created >= {cutoff_date}'
+        f'AND updated >= {cutoff_date}'
     )
     if not show_closed_tasks:
         tasks_jql += ' AND status NOT IN (Closed, Resolved)'

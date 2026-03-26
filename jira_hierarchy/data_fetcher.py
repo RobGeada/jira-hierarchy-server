@@ -118,7 +118,7 @@ def fetch_rfes(component, jira_email, jira_pat, show_closed=False, max_age_days=
         f'project = RHAIRFE '
         f'AND issuetype = "Feature Request" '
         f'AND {component_clause} '
-        f'AND created >= {cutoff_date}'
+        f'AND updated >= {cutoff_date}'
     )
     if not show_closed:
         rfes_jql += ' AND status NOT IN (Closed, Resolved)'

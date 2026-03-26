@@ -360,7 +360,8 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             from .jira_client import update_jira_issue
             # If assignee is empty, set to null to unassign
             if assignee:
-                update_jira_issue(issue_key, {'assignee': {'name': assignee}}, email, pat)
+                # JIRA Cloud uses accountId, not name
+                update_jira_issue(issue_key, {'assignee': {'accountId': assignee}}, email, pat)
             else:
                 update_jira_issue(issue_key, {'assignee': None}, email, pat)
             self.send_json({'success': True})
@@ -422,7 +423,7 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             # Fetch the item and its children based on type
             if item_type == 'rfe':
                 # Fetch this specific RFE
-                rfes = fetch_rfes(component, email, pat)
+                rfes = fetch_rfes(component, email, pat, show_closed=True, max_age_days=3650)
                 rfe = next((r for r in rfes if r['key'] == issue_key), None)
                 if not rfe:
                     self.send_json({'error': 'RFE not found'}, status=404)
@@ -539,7 +540,7 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
                 f'project = RHAISTRAT',
                 f'AND assignee = "{assignee}"',
                 f'AND status NOT IN (Closed, Resolved)',
-                f'AND created >= {cutoff_date}'
+                f'AND updated >= {cutoff_date}'
             ]
 
             if component:

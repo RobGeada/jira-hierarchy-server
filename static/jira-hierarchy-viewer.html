@@ -1861,7 +1861,7 @@
                 <div class="form-group">
                     <label for="configMaxAgeDays">Maximum Ticket Age (days)</label>
                     <input type="number" id="configMaxAgeDays" min="1" max="3650" placeholder="365">
-                    <small style="color: #6B778C; font-size: 12px;">Only show tickets created within the last N days. Default: 365 (1 year)</small>
+                    <small style="color: #6B778C; font-size: 12px;">Only show tickets updated within the last N days. Default: 365 (1 year)</small>
                 </div>
                 <div class="form-group">
                     <label>Show Closed Items</label>
@@ -5435,12 +5435,12 @@
             // Build options HTML from known assignees (sorted by display name)
             const assigneeOptions = Array.from(knownAssignees.entries())
                 .sort((a, b) => a[1].localeCompare(b[1])) // Sort by display name
-                .map(([username, displayName]) => `<div class="status-option" onclick="changeAssignee('${issueKey}', '${username}')">${displayName} (${username})</div>`)
+                .map(([username, displayName]) => `<div class="status-option assignee-option" data-username="${username.toLowerCase()}" data-displayname="${displayName.toLowerCase()}" onclick="changeAssignee('${issueKey}', '${username}')">${displayName} (${username})</div>`)
                 .join('');
 
             dropdown.innerHTML = `
-                <input type="text" id="assignee-input-${issueKey}" placeholder="Username" style="width: 100%; padding: 8px; border: 1px solid #DFE1E6; border-radius: 3px; margin-bottom: 8px;" />
-                <div class="status-option" onclick="changeAssignee('${issueKey}', '')">Unassigned</div>
+                <input type="text" id="assignee-input-${issueKey}" placeholder="Type to filter..." style="width: 100%; padding: 8px; border: 1px solid #DFE1E6; border-radius: 3px; margin-bottom: 8px;" />
+                <div class="status-option assignee-option-unassigned" onclick="changeAssignee('${issueKey}', '')">Unassigned</div>
                 ${assigneeOptions}
             `;
 
@@ -5458,6 +5458,35 @@
             const input = document.getElementById(`assignee-input-${issueKey}`);
             if (input) {
                 input.focus();
+
+                // Filter options as user types
+                input.addEventListener('input', (e) => {
+                    const filter = e.target.value.toLowerCase();
+                    const options = dropdown.querySelectorAll('.assignee-option');
+                    const unassignedOption = dropdown.querySelector('.assignee-option-unassigned');
+
+                    // Filter "Unassigned" option
+                    if (unassignedOption) {
+                        if ('unassigned'.includes(filter)) {
+                            unassignedOption.style.display = '';
+                        } else {
+                            unassignedOption.style.display = 'none';
+                        }
+                    }
+
+                    // Filter assignee options
+                    options.forEach(option => {
+                        const username = option.getAttribute('data-username') || '';
+                        const displayName = option.getAttribute('data-displayname') || '';
+
+                        if (username.includes(filter) || displayName.includes(filter)) {
+                            option.style.display = '';
+                        } else {
+                            option.style.display = 'none';
+                        }
+                    });
+                });
+
                 input.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
                         changeAssignee(issueKey, input.value);
@@ -5761,12 +5790,28 @@
         }
 
         function updatePullRequestInHierarchy(issueKey, prUrl) {
-            if (!hierarchyData.rfes) return;
+            // Handle RFE mode
+            if (hierarchyData.rfes) {
+                for (const rfe of hierarchyData.rfes) {
+                    if (!rfe.strats) continue;
+                    for (const strat of rfe.strats) {
+                        if (!strat.epics) continue;
+                        for (const epic of strat.epics) {
+                            if (!epic.tasks) continue;
+                            for (const task of epic.tasks) {
+                                if (task.key === issueKey) {
+                                    task.pull_request = prUrl;
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
-            // Find and update the task in hierarchyData
-            for (const rfe of hierarchyData.rfes) {
-                if (!rfe.strats) continue;
-                for (const strat of rfe.strats) {
+            // Handle STRAT mode
+            if (hierarchyData.strats) {
+                for (const strat of hierarchyData.strats) {
                     if (!strat.epics) continue;
                     for (const epic of strat.epics) {
                         if (!epic.tasks) continue;
@@ -5782,55 +5827,51 @@
         }
 
         function updateItemInHierarchy(issueKey, itemType, newData) {
-            if (!hierarchyData.rfes) return;
+            // Handle RFE mode
+            if (hierarchyData.rfes) {
+                for (let i = 0; i < hierarchyData.rfes.length; i++) {
+                    const rfe = hierarchyData.rfes[i];
 
-            // Find and replace the item in hierarchyData
-            for (let i = 0; i < hierarchyData.rfes.length; i++) {
-                const rfe = hierarchyData.rfes[i];
+                    if (itemType === 'rfe' && rfe.key === issueKey) {
+                        // Replace entire RFE
+                        hierarchyData.rfes[i] = newData;
+                        rerenderRfe(newData);
+                        populateAssigneeFilter();
+                        return;
+                    }
 
-                if (itemType === 'rfe' && rfe.key === issueKey) {
-                    // Replace entire RFE
-                    hierarchyData.rfes[i] = newData;
-                    // Re-render this RFE and its children in the DOM
-                    rerenderRfe(newData);
-                    populateAssigneeFilter();
-                    return;
-                }
+                    if (rfe.strats) {
+                        for (let j = 0; j < rfe.strats.length; j++) {
+                            const strat = rfe.strats[j];
 
-                if (rfe.strats) {
-                    for (let j = 0; j < rfe.strats.length; j++) {
-                        const strat = rfe.strats[j];
+                            if (itemType === 'strat' && strat.key === issueKey) {
+                                rfe.strats[j] = newData;
+                                rerenderStrat(newData);
+                                populateAssigneeFilter();
+                                return;
+                            }
 
-                        if (itemType === 'strat' && strat.key === issueKey) {
-                            // Replace STRAT
-                            rfe.strats[j] = newData;
-                            rerenderStrat(newData);
-                            populateAssigneeFilter();
-                            return;
-                        }
+                            if (strat.epics) {
+                                for (let k = 0; k < strat.epics.length; k++) {
+                                    const epic = strat.epics[k];
 
-                        if (strat.epics) {
-                            for (let k = 0; k < strat.epics.length; k++) {
-                                const epic = strat.epics[k];
+                                    if (itemType === 'epic' && epic.key === issueKey) {
+                                        strat.epics[k] = newData;
+                                        rerenderEpic(newData);
+                                        populateAssigneeFilter();
+                                        return;
+                                    }
 
-                                if (itemType === 'epic' && epic.key === issueKey) {
-                                    // Replace Epic
-                                    strat.epics[k] = newData;
-                                    rerenderEpic(newData);
-                                    populateAssigneeFilter();
-                                    return;
-                                }
+                                    if (epic.tasks) {
+                                        for (let l = 0; l < epic.tasks.length; l++) {
+                                            const task = epic.tasks[l];
 
-                                if (epic.tasks) {
-                                    for (let l = 0; l < epic.tasks.length; l++) {
-                                        const task = epic.tasks[l];
-
-                                        if (itemType === 'task' && task.key === issueKey) {
-                                            // Replace Task
-                                            epic.tasks[l] = newData;
-                                            rerenderTask(newData);
-                                            populateAssigneeFilter();
-                                            return;
+                                            if (itemType === 'task' && task.key === issueKey) {
+                                                epic.tasks[l] = newData;
+                                                rerenderTask(newData);
+                                                populateAssigneeFilter();
+                                                return;
+                                            }
                                         }
                                     }
                                 }
@@ -5839,6 +5880,47 @@
                     }
                 }
             }
+
+            // Handle STRAT mode
+            if (hierarchyData.strats) {
+                for (let i = 0; i < hierarchyData.strats.length; i++) {
+                    const strat = hierarchyData.strats[i];
+
+                    if (itemType === 'strat' && strat.key === issueKey) {
+                        hierarchyData.strats[i] = newData;
+                        rerenderStrat(newData);
+                        populateAssigneeFilter();
+                        return;
+                    }
+
+                    if (strat.epics) {
+                        for (let j = 0; j < strat.epics.length; j++) {
+                            const epic = strat.epics[j];
+
+                            if (itemType === 'epic' && epic.key === issueKey) {
+                                strat.epics[j] = newData;
+                                rerenderEpic(newData);
+                                populateAssigneeFilter();
+                                return;
+                            }
+
+                            if (epic.tasks) {
+                                for (let k = 0; k < epic.tasks.length; k++) {
+                                    const task = epic.tasks[k];
+
+                                    if (itemType === 'task' && task.key === issueKey) {
+                                        epic.tasks[k] = newData;
+                                        rerenderTask(newData);
+                                        populateAssigneeFilter();
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             populateAssigneeFilter();
         }
 
