@@ -282,9 +282,9 @@ def create_epic(summary, description, strat_key, component=None, assignee=None, 
     if component:
         custom_fields["components"] = [{"name": component}]
 
-    # Add assignee if provided
+    # Add assignee if provided (JIRA Cloud uses accountId)
     if assignee:
-        custom_fields["assignee"] = {"name": assignee}
+        custom_fields["assignee"] = {"accountId": assignee}
 
     # Add team if provided (customfield_10001 expects team ID string)
     if team_id:
@@ -337,9 +337,9 @@ def create_task(summary, description, epic_key, issue_type, component=None, assi
     if component:
         custom_fields["components"] = [{"name": component}]
 
-    # Add assignee if provided
+    # Add assignee if provided (JIRA Cloud uses accountId)
     if assignee:
-        custom_fields["assignee"] = {"name": assignee}
+        custom_fields["assignee"] = {"accountId": assignee}
 
     # Add team if provided (customfield_10001 expects team ID string)
     if team_id:

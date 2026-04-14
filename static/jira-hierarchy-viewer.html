@@ -1607,6 +1607,9 @@
             font-size: 14px;
             color: #0052CC;
             margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .standup-task-summary {
@@ -2255,6 +2258,7 @@
                         <div class="standup-task">
                             <div class="standup-task-key">
                                 <a href="${JIRA_CONFIG.baseUrl}/browse/${task.key}" target="_blank" style="color: #0052CC; text-decoration: none;">${task.key}</a>
+                                <button class="btn-reload" onclick="event.stopPropagation(); reloadTaskInStandup('${task.key}')" title="Reload from JIRA">↻</button>
                             </div>
                             <div class="standup-task-summary">${task.summary}</div>
                             <div class="standup-task-meta">
@@ -4567,9 +4571,20 @@
             const config = loadConfig();
             document.getElementById('epicParentInfo').textContent = `Parent STRAT: ${stratKey}`;
             document.getElementById('epicSummary').value = '';
-            document.getElementById('epicComponent').value = config.component || 'AI Safety';
+
+            // Use last used component, or fallback to config component
+            const lastComponent = localStorage.getItem('last_used_component') || config.component || 'AI Safety';
+            document.getElementById('epicComponent').value = lastComponent;
+
             document.getElementById('epicDescription').value = '';
             populateAssigneeDropdown('epicAssignee');
+
+            // Pre-select last used assignee if available
+            const lastAssignee = localStorage.getItem('last_used_assignee') || '';
+            if (lastAssignee) {
+                document.getElementById('epicAssignee').value = lastAssignee;
+            }
+
             document.getElementById('createEpicModal').classList.add('active');
         }
 
@@ -4578,10 +4593,21 @@
             const config = loadConfig();
             document.getElementById('taskParentInfo').textContent = `Parent Epic: ${epicKey}`;
             document.getElementById('taskSummary').value = '';
-            document.getElementById('taskComponent').value = config.component || 'AI Safety';
+
+            // Use last used component, or fallback to config component
+            const lastComponent = localStorage.getItem('last_used_component') || config.component || 'AI Safety';
+            document.getElementById('taskComponent').value = lastComponent;
+
             document.getElementById('taskDescription').value = '';
             document.getElementById('taskPullRequest').value = '';
             populateAssigneeDropdown('taskAssignee');
+
+            // Pre-select last used assignee if available
+            const lastAssignee = localStorage.getItem('last_used_assignee') || '';
+            if (lastAssignee) {
+                document.getElementById('taskAssignee').value = lastAssignee;
+            }
+
             document.getElementById('createTaskModal').classList.add('active');
         }
 
@@ -4937,6 +4963,10 @@
                 const result = await response.json();
 
                 if (response.ok && result.success) {
+                    // Save last used values for next time
+                    localStorage.setItem('last_used_component', component);
+                    localStorage.setItem('last_used_assignee', assignee);
+
                     showSuccess(`Epic ${result.epic.key} created successfully!`);
                     closeModal('createEpicModal');
                     // Add the new epic directly to the tree
@@ -5000,6 +5030,10 @@
                 const result = await response.json();
 
                 if (response.ok && result.success) {
+                    // Save last used values for next time
+                    localStorage.setItem('last_used_component', component);
+                    localStorage.setItem('last_used_assignee', assignee);
+
                     showSuccess(`Task ${result.task.key} created successfully!`);
                     closeModal('createTaskModal');
                     document.getElementById('createTaskForm').reset();
@@ -5653,6 +5687,89 @@
                     btn.textContent = '↻';
                     btn.disabled = false;
                 });
+            }
+        }
+
+        async function reloadTaskInStandup(issueKey) {
+            try {
+                const config = loadConfig();
+                if (!config.pat) {
+                    showError('Please configure your Personal Access Token in Settings');
+                    return;
+                }
+
+                // Show loading indicator on the button
+                const buttons = document.querySelectorAll(`button[onclick*="reloadTaskInStandup('${issueKey}'"]`);
+                buttons.forEach(btn => {
+                    btn.textContent = '⟳';
+                    btn.disabled = true;
+                });
+
+                const response = await fetch(`/api/reload-item?issue_key=${issueKey}&item_type=task&email=${encodeURIComponent(config.email)}&pat=${encodeURIComponent(config.pat)}&component=${encodeURIComponent(config.component)}`);
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // Update hierarchyData
+                    updateItemInHierarchy(issueKey, 'task', result.data);
+
+                    // Update just this task in the standup view without re-rendering everything
+                    updateTaskInStandupView(issueKey, result.data);
+
+                    showSuccess(`${issueKey} reloaded successfully`);
+                } else {
+                    showError(`Error reloading item: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Error reloading item: ${error.message}`);
+            } finally {
+                // Restore button state
+                const buttons = document.querySelectorAll(`button[onclick*="reloadTaskInStandup('${issueKey}'"]`);
+                buttons.forEach(btn => {
+                    btn.textContent = '↻';
+                    btn.disabled = false;
+                });
+            }
+        }
+
+        function updateTaskInStandupView(issueKey, taskData) {
+            // Find the task element in the standup view
+            const standupTasks = document.querySelectorAll('.standup-task');
+
+            for (const taskElement of standupTasks) {
+                const keyLink = taskElement.querySelector('.standup-task-key a');
+                if (keyLink && keyLink.textContent === issueKey) {
+                    // Update the task summary
+                    const summaryDiv = taskElement.querySelector('.standup-task-summary');
+                    if (summaryDiv) {
+                        summaryDiv.textContent = taskData.summary;
+                    }
+
+                    // Update the status
+                    const statusSpan = taskElement.querySelector('.issue-status');
+                    if (statusSpan) {
+                        statusSpan.textContent = taskData.status;
+                        statusSpan.className = `issue-status ${getStatusClass(taskData.status)}`;
+                    }
+
+                    // Update the priority
+                    const prioritySpan = taskElement.querySelector('.issue-priority');
+                    if (prioritySpan) {
+                        prioritySpan.textContent = taskData.priority;
+                        prioritySpan.className = `issue-priority ${getPriorityClass(taskData.priority)}`;
+                    }
+
+                    // Update the updated time
+                    const updatedSpan = taskElement.querySelector('.issue-updated');
+                    if (updatedSpan) {
+                        updatedSpan.textContent = `Updated ${formatRelativeTime(taskData.updated)}`;
+                        updatedSpan.title = `Updated ${formatDate(taskData.updated)}`;
+                    }
+
+                    // Note: If assignee changed, we'd need to move the task to a different assignee section
+                    // For now, we'll just update in place. User can refresh the full view if needed.
+
+                    return;
+                }
             }
         }
 
