@@ -164,25 +164,62 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
 
             email = data.get('email')
             pat = data.get('pat')
-            comments_data = data.get('comments', [])  # List of {issue_key, comment}
+            comments_data = data.get('comments', [])  # List of {issue_key, comment, status_summary (optional)}
+            update_status_summary = data.get('update_status_summary', False)  # Whether to update Status Summary field
 
             if not comments_data:
                 self.send_json({'error': 'No comments provided'}, status=400)
                 return
 
+            # Status Summary is customfield_10814 in Red Hat JIRA
+            STATUS_SUMMARY_FIELD = 'customfield_10814'
+
             results = []
             for item in comments_data:
                 issue_key = item.get('issue_key')
                 comment = item.get('comment')
+                status_summary = item.get('status_summary')  # Optional status summary text
 
                 if not issue_key or not comment:
                     results.append({'issue_key': issue_key, 'success': False, 'error': 'Missing fields'})
                     continue
 
                 try:
+                    # Add comment to JIRA
                     add_jira_comment(issue_key, comment, email, pat)
+
+                    # Optionally update Status Summary field
+                    if update_status_summary and status_summary:
+                        from .jira_client import update_jira_issue
+                        print(f"Updating Status Summary for {issue_key} with field {STATUS_SUMMARY_FIELD}: {status_summary[:50]}...", file=sys.stderr)
+                        try:
+                            # Convert status summary to ADF format
+                            status_summary_adf = {
+                                "type": "doc",
+                                "version": 1,
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "text",
+                                                "text": status_summary
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                            update_jira_issue(issue_key, {STATUS_SUMMARY_FIELD: status_summary_adf}, email, pat)
+                            print(f"  Successfully updated Status Summary for {issue_key}", file=sys.stderr)
+                        except Exception as field_error:
+                            print(f"  Error updating Status Summary for {issue_key}: {field_error}", file=sys.stderr)
+                            # Don't fail the whole operation if just Status Summary fails
+                            # raise field_error  # Uncomment to make it fail if Status Summary update fails
+
                     results.append({'issue_key': issue_key, 'success': True})
                 except Exception as e:
+                    print(f"Error processing {issue_key}: {e}", file=sys.stderr)
+                    traceback.print_exc()
                     results.append({'issue_key': issue_key, 'success': False, 'error': str(e)})
 
             self.send_json({'success': True, 'results': results})

@@ -1962,6 +1962,12 @@
             </div>
             <div id="statusUpdateStratsContainer" style="display: none;">
                 <div id="statusUpdateStratsList" style="max-height: 75vh; overflow-y: auto; margin-bottom: 20px;"></div>
+                <div class="form-group" style="margin-top: 12px;">
+                    <label style="display: flex; align-items: center; font-weight: normal; cursor: pointer; user-select: none;">
+                        <input type="checkbox" id="includeCommentsInSummary" onchange="saveIncludeCommentsPreference()" style="width: 16px; height: 16px; margin-right: 8px; cursor: pointer;">
+                        <span style="font-size: 14px;">Update "Status Summary" field in JIRA with comment text</span>
+                    </label>
+                </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-cancel" onclick="closeModal('statusUpdateModal')">Cancel</button>
                     <button type="button" class="btn-submit" onclick="generateStatusReport()">Generate Report</button>
@@ -4616,6 +4622,11 @@
         }
 
         // Status Update Modal Functions
+        function saveIncludeCommentsPreference() {
+            const includeCommentsInSummary = document.getElementById('includeCommentsInSummary').checked;
+            localStorage.setItem('include_comments_in_summary', includeCommentsInSummary);
+        }
+
         function showStatusUpdateModal() {
             // Populate assignee dropdown (filtered by selected assignees)
             const select = document.getElementById('statusUpdateAssignee');
@@ -4666,6 +4677,10 @@
                         container.innerHTML = '<div class="status-update-loading">No STRATs found for this assignee</div>';
                         return;
                     }
+
+                    // Restore checkbox state when STRATs are loaded
+                    const includeCommentsInSummary = localStorage.getItem('include_comments_in_summary') === 'true';
+                    document.getElementById('includeCommentsInSummary').checked = includeCommentsInSummary;
 
                     container.innerHTML = result.strats.map(strat => {
                         const lastComment = strat.comments && strat.comments.length > 0
@@ -4746,6 +4761,9 @@
                 return;
             }
 
+            // Check if we should update Status Summary field
+            const updateStatusSummary = document.getElementById('includeCommentsInSummary').checked;
+
             // Collect all comments
             const commentInputs = document.querySelectorAll('.status-update-comment-input');
             const commentsData = [];
@@ -4767,7 +4785,8 @@
                 if (!usedLastComment) {
                     commentsData.push({
                         issue_key: stratKey,
-                        comment: comment
+                        comment: comment,
+                        status_summary: comment  // Use comment text as status summary
                     });
                 }
 
@@ -4795,7 +4814,8 @@
                         body: JSON.stringify({
                             email: config.email,
                             pat: config.pat,
-                            comments: commentsData
+                            comments: commentsData,
+                            update_status_summary: updateStatusSummary
                         })
                     });
 
@@ -4805,10 +4825,13 @@
                         // Check if any failed
                         const failed = result.results.filter(r => !r.success);
                         if (failed.length > 0) {
+                            const errorDetails = failed.map(f => `${f.issue_key}: ${f.error}`).join('\n');
                             showError(`Failed to add ${failed.length} comment(s). Check console for details.`);
                             console.error('Failed comments:', failed);
+                            console.error('Error details:', errorDetails);
                         } else {
-                            showSuccess(`Successfully added ${result.results.length} new comment(s) to JIRA`);
+                            const statusSummaryMsg = updateStatusSummary ? ' and updated Status Summary field' : '';
+                            showSuccess(`Successfully added ${result.results.length} new comment(s) to JIRA${statusSummaryMsg}`);
                         }
                     } else {
                         showError(`Error adding comments: ${result.error || 'Unknown error'}`);
