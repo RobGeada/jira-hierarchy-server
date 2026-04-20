@@ -1756,6 +1756,13 @@
                     <small style="color: #6B778C; font-size: 12px;">Select from known assignees or leave unassigned</small>
                 </div>
                 <div class="form-group">
+                    <label for="epicSprint">Sprint</label>
+                    <select id="epicSprint">
+                        <option value="">Loading sprints...</option>
+                    </select>
+                    <small style="color: #6B778C; font-size: 12px;">Sprint to assign this epic to</small>
+                </div>
+                <div class="form-group">
                     <label for="epicDescription">Description</label>
                     <textarea id="epicDescription"></textarea>
                 </div>
@@ -1799,6 +1806,13 @@
                         <option value="">Unassigned</option>
                     </select>
                     <small style="color: #6B778C; font-size: 12px;">Select from known assignees or leave unassigned</small>
+                </div>
+                <div class="form-group">
+                    <label for="taskSprint">Sprint</label>
+                    <select id="taskSprint">
+                        <option value="">Loading sprints...</option>
+                    </select>
+                    <small style="color: #6B778C; font-size: 12px;">Sprint to assign this task to</small>
                 </div>
                 <div class="form-group">
                     <label for="taskDescription">Description</label>
@@ -2004,6 +2018,7 @@
         let hierarchyData = {rfes: [], strats: [], allTasks: [], metadata: {total_rfes: 0, total_strats: 0, total_epics: 0, total_tasks: 0}};
         let eventSource = null;
         let knownAssignees = new Map(); // Track assignees: username -> display name
+        let sprintCache = []; // Cached sprint data fetched in background
         let currentView = 'hierarchy'; // 'hierarchy' or 'standup'
 
         // Track if we're currently loading
@@ -3307,6 +3322,7 @@
 
                 updateStats(hierarchyData);
                 populateAssigneeFilter();
+                fetchSprintsInBackground();
 
                 // Refresh the current view if in standup mode
                 if (currentView === 'standup') {
@@ -4572,6 +4588,74 @@
             });
         }
 
+        async function fetchSprintsInBackground() {
+            const config = loadConfig();
+            if (!config.email || !config.pat) return;
+
+            try {
+                const params = new URLSearchParams({ email: config.email, pat: config.pat });
+                const response = await fetch(`/api/search-sprints?${params.toString()}`);
+                const data = await response.json();
+                sprintCache = data.sprints || [];
+
+                // Populate sprint dropdowns if they're already rendered
+                ['epicSprint', 'taskSprint'].forEach(id => {
+                    const select = document.getElementById(id);
+                    if (select && select.options.length > 0 && select.options[0].value === '') {
+                        populateSprintDropdown(id);
+                    }
+                });
+            } catch (e) {
+                console.error('Error fetching sprints in background:', e);
+            }
+        }
+
+        function populateSprintDropdown(selectId) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+
+            // Save current selection before rebuilding
+            const savedSelection = select.value;
+
+            // Check for last used sprint (separate key per dropdown)
+            const lastUsedSprintId = localStorage.getItem(`last_used_${selectId}`);
+            const sprints = sprintCache || [];
+
+            // Clear and populate dropdown from cache
+            select.innerHTML = '<option value="">No sprint</option>';
+
+            if (sprints && sprints.length > 0) {
+                // Separate last used sprint and the rest
+                const lastUsedSprint = sprints.find(s => String(s.id) === String(lastUsedSprintId));
+                const otherSprints = sprints.filter(s => String(s.id) !== String(lastUsedSprintId));
+
+                // Add last used sprint first if it exists
+                if (lastUsedSprint) {
+                    const option = document.createElement('option');
+                    option.value = lastUsedSprint.id;
+                    option.textContent = `${lastUsedSprint.name} (${lastUsedSprint.state})`;
+                    select.appendChild(option);
+                }
+
+                // Add remaining sprints
+                otherSprints.forEach(sprint => {
+                    const option = document.createElement('option');
+                    option.value = sprint.id;
+                    option.textContent = `${sprint.name} (${sprint.state})`;
+                    select.appendChild(option);
+                });
+
+                // Restore user's selection if it's still valid
+                if (savedSelection && [...select.options].some(o => o.value === savedSelection)) {
+                    select.value = savedSelection;
+                }
+            } else {
+                select.innerHTML = '<option value="">Loading sprints...</option>';
+                // If cache is empty, try fetching
+                fetchSprintsInBackground();
+            }
+        }
+
         function showCreateEpicModal(stratKey) {
             currentStratKey = stratKey;
             const config = loadConfig();
@@ -4590,6 +4674,9 @@
             if (lastAssignee) {
                 document.getElementById('epicAssignee').value = lastAssignee;
             }
+
+            // Populate sprint dropdown
+            populateSprintDropdown('epicSprint');
 
             document.getElementById('createEpicModal').classList.add('active');
         }
@@ -4612,6 +4699,15 @@
             const lastAssignee = localStorage.getItem('last_used_assignee') || '';
             if (lastAssignee) {
                 document.getElementById('taskAssignee').value = lastAssignee;
+            }
+
+            // Populate sprint dropdown
+            populateSprintDropdown('taskSprint');
+
+            // Pre-select last used sprint if available
+            const lastTaskSprint = localStorage.getItem('last_used_taskSprint');
+            if (lastTaskSprint) {
+                document.getElementById('taskSprint').value = lastTaskSprint;
             }
 
             document.getElementById('createTaskModal').classList.add('active');
@@ -4965,6 +5061,7 @@
                 const component = document.getElementById('epicComponent').value;
                 const assignee = document.getElementById('epicAssignee').value;
                 const description = document.getElementById('epicDescription').value;
+                const sprintId = document.getElementById('epicSprint').value;
 
                 const response = await fetch('/api/create-epic', {
                     method: 'POST',
@@ -4979,7 +5076,8 @@
                         component: component,
                         assignee: assignee,
                         description: description,
-                        team_id: config.teamId
+                        team_id: config.teamId,
+                        sprint_id: sprintId ? parseInt(sprintId) : null
                     })
                 });
 
@@ -4989,6 +5087,9 @@
                     // Save last used values for next time
                     localStorage.setItem('last_used_component', component);
                     localStorage.setItem('last_used_assignee', assignee);
+                    if (sprintId) {
+                        localStorage.setItem('last_used_epicSprint', sprintId);
+                    }
 
                     showSuccess(`Epic ${result.epic.key} created successfully!`);
                     closeModal('createEpicModal');
@@ -5030,6 +5131,7 @@
                 const assignee = document.getElementById('taskAssignee').value;
                 const description = document.getElementById('taskDescription').value;
                 const pullRequest = document.getElementById('taskPullRequest').value;
+                const sprintId = document.getElementById('taskSprint').value;
 
                 const response = await fetch('/api/create-task', {
                     method: 'POST',
@@ -5046,7 +5148,8 @@
                         assignee: assignee,
                         description: description,
                         pull_request: pullRequest,
-                        team_id: config.teamId
+                        team_id: config.teamId,
+                        sprint_id: sprintId ? parseInt(sprintId) : null
                     })
                 });
 
@@ -5056,6 +5159,9 @@
                     // Save last used values for next time
                     localStorage.setItem('last_used_component', component);
                     localStorage.setItem('last_used_assignee', assignee);
+                    if (sprintId) {
+                        localStorage.setItem('last_used_taskSprint', sprintId);
+                    }
 
                     showSuccess(`Task ${result.task.key} created successfully!`);
                     closeModal('createTaskModal');
@@ -6381,6 +6487,7 @@
         window.addEventListener('DOMContentLoaded', () => {
             loadData();
             checkVersionStatus();
+            fetchSprintsInBackground();
 
             // Check version every 5 minutes
             setInterval(checkVersionStatus, 5 * 60 * 1000);

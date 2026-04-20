@@ -257,7 +257,7 @@ def fetch_tasks_for_epic(epic_key, jira_email, jira_pat):
         return []
 
 
-def create_epic(summary, description, strat_key, component=None, assignee=None, team_id=None, jira_email=None, jira_pat=None):
+def create_epic(summary, description, strat_key, component=None, assignee=None, team_id=None, sprint_id=None, jira_email=None, jira_pat=None):
     """
     Create a new Epic and link it to a STRAT
 
@@ -268,6 +268,7 @@ def create_epic(summary, description, strat_key, component=None, assignee=None, 
         component: Component name to assign
         assignee: Assignee email or username
         team_id: Team ID to assign (from JIRA's team system)
+        sprint_id: Sprint ID to assign
         jira_email: User email address
         jira_pat: API token
 
@@ -290,6 +291,10 @@ def create_epic(summary, description, strat_key, component=None, assignee=None, 
     if team_id:
         custom_fields["customfield_10001"] = team_id
 
+    # Add sprint if provided (customfield_10020 is the Sprint field)
+    if sprint_id:
+        custom_fields["customfield_10020"] = sprint_id
+
     epic_key = create_jira_issue(
         project_key="RHOAIENG",
         summary=summary,
@@ -310,7 +315,7 @@ def create_epic(summary, description, strat_key, component=None, assignee=None, 
     return epic_data
 
 
-def create_task(summary, description, epic_key, issue_type, component=None, assignee=None, pull_request=None, team_id=None, jira_email=None, jira_pat=None):
+def create_task(summary, description, epic_key, issue_type, component=None, assignee=None, pull_request=None, team_id=None, sprint_id=None, jira_email=None, jira_pat=None):
     """
     Create a new Task and link it to an Epic
 
@@ -323,6 +328,7 @@ def create_task(summary, description, epic_key, issue_type, component=None, assi
         assignee: Assignee email or username
         pull_request: Pull request URL
         team_id: Team ID to assign (from JIRA's team system)
+        sprint_id: Sprint ID to assign
         jira_email: User email address
         jira_pat: API token
 
@@ -344,6 +350,10 @@ def create_task(summary, description, epic_key, issue_type, component=None, assi
     # Add team if provided (customfield_10001 expects team ID string)
     if team_id:
         custom_fields["customfield_10001"] = team_id
+
+    # Add sprint if provided (customfield_10020 is the Sprint field)
+    if sprint_id:
+        custom_fields["customfield_10020"] = sprint_id
 
     # Add Git Pull Request URL if provided (customfield_10875 in ADF format)
     if pull_request:

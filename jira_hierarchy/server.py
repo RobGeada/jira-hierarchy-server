@@ -1,5 +1,6 @@
 """HTTP server and request handlers"""
 
+import base64
 import json
 import os
 import sys
@@ -47,6 +48,8 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             self.search_teams()
         elif parsed_path.path == '/api/search-components':
             self.search_components()
+        elif parsed_path.path == '/api/search-sprints':
+            self.search_sprints()
         elif parsed_path.path == '/api/version-status':
             self.get_version_status()
         elif parsed_path.path == '/health':
@@ -94,12 +97,13 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             assignee = data.get('assignee')
             description = data.get('description', '')
             team_id = data.get('team_id', '')
+            sprint_id = data.get('sprint_id')
 
             if not strat_key or not summary:
                 self.send_json({'error': 'Missing required fields'}, status=400)
                 return
 
-            epic_data = create_epic(summary, description, strat_key, component, assignee, team_id, email, pat)
+            epic_data = create_epic(summary, description, strat_key, component, assignee, team_id, sprint_id, email, pat)
             self.send_json({'success': True, 'epic': epic_data})
 
         except Exception as e:
@@ -122,12 +126,13 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             issue_type = data.get('issue_type', 'Story')
             pull_request = data.get('pull_request', '')
             team_id = data.get('team_id', '')
+            sprint_id = data.get('sprint_id')
 
             if not epic_key or not summary:
                 self.send_json({'error': 'Missing required fields'}, status=400)
                 return
 
-            task_data = create_task(summary, description, epic_key, issue_type, component, assignee, pull_request, team_id, email, pat)
+            task_data = create_task(summary, description, epic_key, issue_type, component, assignee, pull_request, team_id, sprint_id, email, pat)
             self.send_json({'success': True, 'task': task_data})
 
         except Exception as e:
@@ -847,6 +852,82 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             print(f"Error searching teams: {e}", file=sys.stderr)
             traceback.print_exc()
             self.send_json({'teams': []}, status=500)
+
+    def search_sprints(self):
+        """Fetch active and recent sprints from all relevant boards"""
+        try:
+            parsed_path = urlparse(self.path)
+            params = parse_qs(parsed_path.query)
+
+            email = params.get('email', [None])[0]
+            pat = params.get('pat', [None])[0]
+
+            # Credentials required
+            if not email or not pat:
+                self.send_json({'error': 'Email and API Token required'}, status=400)
+                return
+
+            import requests
+            from .config import JIRA_BASE_URL
+
+            headers = {
+                'Authorization': f'Basic {base64.b64encode(f"{email}:{pat}".encode()).decode()}',
+                'Accept': 'application/json'
+            }
+
+            # Search for boards by multiple relevant keywords
+            all_sprints = []
+            seen_sprint_ids = set()
+
+            # Search queries covering all relevant boards (RHOAIENG, TrustyAI, XAI, RHOAI)
+            search_queries = ['RHOAIENG', 'TrustyAI', 'XAI', 'RHOAI']
+
+            for query in search_queries:
+                boards_url = f"{JIRA_BASE_URL}/rest/agile/1.0/board"
+                params = {'name': query}
+
+                response = requests.get(boards_url, headers=headers, params=params, timeout=10)
+
+                if response.status_code == 200:
+                    boards_data = response.json()
+                    boards = boards_data.get('values', [])
+
+                    for board in boards:
+                        if board.get('type') != 'scrum':
+                            continue
+                        board_id = board['id']
+                        print(f"Checking board {board_id}: {board.get('name')}", file=sys.stderr)
+
+                        # Fetch sprints for this board
+                        sprints_url = f"{JIRA_BASE_URL}/rest/agile/1.0/board/{board_id}/sprint"
+                        params = {'state': 'active,future'}
+
+                        response = requests.get(sprints_url, headers=headers, params=params, timeout=10)
+
+                        if response.status_code == 200:
+                            sprints_data = response.json()
+                            for sprint in sprints_data.get('values', []):
+                                sprint_id = sprint.get('id')
+                                if sprint_id and sprint_id not in seen_sprint_ids:
+                                    seen_sprint_ids.add(sprint_id)
+                                    all_sprints.append({
+                                        'id': sprint_id,
+                                        'name': sprint.get('name', ''),
+                                        'state': sprint.get('state', '')
+                                    })
+                else:
+                    print(f"Board search for '{query}' returned {response.status_code}", file=sys.stderr)
+
+            # Sort: active sprints first, then by ID (most recent)
+            all_sprints.sort(key=lambda s: (s['state'] != 'active', -s['id']))
+
+            print(f"Total sprints found: {len(all_sprints)}", file=sys.stderr)
+            self.send_json({'sprints': all_sprints})
+
+        except Exception as e:
+            print(f"Error searching sprints: {e}", file=sys.stderr)
+            traceback.print_exc()
+            self.send_json({'sprints': []}, status=500)
 
     def get_version_status(self):
         """Get the current version status"""
