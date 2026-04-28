@@ -87,6 +87,45 @@ def build_issue_data(issue, issue_type='rfe'):
     }
 
 
+def fetch_outcomes(component, jira_email, jira_pat, show_closed=False, max_age_days=365):
+    """
+    Fetch Outcomes for a given component from RHAISTRAT project
+
+    Args:
+        component: Component name(s) to filter by (comma-separated for multiple)
+        jira_email: User email address
+        jira_pat: API token
+        show_closed: Include closed Outcomes in results
+        max_age_days: Maximum age in days for tickets to include
+
+    Returns:
+        List of Outcome issue dicts
+    """
+    cutoff_date = (datetime.now() - timedelta(days=max_age_days)).strftime('%Y-%m-%d')
+
+    components = [c.strip() for c in component.split(',')]
+    if len(components) > 1:
+        component_list = ', '.join([f'"{c}"' for c in components])
+        component_clause = f'component IN ({component_list})'
+    else:
+        component_clause = f'component = "{components[0]}"'
+
+    outcomes_jql = (
+        f'project = RHAISTRAT '
+        f'AND issuetype = Outcome '
+        f'AND {component_clause} '
+        f'AND updated >= {cutoff_date}'
+    )
+    if not show_closed:
+        outcomes_jql += ' AND status NOT IN (Closed, Resolved)'
+    outcomes_jql += ' ORDER BY priority DESC, created DESC'
+
+    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components'
+    outcome_issues = run_jira_query(outcomes_jql, field_list, jira_email, jira_pat)
+
+    return [build_issue_data(outcome, 'outcome') for outcome in outcome_issues]
+
+
 def fetch_rfes(component, jira_email, jira_pat, show_closed=False, max_age_days=365):
     """
     Fetch RFEs for a given component
@@ -124,10 +163,17 @@ def fetch_rfes(component, jira_email, jira_pat, show_closed=False, max_age_days=
         rfes_jql += ' AND status NOT IN (Closed, Resolved)'
     rfes_jql += ' ORDER BY priority DESC, created DESC'
 
-    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components'
+    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,parent'
     rfe_issues = run_jira_query(rfes_jql, field_list, jira_email, jira_pat)
 
-    return [build_issue_data(rfe, 'rfe') for rfe in rfe_issues]
+    results = []
+    for rfe in rfe_issues:
+        rfe_data = build_issue_data(rfe, 'rfe')
+        parent_field = rfe.get('fields', {}).get('parent')
+        if parent_field and isinstance(parent_field, dict):
+            rfe_data['outcome_key'] = parent_field.get('key')
+        results.append(rfe_data)
+    return results
 
 
 def fetch_strats_for_rfe(rfe_key, jira_email, jira_pat):

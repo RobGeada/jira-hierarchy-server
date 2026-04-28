@@ -119,6 +119,81 @@ def run_jira_query(jql, fields="summary,status,priority,assignee,description", j
     return all_issues
 
 
+def iter_jira_query(jql, fields="summary,status,priority,assignee,description", jira_email=None, jira_pat=None):
+    """
+    Run a JQL query, yielding each page of results as it arrives.
+
+    Args:
+        jql: JQL query string
+        fields: Comma-separated list of fields to retrieve
+        jira_email: User email address
+        jira_pat: API token
+
+    Yields:
+        (issues_batch, total_so_far) tuples
+    """
+    import sys
+
+    url = f"{JIRA_BASE_URL}/rest/api/3/search/jql"
+    headers = {
+        'Authorization': _get_auth_header(jira_email, jira_pat),
+        'Accept': 'application/json'
+    }
+
+    max_results = 100
+    page_num = 1
+    max_pages = 100
+    first_key = None
+    next_page_token = None
+    total_fetched = 0
+
+    while page_num <= max_pages:
+        params = {
+            'jql': jql,
+            'fields': fields,
+            'maxResults': max_results
+        }
+
+        if next_page_token:
+            params['nextPageToken'] = next_page_token
+
+        response = requests.get(url, headers=headers, params=params)
+
+        if response.status_code != 200:
+            raise ValueError(
+                f"JIRA API error: {response.status_code}\n"
+                f"URL: {url}\n"
+                f"Response: {response.text[:500]}"
+            )
+
+        result = response.json()
+        issues = result.get('issues', [])
+
+        if len(issues) == 0:
+            break
+
+        if page_num == 1 and issues:
+            first_key = issues[0]['key']
+        elif page_num == 2 and issues and first_key:
+            if issues[0]['key'] == first_key:
+                print(f"WARNING: Pagination not working! Page 2 starts with same issue as page 1: {first_key}", file=sys.stderr)
+                break
+
+        total_fetched += len(issues)
+        yield issues, total_fetched
+
+        next_page_token = result.get('nextPageToken')
+        page_num += 1
+
+        if not next_page_token:
+            break
+
+    if page_num > max_pages:
+        print(f"WARNING: Hit pagination safety limit ({max_pages} pages).", file=sys.stderr)
+
+    print(f"Pagination complete: {total_fetched} total issues fetched", file=sys.stderr)
+
+
 def create_jira_issue(project_key, summary, description, issue_type, custom_fields=None, jira_email=None, jira_pat=None):
     """
     Create a new JIRA issue

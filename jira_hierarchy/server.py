@@ -463,7 +463,38 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             from .jira_client import run_jira_query
 
             # Fetch the item and its children based on type
-            if item_type == 'rfe':
+            if item_type == 'outcome':
+                jql = f'key = {issue_key}'
+                field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components'
+                outcome_issues = run_jira_query(jql, field_list, email, pat)
+                if not outcome_issues:
+                    self.send_json({'error': 'Outcome not found'}, status=404)
+                    return
+                outcome_data = build_issue_data(outcome_issues[0], 'outcome')
+                self.send_json({'success': True, 'data': outcome_data})
+
+            elif item_type == 'initiative':
+                jql = f'key = {issue_key}'
+                field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components'
+                init_issues = run_jira_query(jql, field_list, email, pat)
+                if not init_issues:
+                    self.send_json({'error': 'Initiative not found'}, status=404)
+                    return
+                init_data = build_issue_data(init_issues[0], 'initiative')
+                init_data['epics'] = []
+
+                epics = fetch_epics_for_strat(issue_key, email, pat)
+                for epic_data in epics:
+                    epic_data['initiative_key'] = issue_key
+                    epic_data['tasks'] = fetch_tasks_for_epic(epic_data['key'], email, pat)
+                    for task in epic_data['tasks']:
+                        task['initiative_key'] = issue_key
+                        task['epic_key'] = epic_data['key']
+                    init_data['epics'].append(epic_data)
+
+                self.send_json({'success': True, 'data': init_data})
+
+            elif item_type == 'rfe':
                 # Fetch this specific RFE
                 rfes = fetch_rfes(component, email, pat, show_closed=True, max_age_days=3650)
                 rfe = next((r for r in rfes if r['key'] == issue_key), None)
@@ -1037,9 +1068,10 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
         email = params.get('email', [None])[0]
         pat = params.get('pat', [None])[0]
         component = params.get('component', ['AI Safety'])[0]
-        top_level = params.get('top_level', ['rfe'])[0]
         max_age_days = int(params.get('max_age_days', ['365'])[0])
+        show_closed_outcomes = params.get('show_closed_outcomes', ['false'])[0].lower() == 'true'
         show_closed_rfes = params.get('show_closed_rfes', ['false'])[0].lower() == 'true'
+        show_closed_initiatives = params.get('show_closed_initiatives', ['false'])[0].lower() == 'true'
         show_closed_strats = params.get('show_closed_strats', ['false'])[0].lower() == 'true'
         show_closed_epics = params.get('show_closed_epics', ['false'])[0].lower() == 'true'
         show_closed_tasks = params.get('show_closed_tasks', ['false'])[0].lower() == 'true'
@@ -1067,8 +1099,9 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
         try:
-            stream_hierarchy(self.wfile, email, pat, component, top_level,
-                           show_closed_rfes, show_closed_strats,
+            stream_hierarchy(self.wfile, email, pat, component,
+                           show_closed_outcomes, show_closed_rfes,
+                           show_closed_initiatives, show_closed_strats,
                            show_closed_epics, show_closed_tasks, max_age_days, assignees)
         except Exception as e:
             print(f"Error streaming hierarchy: {e}", file=sys.stderr)

@@ -117,11 +117,28 @@
             border-bottom: none;
         }
 
+        .tree-node.outcome {
+            border-left-color: #BF2600;
+            background: #FFEBE6;
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .tree-node.outcome.empty {
+            background: #F4F5F7;
+            border-left-color: #DFE1E6;
+        }
+
+        .tree-node.outcome.empty .tree-content {
+            opacity: 0.6;
+        }
+
         .tree-node.rfe {
             border-left-color: #6554C0;
             background: #EAE6FF;
             font-weight: 700;
             font-size: 16px;
+            margin-left: 24px;
         }
 
         .tree-node.rfe.empty {
@@ -133,11 +150,27 @@
             opacity: 0.6;
         }
 
+        .tree-node.initiative {
+            border-left-color: #00B8D9;
+            background: #E6FCFF;
+            font-weight: 600;
+            margin-left: 24px;
+        }
+
+        .tree-node.initiative.empty {
+            background: #F4F5F7;
+            border-left-color: #DFE1E6;
+        }
+
+        .tree-node.initiative.empty .tree-content {
+            opacity: 0.6;
+        }
+
         .tree-node.strat {
             border-left-color: #0052CC;
             background: #DEEBFF;
             font-weight: 600;
-            margin-left: 24px;
+            margin-left: 48px;
         }
 
         .tree-node.strat.empty {
@@ -152,19 +185,19 @@
         .tree-node.epic {
             border-left-color: #00875A;
             background: #E3FCEF;
-            margin-left: 48px;
+            margin-left: 72px;
         }
 
         .tree-node.task {
             border-left-color: #FF991F;
             background: #FFF0B3;
-            margin-left: 72px;
+            margin-left: 96px;
         }
 
         .tree-node.subtask {
             border-left-color: #FFAB00;
             background: #FFF7D6;
-            margin-left: 96px;
+            margin-left: 120px;
             font-size: 14px;
         }
 
@@ -297,7 +330,6 @@
 
         .hierarchy-header {
             padding: 8px 12px;
-            margin-left: 24px;
             font-size: 11px;
             font-weight: 600;
             color: #6B778C;
@@ -307,6 +339,11 @@
             margin-top: 4px;
             margin-bottom: 4px;
         }
+
+        .hierarchy-header-rfe, .hierarchy-header-initiative { margin-left: 24px; }
+        .hierarchy-header-strat { margin-left: 48px; }
+        .hierarchy-header-epic { margin-left: 72px; }
+        .hierarchy-header-task { margin-left: 96px; }
 
         .status-new { background: #DFE1E6; color: #172B4D; }
         .status-in-progress { background: #0052CC; color: white; }
@@ -957,16 +994,24 @@
         }
 
         /* Match the left margin of the tree-node to align properly */
-        .strat + .issue-details {
+        .rfe + .issue-details {
             margin-left: 24px;
         }
 
-        .epic + .issue-details {
+        .initiative + .issue-details {
+            margin-left: 24px;
+        }
+
+        .strat + .issue-details {
             margin-left: 48px;
         }
 
-        .task + .issue-details {
+        .epic + .issue-details {
             margin-left: 72px;
+        }
+
+        .task + .issue-details {
+            margin-left: 96px;
         }
 
         .detail-row {
@@ -1672,13 +1717,12 @@
     <div class="container">
         <div class="header">
             <h1 id="pageTitle">🛡️ JIRA Hierarchy Viewer</h1>
-            <p>Expandable tree view of RFEs → STRATs → Epics → Tasks</p>
+            <p>Expandable tree view of Outcomes → RFEs/Initiatives → STRATs → Epics → Tasks</p>
         </div>
 
         <div class="controls">
             <button class="btn" onclick="loadData()" id="refreshBtn">🔄 Refresh Data</button>
             <button class="btn-secondary btn" onclick="toggleView()" id="viewToggleBtn">View: Hierarchy</button>
-            <button class="btn-secondary btn" onclick="toggleTopLevel()" id="topLevelBtn">Group By: RFEs</button>
             <button class="btn-secondary btn" onclick="expandAll()">⬇️ Expand All</button>
             <button class="btn-secondary btn" onclick="collapseAll()">⬆️ Collapse All</button>
             <button class="btn-secondary btn" onclick="showConfigModal()">⚙️ Settings</button>
@@ -1690,7 +1734,9 @@
                     <option value="task">Tasks & Up</option>
                     <option value="epic">Epics & Up</option>
                     <option value="strat">STRATs & Up</option>
-                    <option value="rfe">RFEs Only</option>
+                    <option value="initiative">Initiatives & Up</option>
+                    <option value="rfe">RFEs & Up</option>
+                    <option value="outcome">Outcomes Only</option>
                 </select>
                 <span class="filter-label">assigned to</span>
                 <select id="assigneeFilter" onchange="filterByAssignee()" class="assignee-filter">
@@ -1709,8 +1755,16 @@
 
         <div class="stats" id="stats" style="display: none;">
             <div class="stat-item">
+                <span>Outcomes:</span>
+                <span class="stat-value" id="outcomeCount">0</span>
+            </div>
+            <div class="stat-item">
                 <span>RFEs:</span>
                 <span class="stat-value" id="rfeCount">0</span>
+            </div>
+            <div class="stat-item">
+                <span>Initiatives:</span>
+                <span class="stat-value" id="initiativeCount">0</span>
             </div>
             <div class="stat-item">
                 <span>STRATs:</span>
@@ -2015,7 +2069,7 @@
             // For now, we'll use a proxy or generate static data
         };
 
-        let hierarchyData = {rfes: [], strats: [], allTasks: [], metadata: {total_rfes: 0, total_strats: 0, total_epics: 0, total_tasks: 0}};
+        let hierarchyData = {outcomes: [], allTasks: [], metadata: {total_outcomes: 0, total_rfes: 0, total_initiatives: 0, total_strats: 0, total_epics: 0, total_tasks: 0}};
         let eventSource = null;
         let knownAssignees = new Map(); // Track assignees: username -> display name
         let sprintCache = []; // Cached sprint data fetched in background
@@ -2025,8 +2079,7 @@
         let isLoading = false;
 
         // Track current top level mode
-        let currentTopLevel = 'rfe';
-
+        
         // Toast notification system
         function showToast(message, type = 'info', duration = 4000) {
             const container = document.getElementById('toastContainer');
@@ -2086,9 +2139,10 @@
             const component = localStorage.getItem('jira_component') || 'AI Safety';
             const team = localStorage.getItem('jira_team') || '';
             const teamId = localStorage.getItem('jira_team_id') || '';
-            const topLevel = localStorage.getItem('jira_top_level') || 'rfe';
             const maxAgeDays = parseInt(localStorage.getItem('jira_max_age_days') || '365', 10);
+            const showClosedOutcomes = localStorage.getItem('show_closed_outcomes') === 'true';
             const showClosedRFEs = localStorage.getItem('show_closed_rfes') === 'true';
+            const showClosedInitiatives = localStorage.getItem('show_closed_initiatives') === 'true';
             const showClosedSTRATs = localStorage.getItem('show_closed_strats') === 'true';
             const showClosedEpics = localStorage.getItem('show_closed_epics') === 'true';
             const showClosedTasks = localStorage.getItem('show_closed_tasks') === 'true';
@@ -2111,9 +2165,10 @@
                 component,
                 team,
                 teamId,
-                topLevel,
                 maxAgeDays,
+                showClosedOutcomes,
                 showClosedRFEs,
+                showClosedInitiatives,
                 showClosedSTRATs,
                 showClosedEpics,
                 showClosedTasks,
@@ -2134,15 +2189,10 @@
             localStorage.setItem('show_closed_tasks', showClosedTasks);
         }
 
-        function saveTopLevel(topLevel) {
-            localStorage.setItem('jira_top_level', topLevel);
-        }
-
         function toggleView() {
             currentView = currentView === 'hierarchy' ? 'standup' : 'hierarchy';
 
             const viewBtn = document.getElementById('viewToggleBtn');
-            const topLevelBtn = document.getElementById('topLevelBtn');
             const expandAllBtn = document.querySelector('button[onclick="expandAll()"]');
             const collapseAllBtn = document.querySelector('button[onclick="collapseAll()"]');
             const filterGroup = document.querySelector('.filter-group');
@@ -2150,7 +2200,6 @@
 
             if (currentView === 'standup') {
                 viewBtn.textContent = 'View: Standup';
-                topLevelBtn.style.display = 'none';
                 if (expandAllBtn) expandAllBtn.style.display = 'none';
                 if (collapseAllBtn) collapseAllBtn.style.display = 'none';
                 if (filterGroup) filterGroup.style.display = 'none';
@@ -2158,7 +2207,6 @@
                 renderStandupView();
             } else {
                 viewBtn.textContent = 'View: Hierarchy';
-                topLevelBtn.style.display = '';
                 if (expandAllBtn) expandAllBtn.style.display = '';
                 if (collapseAllBtn) collapseAllBtn.style.display = '';
                 if (filterGroup) filterGroup.style.display = 'flex';
@@ -2179,21 +2227,29 @@
                 let strat = null;
                 let rfe = null;
 
-                if (currentTopLevel === 'strat') {
-                    // STRAT mode
-                    strat = hierarchyData.strats?.find(s => s.key === task.strat_key);
-                    if (strat) {
-                        epic = strat.epics?.find(e => e.key === task.epic_key);
-                    }
-                } else {
-                    // RFE mode
-                    rfe = hierarchyData.rfes?.find(r => r.key === task.rfe_key);
-                    if (rfe) {
-                        strat = rfe.strats?.find(s => s.key === task.strat_key);
-                        if (strat) {
-                            epic = strat.epics?.find(e => e.key === task.epic_key);
+                // Search through outcomes -> rfes -> strats -> epics
+                for (const outcome of (hierarchyData.outcomes || [])) {
+                    // Check RFE path: Outcome -> RFE -> Strat -> Epic
+                    for (const r of (outcome.rfes || [])) {
+                        if (r.key === task.rfe_key) {
+                            rfe = r;
+                            strat = r.strats?.find(s => s.key === task.strat_key);
+                            if (strat) {
+                                epic = strat.epics?.find(e => e.key === task.epic_key);
+                            }
+                            break;
                         }
                     }
+                    if (epic) break;
+
+                    // Check Initiative path: Outcome -> Initiative -> Epic
+                    for (const init of (outcome.initiatives || [])) {
+                        if (init.key === task.initiative_key) {
+                            epic = init.epics?.find(e => e.key === task.epic_key);
+                            break;
+                        }
+                    }
+                    if (epic) break;
                 }
 
                 return { epic, strat, rfe };
@@ -2391,23 +2447,15 @@
             `;
             const tree = document.getElementById('tree');
 
-            if (currentTopLevel === 'strat') {
-                // Render STRAT-first view
-                hierarchyData.strats?.forEach(strat => {
-                    addStratToTree(strat, true);
-                    strat.epics?.forEach(epic => {
-                        addEpicToTree(epic);
-                        epic.tasks?.forEach(task => {
-                            addTaskToTree(task);
-                        });
-                    });
-                });
-            } else {
-                // Render RFE-first view
-                hierarchyData.rfes?.forEach(rfe => {
-                    addRfeToTree(tree, rfe);
+            // Render Outcome-first view
+            hierarchyData.outcomes?.forEach(outcome => {
+                addOutcomeToTree(tree, outcome);
+
+                // RFE path: Outcome -> RFE -> Strat -> Epic -> Task
+                outcome.rfes?.forEach(rfe => {
+                    addRfeToTree(rfe);
                     rfe.strats?.forEach(strat => {
-                        addStratToTree(strat, false);
+                        addStratToTree(strat);
                         strat.epics?.forEach(epic => {
                             addEpicToTree(epic);
                             epic.tasks?.forEach(task => {
@@ -2416,33 +2464,18 @@
                         });
                     });
                 });
-            }
-        }
 
-        function toggleTopLevel() {
-            const config = loadConfig();
-            const newTopLevel = config.topLevel === 'rfe' ? 'strat' : 'rfe';
-            saveTopLevel(newTopLevel);
-
-            // Update button text
-            const btn = document.getElementById('topLevelBtn');
-            btn.textContent = `Group by: ${newTopLevel === 'rfe' ? 'RFEs' : 'STRATs'}`;
-
-            // Force close any existing connection
-            if (eventSource) {
-                eventSource.close();
-                eventSource = null;
-            }
-
-            // Reset loading flag and hide indicator
-            isLoading = false;
-            const loadingIndicator = document.getElementById('loadingIndicator');
-            if (loadingIndicator) {
-                loadingIndicator.style.display = 'none';
-            }
-
-            // Reload data with new top level
-            loadData();
+                // Initiative path: Outcome -> Initiative -> Epic -> Task
+                outcome.initiatives?.forEach(initiative => {
+                    addInitiativeToTree(initiative);
+                    initiative.epics?.forEach(epic => {
+                        addEpicToTree(epic);
+                        epic.tasks?.forEach(task => {
+                            addTaskToTree(task);
+                        });
+                    });
+                });
+            });
         }
 
         function switchSettingsTab(tabName) {
@@ -2526,10 +2559,9 @@
                     email: config.email,
                     pat: config.pat,
                     component: config.component,
-                    top_level: config.topLevel,
                     max_age_days: config.maxAgeDays || 365,
                     show_closed_tasks: false,
-                    fetch_assignees_only: 'true'  // Special flag to only fetch task assignees
+                    fetch_assignees_only: 'true'
                 });
 
                 const response = await fetch('/api/fetch-assignees?' + params.toString());
@@ -3037,45 +3069,10 @@
             // Update hierarchyData in background (non-blocking, only if data exists)
             // Use setTimeout to ensure this doesn't block the UI update
             setTimeout(() => {
-                if (!hierarchyData.rfes) return;
-
-                // Search through RFEs
-                for (const rfe of hierarchyData.rfes) {
-                    if (rfe.key === issueKey) {
-                        if (!rfe.comments) rfe.comments = [];
-                        rfe.comments.push(newComment);
-                        return;
-                    }
-                    // Search through STRATs
-                    if (rfe.strats) {
-                        for (const strat of rfe.strats) {
-                            if (strat.key === issueKey) {
-                                if (!strat.comments) strat.comments = [];
-                                strat.comments.push(newComment);
-                                return;
-                            }
-                            // Search through Epics
-                            if (strat.epics) {
-                                for (const epic of strat.epics) {
-                                    if (epic.key === issueKey) {
-                                        if (!epic.comments) epic.comments = [];
-                                        epic.comments.push(newComment);
-                                        return;
-                                    }
-                                    // Search through Tasks
-                                    if (epic.tasks) {
-                                        for (const task of epic.tasks) {
-                                            if (task.key === issueKey) {
-                                                if (!task.comments) task.comments = [];
-                                                task.comments.push(newComment);
-                                                return;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                const issue = findIssueInHierarchy(issueKey);
+                if (issue) {
+                    if (!issue.comments) issue.comments = [];
+                    issue.comments.push(newComment);
                 }
             }, 0);
         }
@@ -3107,10 +3104,7 @@
             const oldData = hierarchyData;
 
             // Reset data
-            hierarchyData = {rfes: [], strats: [], allTasks: [], metadata: {total_rfes: 0, total_strats: 0, total_epics: 0, total_tasks: 0}};
-
-            // Track current mode
-            currentTopLevel = config.topLevel;
+            hierarchyData = {outcomes: [], allTasks: [], metadata: {total_outcomes: 0, total_rfes: 0, total_initiatives: 0, total_strats: 0, total_epics: 0, total_tasks: 0}};
 
             // Initialize tree structure only if in hierarchy view
             let tree = null;
@@ -3154,18 +3148,15 @@
             document.getElementById('pageTitle').textContent = pageTitle;
             document.title = pageTitle;
 
-            // Update top level button text
-            const topLevelBtn = document.getElementById('topLevelBtn');
-            topLevelBtn.textContent = `Group By: ${config.topLevel === 'rfe' ? 'RFEs' : 'STRATs'}`;
-
             // Create EventSource to stream data with config as query params
             const params = new URLSearchParams({
                 email: config.email,
                 pat: config.pat,
                 component: config.component,
-                top_level: config.topLevel,
                 max_age_days: config.maxAgeDays || 365,
+                show_closed_outcomes: config.showClosedOutcomes || false,
                 show_closed_rfes: config.showClosedRFEs || false,
+                show_closed_initiatives: config.showClosedInitiatives || false,
                 show_closed_strats: config.showClosedSTRATs || false,
                 show_closed_epics: config.showClosedEpics || false,
                 show_closed_tasks: config.showClosedTasks || false
@@ -3192,15 +3183,52 @@
                 }
             });
 
+            eventSource.addEventListener('outcome', function(e) {
+                const outcome = JSON.parse(e.data);
+                hierarchyData.outcomes.push(outcome);
+                hierarchyData.metadata.total_outcomes++;
+
+                if (tree) {
+                    addOutcomeToTree(tree, outcome);
+                    updateStats(hierarchyData);
+                }
+            });
+
             eventSource.addEventListener('rfe', function(e) {
                 const rfe = JSON.parse(e.data);
-                hierarchyData.rfes.push(rfe);
                 hierarchyData.metadata.total_rfes++;
 
-                // Add RFE to tree immediately (only in hierarchy view)
-                if (tree) {
-                    addRfeToTree(tree, rfe);
-                    updateStats(hierarchyData);
+                let outcome = hierarchyData.outcomes.find(o => o.key === rfe.outcome_key);
+                if (!outcome && rfe.outcome_key === '__orphan__') {
+                    outcome = ensureOrphanOutcome(tree);
+                }
+                if (outcome) {
+                    if (!outcome.rfes) outcome.rfes = [];
+                    outcome.rfes.push(rfe);
+
+                    if (tree) {
+                        addRfeToTree(rfe);
+                        updateStats(hierarchyData);
+                    }
+                }
+            });
+
+            eventSource.addEventListener('initiative', function(e) {
+                const initiative = JSON.parse(e.data);
+                hierarchyData.metadata.total_initiatives++;
+
+                let outcome = hierarchyData.outcomes.find(o => o.key === initiative.outcome_key);
+                if (!outcome && initiative.outcome_key === '__orphan__') {
+                    outcome = ensureOrphanOutcome(tree);
+                }
+                if (outcome) {
+                    if (!outcome.initiatives) outcome.initiatives = [];
+                    outcome.initiatives.push(initiative);
+
+                    if (tree) {
+                        addInitiativeToTree(initiative);
+                        updateStats(hierarchyData);
+                    }
                 }
             });
 
@@ -3208,25 +3236,20 @@
                 const strat = JSON.parse(e.data);
                 hierarchyData.metadata.total_strats++;
 
-                if (currentTopLevel === 'strat') {
-                    // STRAT mode: STRATs are top-level
-                    hierarchyData.strats.push(strat);
-                    if (tree) {
-                        addStratToTree(strat, true);  // Pass true to indicate top-level
-                        updateStats(hierarchyData);
-                    }
-                } else {
-                    // RFE mode: STRATs are children of RFEs
-                    const rfe = hierarchyData.rfes.find(r => r.key === strat.rfe_key);
+                // Find parent RFE within its Outcome
+                let found = false;
+                for (const outcome of hierarchyData.outcomes) {
+                    const rfe = (outcome.rfes || []).find(r => r.key === strat.rfe_key);
                     if (rfe) {
                         if (!rfe.strats) rfe.strats = [];
                         rfe.strats.push(strat);
+                        found = true;
 
-                        // Add STRAT to tree immediately (only in hierarchy view)
                         if (tree) {
                             addStratToTree(strat);
                             updateStats(hierarchyData);
                         }
+                        break;
                     }
                 }
             });
@@ -3235,33 +3258,40 @@
                 const epic = JSON.parse(e.data);
                 hierarchyData.metadata.total_epics++;
 
-                if (currentTopLevel === 'strat') {
-                    // STRAT mode: Find parent STRAT in top-level strats
-                    const strat = hierarchyData.strats.find(s => s.key === epic.strat_key);
-                    if (strat) {
-                        if (!strat.epics) strat.epics = [];
-                        strat.epics.push(epic);
+                let found = false;
+                for (const outcome of hierarchyData.outcomes) {
+                    // Check STRAT path: epic.strat_key
+                    if (epic.strat_key) {
+                        for (const rfe of (outcome.rfes || [])) {
+                            const strat = (rfe.strats || []).find(s => s.key === epic.strat_key);
+                            if (strat) {
+                                if (!strat.epics) strat.epics = [];
+                                strat.epics.push(epic);
+                                found = true;
 
-                        // Add epic to tree immediately (only in hierarchy view)
-                        if (tree) {
-                            addEpicToTree(epic);
-                            updateStats(hierarchyData);
+                                if (tree) {
+                                    addEpicToTree(epic);
+                                    updateStats(hierarchyData);
+                                }
+                                break;
+                            }
                         }
+                        if (found) break;
                     }
-                } else {
-                    // RFE mode: Find parent RFE and STRAT, then add epic
-                    const rfe = hierarchyData.rfes.find(r => r.key === epic.rfe_key);
-                    if (rfe && rfe.strats) {
-                        const strat = rfe.strats.find(s => s.key === epic.strat_key);
-                        if (strat) {
-                            if (!strat.epics) strat.epics = [];
-                            strat.epics.push(epic);
 
-                            // Add epic to tree immediately (only in hierarchy view)
+                    // Check Initiative path: epic.initiative_key
+                    if (epic.initiative_key) {
+                        const initiative = (outcome.initiatives || []).find(i => i.key === epic.initiative_key);
+                        if (initiative) {
+                            if (!initiative.epics) initiative.epics = [];
+                            initiative.epics.push(epic);
+                            found = true;
+
                             if (tree) {
                                 addEpicToTree(epic);
                                 updateStats(hierarchyData);
                             }
+                            break;
                         }
                     }
                 }
@@ -3271,43 +3301,49 @@
                 const task = JSON.parse(e.data);
                 hierarchyData.metadata.total_tasks++;
 
-                // Add to allTasks array for standup view
                 hierarchyData.allTasks.push(task);
-
-                // Track assignee for all tasks (including those outside hierarchy)
                 trackAssignee(task.assignee, task.assignee_username);
 
-                if (currentTopLevel === 'strat') {
-                    // STRAT mode: Find parent STRAT and epic
-                    const strat = hierarchyData.strats.find(s => s.key === task.strat_key);
-                    if (strat && strat.epics) {
-                        const epic = strat.epics.find(ep => ep.key === task.epic_key);
-                        if (epic) {
-                            if (!epic.tasks) epic.tasks = [];
-                            epic.tasks.push(task);
+                let found = false;
+                if (task.epic_key) {
+                    for (const outcome of hierarchyData.outcomes) {
+                        // Check STRAT path
+                        if (task.strat_key) {
+                            for (const rfe of (outcome.rfes || [])) {
+                                const strat = (rfe.strats || []).find(s => s.key === task.strat_key);
+                                if (strat && strat.epics) {
+                                    const epic = strat.epics.find(ep => ep.key === task.epic_key);
+                                    if (epic) {
+                                        if (!epic.tasks) epic.tasks = [];
+                                        epic.tasks.push(task);
+                                        found = true;
 
-                            // Add task to tree immediately (only in hierarchy view)
-                            if (tree) {
-                                addTaskToTree(task);
-                                updateStats(hierarchyData);
+                                        if (tree) {
+                                            addTaskToTree(task);
+                                            updateStats(hierarchyData);
+                                        }
+                                        break;
+                                    }
+                                }
                             }
+                            if (found) break;
                         }
-                    }
-                } else {
-                    // RFE mode: Find parent RFE, STRAT, and epic, then add task
-                    const rfe = hierarchyData.rfes.find(r => r.key === task.rfe_key);
-                    if (rfe && rfe.strats) {
-                        const strat = rfe.strats.find(s => s.key === task.strat_key);
-                        if (strat && strat.epics) {
-                            const epic = strat.epics.find(ep => ep.key === task.epic_key);
-                            if (epic) {
-                                if (!epic.tasks) epic.tasks = [];
-                                epic.tasks.push(task);
 
-                                // Add task to tree immediately (only in hierarchy view)
-                                if (tree) {
-                                    addTaskToTree(task);
-                                    updateStats(hierarchyData);
+                        // Check Initiative path
+                        if (task.initiative_key) {
+                            const initiative = (outcome.initiatives || []).find(i => i.key === task.initiative_key);
+                            if (initiative && initiative.epics) {
+                                const epic = initiative.epics.find(ep => ep.key === task.epic_key);
+                                if (epic) {
+                                    if (!epic.tasks) epic.tasks = [];
+                                    epic.tasks.push(task);
+                                    found = true;
+
+                                    if (tree) {
+                                        addTaskToTree(task);
+                                        updateStats(hierarchyData);
+                                    }
+                                    break;
                                 }
                             }
                         }
@@ -3369,19 +3405,129 @@
         }
 
         // Helper function to add section headers to containers
-        function ensureContainerHeader(containerId, headerText) {
+        function findIssueInHierarchy(issueKey) {
+            for (const outcome of (hierarchyData.outcomes || [])) {
+                if (outcome.key === issueKey) return outcome;
+                for (const rfe of (outcome.rfes || [])) {
+                    if (rfe.key === issueKey) return rfe;
+                    for (const strat of (rfe.strats || [])) {
+                        if (strat.key === issueKey) return strat;
+                        for (const epic of (strat.epics || [])) {
+                            if (epic.key === issueKey) return epic;
+                            for (const task of (epic.tasks || [])) {
+                                if (task.key === issueKey) return task;
+                            }
+                        }
+                    }
+                }
+                for (const init of (outcome.initiatives || [])) {
+                    if (init.key === issueKey) return init;
+                    for (const epic of (init.epics || [])) {
+                        if (epic.key === issueKey) return epic;
+                        for (const task of (epic.tasks || [])) {
+                            if (task.key === issueKey) return task;
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        function ensureContainerHeader(containerId, headerText, childLevel) {
             const container = document.getElementById(containerId);
             if (!container) return;
 
             // Check if header already exists
             if (!container.querySelector('.hierarchy-header')) {
-                const headerHtml = `<div class="hierarchy-header">${headerText}</div>`;
+                const headerHtml = `<div class="hierarchy-header hierarchy-header-${childLevel || 'default'}">${headerText}</div>`;
                 container.insertAdjacentHTML('afterbegin', headerHtml);
             }
         }
 
-        function addRfeToTree(tree, rfe) {
+        function ensureOrphanOutcome(tree) {
+            let orphan = hierarchyData.outcomes.find(o => o.key === '__orphan__');
+            if (!orphan) {
+                orphan = {
+                    key: '__orphan__',
+                    summary: 'Unlinked Items',
+                    status: '',
+                    priority: '',
+                    assignee: '',
+                    reporter: '',
+                    description: '',
+                    labels: [],
+                    components: [],
+                    comments: [],
+                    created: '',
+                    updated: '',
+                    rfes: [],
+                    initiatives: []
+                };
+                hierarchyData.outcomes.push(orphan);
+                if (tree) {
+                    addOutcomeToTree(tree, orphan);
+                }
+            }
+            return orphan;
+        }
+
+        function addOutcomeToTree(tree, outcome) {
+            trackAssignee(outcome.assignee, outcome.assignee_username);
+            const outcomeId = `outcome-${outcome.key}`;
+            const isOrphan = outcome.key === '__orphan__';
+            const versionInfo = extractVersionLabel(outcome.labels);
+            const versionClass = versionInfo.display === 'No version label' ? 'issue-version no-version' : 'issue-version';
+            const outcomeHtml = isOrphan ? `
+                <div class="tree-item" id="item-${outcome.key}" data-assignee="" data-type="outcome" data-version="">
+                    <div class="tree-node outcome" id="node-${outcome.key}" onclick="toggleNode('${outcomeId}')">
+                        <span class="expand-icon">▶</span>
+                        <div class="tree-content">
+                            <span class="issue-key">—</span>
+                            <span class="issue-summary-link" style="font-style: italic;">Unlinked Items (no parent Outcome)</span>
+                            <span class="issue-version no-version"></span>
+                            <span class="issue-status"></span>
+                            <span class="issue-priority"></span>
+                            <span class="issue-assignee"></span>
+                            <span class="issue-updated"></span>
+                            <span style="width: 32px; flex-shrink: 0;"></span>
+                        </div>
+                    </div>
+                    <div class="children" id="${outcomeId}"></div>
+                </div>
+            ` : `
+                <div class="tree-item" id="item-${outcome.key}" data-assignee="${outcome.assignee_username || ''}" data-type="outcome" data-version="${versionInfo.sortValue}">
+                    <div class="tree-node outcome empty" id="node-${outcome.key}" onclick="toggleNode('${outcomeId}')">
+                        <span class="expand-icon">▶</span>
+                        <div class="tree-content">
+                            <span class="issue-key">${outcome.key}</span>
+                            <a href="${JIRA_CONFIG.baseUrl}/browse/${outcome.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${outcome.summary}</a>
+                            <span class="${versionClass}">${versionInfo.display}</span>
+                            <span class="issue-status ${getStatusClass(outcome.status)}" onclick="event.stopPropagation(); showStatusDropdown('${outcome.key}', this)">${outcome.status}</span>
+                            <span class="issue-priority ${getPriorityClass(outcome.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${outcome.key}', this)">${outcome.priority}</span>
+                            <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${outcome.key}', this)">${outcome.assignee || 'Unassigned'}</span>
+                            <span class="issue-updated">${formatDate(outcome.updated)}</span>
+                            <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${outcome.key}', 'outcome')">↻</button>
+                        </div>
+                    </div>
+                    ${generateDetailsHTML(outcome)}
+                    <div class="children" id="${outcomeId}"></div>
+                </div>
+            `;
+            tree.insertAdjacentHTML('beforeend', outcomeHtml);
+        }
+
+        function addRfeToTree(rfe) {
             trackAssignee(rfe.assignee, rfe.assignee_username);
+            const outcomeContainer = document.getElementById(`outcome-${rfe.outcome_key}`);
+            if (!outcomeContainer) return;
+
+            const outcomeNodeDiv = document.getElementById(`node-${rfe.outcome_key}`);
+            if (outcomeNodeDiv && outcomeNodeDiv.classList.contains('empty')) {
+                outcomeNodeDiv.classList.remove('empty');
+            }
+
+            ensureContainerHeader(`outcome-${rfe.outcome_key}`, 'RFEs:', 'rfe');
+
             const rfeId = `rfe-${rfe.key}`;
             const versionInfo = extractVersionLabel(rfe.labels);
             const versionClass = versionInfo.display === 'No version label' ? 'issue-version no-version' : 'issue-version';
@@ -3404,11 +3550,60 @@
                     <div class="children" id="${rfeId}"></div>
                 </div>
             `;
-            tree.insertAdjacentHTML('beforeend', rfeHtml);
+            outcomeContainer.insertAdjacentHTML('beforeend', rfeHtml);
         }
 
-        function addStratToTree(strat, isTopLevel = false) {
+        function addInitiativeToTree(initiative) {
+            trackAssignee(initiative.assignee, initiative.assignee_username);
+            const outcomeContainer = document.getElementById(`outcome-${initiative.outcome_key}`);
+            if (!outcomeContainer) return;
+
+            const outcomeNodeDiv = document.getElementById(`node-${initiative.outcome_key}`);
+            if (outcomeNodeDiv && outcomeNodeDiv.classList.contains('empty')) {
+                outcomeNodeDiv.classList.remove('empty');
+            }
+
+            ensureContainerHeader(`outcome-${initiative.outcome_key}`, 'INITIATIVES:', 'initiative');
+
+            const initiativeId = `initiative-${initiative.key}`;
+            const versionInfo = extractVersionLabel(initiative.labels);
+            const versionClass = versionInfo.display === 'No version label' ? 'issue-version no-version' : 'issue-version';
+            const initiativeHtml = `
+                <div class="tree-item" id="item-${initiative.key}" data-assignee="${initiative.assignee_username || ''}" data-type="initiative" data-version="${versionInfo.sortValue}">
+                    <div class="tree-node initiative empty" id="node-${initiative.key}" onclick="toggleNode('${initiativeId}')">
+                        <span class="expand-icon">▶</span>
+                        <div class="tree-content">
+                            <span class="issue-key">${initiative.key}</span>
+                            <a href="${JIRA_CONFIG.baseUrl}/browse/${initiative.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${initiative.summary}</a>
+                            <span class="${versionClass}">${versionInfo.display}</span>
+                            <span class="issue-status ${getStatusClass(initiative.status)}" onclick="event.stopPropagation(); showStatusDropdown('${initiative.key}', this)">${initiative.status}</span>
+                            <span class="issue-priority ${getPriorityClass(initiative.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${initiative.key}', this)">${initiative.priority}</span>
+                            <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${initiative.key}', this)">${initiative.assignee || 'Unassigned'}</span>
+                            <span class="issue-updated">${formatDate(initiative.updated)}</span>
+                            <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${initiative.key}', 'initiative')">↻</button>
+                        </div>
+                    </div>
+                    ${generateDetailsHTML(initiative)}
+                    <div class="children" id="${initiativeId}"></div>
+                </div>
+            `;
+            outcomeContainer.insertAdjacentHTML('beforeend', initiativeHtml);
+
+            addCreateButton(initiativeId, 'epic', initiative.key);
+        }
+
+        function addStratToTree(strat) {
             trackAssignee(strat.assignee, strat.assignee_username);
+            const rfeContainer = document.getElementById(`rfe-${strat.rfe_key}`);
+            if (!rfeContainer) return;
+
+            const rfeNodeDiv = document.getElementById(`node-${strat.rfe_key}`);
+            if (rfeNodeDiv && rfeNodeDiv.classList.contains('empty')) {
+                rfeNodeDiv.classList.remove('empty');
+            }
+
+            ensureContainerHeader(`rfe-${strat.rfe_key}`, 'STRATS:', 'strat');
+
             const stratId = `strat-${strat.key}`;
             const versionInfo = extractVersionLabel(strat.labels);
             const versionClass = versionInfo.display === 'No version label' ? 'issue-version no-version' : 'issue-version';
@@ -3431,29 +3626,8 @@
                     <div class="children" id="${stratId}"></div>
                 </div>
             `;
+            rfeContainer.insertAdjacentHTML('beforeend', stratHtml);
 
-            if (isTopLevel) {
-                // Add to tree root directly
-                const tree = document.getElementById('tree');
-                tree.insertAdjacentHTML('beforeend', stratHtml);
-            } else {
-                // Add to parent RFE container
-                const rfeContainer = document.getElementById(`rfe-${strat.rfe_key}`);
-                if (!rfeContainer) return;
-
-                // Remove "empty" class and update expand icon for parent RFE
-                const rfeNodeDiv = document.getElementById(`node-${strat.rfe_key}`);
-                if (rfeNodeDiv && rfeNodeDiv.classList.contains('empty')) {
-                    rfeNodeDiv.classList.remove('empty');
-                }
-
-                // Add header if this is the first STRAT
-                ensureContainerHeader(`rfe-${strat.rfe_key}`, 'STRATS:');
-
-                rfeContainer.insertAdjacentHTML('beforeend', stratHtml);
-            }
-
-            // Add the "+ Epic" button to the STRAT (will be at bottom initially)
             addCreateButton(stratId, 'epic', strat.key);
         }
 
@@ -3487,22 +3661,32 @@
 
         function addEpicToTree(epic) {
             trackAssignee(epic.assignee, epic.assignee_username);
-            const stratContainer = document.getElementById(`strat-${epic.strat_key}`);
-            if (!stratContainer) return;
 
-            // Remove "empty" class for parent STRAT
-            const stratNodeDiv = document.getElementById(`node-${epic.strat_key}`);
-            if (stratNodeDiv && stratNodeDiv.classList.contains('empty')) {
-                stratNodeDiv.classList.remove('empty');
+            // Determine parent: STRAT or Initiative
+            let parentKey = epic.strat_key || epic.initiative_key;
+            let parentType = epic.strat_key ? 'strat' : 'initiative';
+            let parentContainer = document.getElementById(`${parentType}-${parentKey}`);
+            if (!parentContainer && parentKey) {
+                // Try the other type (handles create-epic which always sets strat_key)
+                parentType = parentType === 'strat' ? 'initiative' : 'strat';
+                parentContainer = document.getElementById(`${parentType}-${parentKey}`);
+                if (parentContainer && parentType === 'initiative') {
+                    epic.initiative_key = epic.strat_key;
+                    delete epic.strat_key;
+                }
+            }
+            if (!parentContainer) return;
+
+            const parentNodeDiv = document.getElementById(`node-${parentKey}`);
+            if (parentNodeDiv && parentNodeDiv.classList.contains('empty')) {
+                parentNodeDiv.classList.remove('empty');
             }
 
-            // Add header if this is the first Epic
-            ensureContainerHeader(`strat-${epic.strat_key}`, 'EPICS:');
+            ensureContainerHeader(`${parentType}-${parentKey}`, 'EPICS:', 'epic');
 
-            // Create unique ID including parent STRAT to allow same Epic under multiple STRATs
-            const epicId = `epic-${epic.strat_key}-${epic.key}`;
+            const epicId = `epic-${parentKey}-${epic.key}`;
             const epicHtml = `
-                <div class="tree-item" id="item-${epic.strat_key}-${epic.key}" data-assignee="${epic.assignee_username || ''}" data-type="epic">
+                <div class="tree-item" id="item-${parentKey}-${epic.key}" data-assignee="${epic.assignee_username || ''}" data-type="epic">
                     <div class="tree-node epic" onclick="toggleNode('${epicId}')">
                         <span class="expand-icon">▶</span>
                         <div class="tree-content">
@@ -3520,23 +3704,19 @@
                     <div class="children" id="${epicId}"></div>
                 </div>
             `;
-            stratContainer.insertAdjacentHTML('beforeend', epicHtml);
+            parentContainer.insertAdjacentHTML('beforeend', epicHtml);
 
-            // Re-add the "+ Epic" button to keep it at the bottom of the STRAT
-            addCreateButton(`strat-${epic.strat_key}`, 'epic', epic.strat_key);
-
-            // Add the "+ Task" button to the Epic
+            addCreateButton(`${parentType}-${parentKey}`, 'epic', parentKey);
             addCreateButton(epicId, 'task', epic.key);
         }
 
         function addTaskToTree(task) {
             trackAssignee(task.assignee, task.assignee_username);
-            // Use unique epic ID that includes parent STRAT
-            const epicContainer = document.getElementById(`epic-${task.strat_key}-${task.epic_key}`);
+            const parentKey = task.strat_key || task.initiative_key;
+            const epicContainer = document.getElementById(`epic-${parentKey}-${task.epic_key}`);
             if (!epicContainer) return;
 
-            // Add header if this is the first Task
-            ensureContainerHeader(`epic-${task.strat_key}-${task.epic_key}`, 'TASKS:');
+            ensureContainerHeader(`epic-${parentKey}-${task.epic_key}`, 'TASKS:', 'task');
 
             const taskId = `task-${task.key}`;
             const taskHtml = `
@@ -3560,8 +3740,7 @@
             `;
             epicContainer.insertAdjacentHTML('beforeend', taskHtml);
 
-            // Re-add the "+ Task" button to keep it at the bottom of the Epic
-            addCreateButton(`epic-${task.strat_key}-${task.epic_key}`, 'task', task.epic_key);
+            addCreateButton(`epic-${parentKey}-${task.epic_key}`, 'task', task.epic_key);
         }
 
         function renderHierarchy(data) {
@@ -4097,11 +4276,10 @@
             if (!node) return;
 
             const treeItem = node.parentElement;
-            const icon = treeItem.querySelector('.expand-icon');
+            const icon = treeItem.querySelector(':scope > .tree-node .expand-icon');
 
-            // Find the details element within this specific tree-item
-            // This ensures we toggle the correct instance when an issue appears in multiple places
-            const details = treeItem.querySelector('.issue-details');
+            // Only select the direct child issue-details, not descendants
+            const details = treeItem.querySelector(':scope > .issue-details');
 
             if (node.classList.contains('expanded')) {
                 node.classList.remove('expanded');
@@ -4189,52 +4367,51 @@
         function sortHierarchyData(data, field, order) {
             if (!data) return data;
 
-            // Sort based on current top level view
-            if (currentTopLevel === 'strat') {
-                // STRAT-first view: STRATs are top level
-                if (data.strats && Array.isArray(data.strats)) {
-                    data.strats.sort((a, b) => compareItems(a, b, field, order));
+            // Sort Outcome-first hierarchy
+            if (data.outcomes && Array.isArray(data.outcomes)) {
+                data.outcomes.sort((a, b) => compareItems(a, b, field, order));
 
-                    // Sort Epics within each STRAT
-                    data.strats.forEach(strat => {
-                        if (strat.epics && Array.isArray(strat.epics)) {
-                            strat.epics.sort((a, b) => compareItems(a, b, field, order));
+                data.outcomes.forEach(outcome => {
+                    // Sort RFEs
+                    if (outcome.rfes && Array.isArray(outcome.rfes)) {
+                        outcome.rfes.sort((a, b) => compareItems(a, b, field, order));
 
-                            // Sort Tasks within each Epic
-                            strat.epics.forEach(epic => {
-                                if (epic.tasks && Array.isArray(epic.tasks)) {
-                                    epic.tasks.sort((a, b) => compareItems(a, b, field, order));
-                                }
-                            });
-                        }
-                    });
-                }
-            } else {
-                // RFE-first view: RFEs are top level
-                if (data.rfes && Array.isArray(data.rfes)) {
-                    data.rfes.sort((a, b) => compareItems(a, b, field, order));
+                        outcome.rfes.forEach(rfe => {
+                            if (rfe.strats && Array.isArray(rfe.strats)) {
+                                rfe.strats.sort((a, b) => compareItems(a, b, field, order));
 
-                    // Sort STRATs within each RFE
-                    data.rfes.forEach(rfe => {
-                        if (rfe.strats && Array.isArray(rfe.strats)) {
-                            rfe.strats.sort((a, b) => compareItems(a, b, field, order));
+                                rfe.strats.forEach(strat => {
+                                    if (strat.epics && Array.isArray(strat.epics)) {
+                                        strat.epics.sort((a, b) => compareItems(a, b, field, order));
 
-                            // Sort Epics within each STRAT
-                            rfe.strats.forEach(strat => {
-                                if (strat.epics && Array.isArray(strat.epics)) {
-                                    strat.epics.sort((a, b) => compareItems(a, b, field, order));
+                                        strat.epics.forEach(epic => {
+                                            if (epic.tasks && Array.isArray(epic.tasks)) {
+                                                epic.tasks.sort((a, b) => compareItems(a, b, field, order));
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
 
-                                    // Sort Tasks within each Epic
-                                    strat.epics.forEach(epic => {
-                                        if (epic.tasks && Array.isArray(epic.tasks)) {
-                                            epic.tasks.sort((a, b) => compareItems(a, b, field, order));
-                                        }
-                                    });
-                                }
-                            });
-                        }
-                    });
-                }
+                    // Sort Initiatives
+                    if (outcome.initiatives && Array.isArray(outcome.initiatives)) {
+                        outcome.initiatives.sort((a, b) => compareItems(a, b, field, order));
+
+                        outcome.initiatives.forEach(initiative => {
+                            if (initiative.epics && Array.isArray(initiative.epics)) {
+                                initiative.epics.sort((a, b) => compareItems(a, b, field, order));
+
+                                initiative.epics.forEach(epic => {
+                                    if (epic.tasks && Array.isArray(epic.tasks)) {
+                                        epic.tasks.sort((a, b) => compareItems(a, b, field, order));
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
             }
 
             return data;
@@ -4277,45 +4454,47 @@
             `;
             const tree = document.getElementById('tree');
 
-            if (currentTopLevel === 'strat') {
-                // STRAT-first view
-                if (hierarchyData.strats && Array.isArray(hierarchyData.strats)) {
-                    hierarchyData.strats.forEach(strat => {
-                        addStratToTree(strat, true);  // true = top-level
-                        if (strat.epics) {
-                            strat.epics.forEach(epic => {
-                                addEpicToTree(epic);
-                                if (epic.tasks) {
-                                    epic.tasks.forEach(task => {
-                                        addTaskToTree(task);
-                                    });
-                                }
-                            });
-                        }
-                    });
-                }
-            } else {
-                // RFE-first view
-                if (hierarchyData.rfes && Array.isArray(hierarchyData.rfes)) {
-                    hierarchyData.rfes.forEach(rfe => {
-                        addRfeToTree(tree, rfe);
-                        if (rfe.strats) {
-                            rfe.strats.forEach(strat => {
-                                addStratToTree(strat);
-                                if (strat.epics) {
-                                    strat.epics.forEach(epic => {
-                                        addEpicToTree(epic);
-                                        if (epic.tasks) {
-                                            epic.tasks.forEach(task => {
-                                                addTaskToTree(task);
-                                            });
-                                        }
-                                    });
-                                }
-                            });
-                        }
-                    });
-                }
+            if (hierarchyData.outcomes && Array.isArray(hierarchyData.outcomes)) {
+                hierarchyData.outcomes.forEach(outcome => {
+                    addOutcomeToTree(tree, outcome);
+
+                    if (outcome.rfes) {
+                        outcome.rfes.forEach(rfe => {
+                            addRfeToTree(rfe);
+                            if (rfe.strats) {
+                                rfe.strats.forEach(strat => {
+                                    addStratToTree(strat);
+                                    if (strat.epics) {
+                                        strat.epics.forEach(epic => {
+                                            addEpicToTree(epic);
+                                            if (epic.tasks) {
+                                                epic.tasks.forEach(task => {
+                                                    addTaskToTree(task);
+                                                });
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+
+                    if (outcome.initiatives) {
+                        outcome.initiatives.forEach(initiative => {
+                            addInitiativeToTree(initiative);
+                            if (initiative.epics) {
+                                initiative.epics.forEach(epic => {
+                                    addEpicToTree(epic);
+                                    if (epic.tasks) {
+                                        epic.tasks.forEach(task => {
+                                            addTaskToTree(task);
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
             }
 
             // Update sort indicators after re-rendering
@@ -4409,7 +4588,7 @@
             allItems.forEach(item => item.style.display = 'none');
 
             // Define hierarchy levels in order (bottom to top)
-            const hierarchyLevels = ['task', 'epic', 'strat', 'rfe'];
+            const hierarchyLevels = ['task', 'epic', 'strat', 'initiative', 'rfe', 'outcome'];
             const selectedLevelIndex = hierarchyLevels.indexOf(filterLevel);
 
             // Get all levels from selected level up to top
@@ -4558,7 +4737,9 @@
 
         function updateStats(data) {
             document.getElementById('stats').style.display = 'flex';
+            document.getElementById('outcomeCount').textContent = data.metadata.total_outcomes || 0;
             document.getElementById('rfeCount').textContent = data.metadata.total_rfes || 0;
+            document.getElementById('initiativeCount').textContent = data.metadata.total_initiatives || 0;
             document.getElementById('stratCount').textContent = data.metadata.total_strats || 0;
             document.getElementById('epicCount').textContent = data.metadata.total_epics || 0;
             document.getElementById('taskCount').textContent = data.metadata.total_tasks || 0;
@@ -5167,45 +5348,54 @@
                     closeModal('createTaskModal');
                     document.getElementById('createTaskForm').reset();
 
-                    // Find the strat_key by looking for the epic container in the DOM
-                    // Epic containers have IDs like: epic-{strat_key}-{epic_key}
+                    // Find the parent key by looking for the epic container in the DOM
+                    // Epic containers have IDs like: epic-{parent_key}-{epic_key}
                     const epicContainers = document.querySelectorAll(`[id^="epic-"][id$="-${currentEpicKey}"]`);
 
                     if (epicContainers.length > 0) {
-                        // Extract strat_key from the container ID
                         const containerId = epicContainers[0].id;
                         const match = containerId.match(/^epic-(.+)-([A-Z]+-\d+)$/);
                         if (match) {
-                            const strat_key = match[1];
-                            result.task.strat_key = strat_key;
+                            const parentKey = match[1];
+                            // Check if parent is a STRAT or Initiative container
+                            if (document.getElementById(`strat-${parentKey}`)) {
+                                result.task.strat_key = parentKey;
+                            } else {
+                                result.task.initiative_key = parentKey;
+                            }
 
                             // Add to allTasks array for standup view
                             hierarchyData.allTasks.push(result.task);
 
                             // Add to the hierarchy data structure
-                            if (currentTopLevel === 'strat') {
-                                const strat = hierarchyData.strats.find(s => s.key === strat_key);
-                                if (strat && strat.epics) {
-                                    const epic = strat.epics.find(e => e.key === currentEpicKey);
-                                    if (epic) {
-                                        if (!epic.tasks) epic.tasks = [];
-                                        epic.tasks.push(result.task);
-                                    }
-                                }
-                            } else {
-                                // RFE mode - need to find the RFE
-                                hierarchyData.rfes.forEach(rfe => {
-                                    if (rfe.strats) {
-                                        const strat = rfe.strats.find(s => s.key === strat_key);
-                                        if (strat && strat.epics) {
-                                            const epic = strat.epics.find(e => e.key === currentEpicKey);
-                                            if (epic) {
-                                                if (!epic.tasks) epic.tasks = [];
-                                                epic.tasks.push(result.task);
-                                            }
+                            for (const outcome of (hierarchyData.outcomes || [])) {
+                                let found = false;
+                                for (const rfe of (outcome.rfes || [])) {
+                                    const strat = (rfe.strats || []).find(s => s.key === strat_key);
+                                    if (strat && strat.epics) {
+                                        const epic = strat.epics.find(e => e.key === currentEpicKey);
+                                        if (epic) {
+                                            if (!epic.tasks) epic.tasks = [];
+                                            epic.tasks.push(result.task);
+                                            found = true;
+                                            break;
                                         }
                                     }
-                                });
+                                }
+                                if (found) break;
+
+                                for (const init of (outcome.initiatives || [])) {
+                                    if (init.epics) {
+                                        const epic = init.epics.find(e => e.key === currentEpicKey);
+                                        if (epic) {
+                                            if (!epic.tasks) epic.tasks = [];
+                                            epic.tasks.push(result.task);
+                                            found = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (found) break;
                             }
 
                             // Add the new task directly to the tree
@@ -5747,38 +5937,8 @@
         }
 
         function updateIssueInData(issueKey, updateFn) {
-            if (!hierarchyData.rfes) return;
-
-            for (const rfe of hierarchyData.rfes) {
-                if (rfe.key === issueKey) {
-                    updateFn(rfe);
-                    return;
-                }
-                if (rfe.strats) {
-                    for (const strat of rfe.strats) {
-                        if (strat.key === issueKey) {
-                            updateFn(strat);
-                            return;
-                        }
-                        if (strat.epics) {
-                            for (const epic of strat.epics) {
-                                if (epic.key === issueKey) {
-                                    updateFn(epic);
-                                    return;
-                                }
-                                if (epic.tasks) {
-                                    for (const task of epic.tasks) {
-                                        if (task.key === issueKey) {
-                                            updateFn(task);
-                                            return;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            const issue = findIssueInHierarchy(issueKey);
+            if (issue) updateFn(issue);
         }
 
         // Reload item and its children
@@ -6036,132 +6196,69 @@
         }
 
         function updatePullRequestInHierarchy(issueKey, prUrl) {
-            // Handle RFE mode
-            if (hierarchyData.rfes) {
-                for (const rfe of hierarchyData.rfes) {
-                    if (!rfe.strats) continue;
-                    for (const strat of rfe.strats) {
-                        if (!strat.epics) continue;
-                        for (const epic of strat.epics) {
-                            if (!epic.tasks) continue;
-                            for (const task of epic.tasks) {
-                                if (task.key === issueKey) {
-                                    task.pull_request = prUrl;
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Handle STRAT mode
-            if (hierarchyData.strats) {
-                for (const strat of hierarchyData.strats) {
-                    if (!strat.epics) continue;
-                    for (const epic of strat.epics) {
-                        if (!epic.tasks) continue;
-                        for (const task of epic.tasks) {
-                            if (task.key === issueKey) {
-                                task.pull_request = prUrl;
-                                return;
-                            }
-                        }
-                    }
-                }
-            }
+            const issue = findIssueInHierarchy(issueKey);
+            if (issue) issue.pull_request = prUrl;
         }
 
         function updateItemInHierarchy(issueKey, itemType, newData) {
-            // Handle RFE mode
-            if (hierarchyData.rfes) {
-                for (let i = 0; i < hierarchyData.rfes.length; i++) {
-                    const rfe = hierarchyData.rfes[i];
+            const rerenderFns = {
+                outcome: rerenderRfe, // outcomes use same re-render pattern
+                rfe: rerenderRfe,
+                initiative: rerenderStrat,
+                strat: rerenderStrat,
+                epic: rerenderEpic,
+                task: rerenderTask
+            };
 
-                    if (itemType === 'rfe' && rfe.key === issueKey) {
-                        // Replace entire RFE
-                        hierarchyData.rfes[i] = newData;
-                        rerenderRfe(newData);
-                        populateAssigneeFilter();
-                        return;
+            function replaceInArray(arr, key, data) {
+                if (!arr) return false;
+                for (let i = 0; i < arr.length; i++) {
+                    if (arr[i].key === key) {
+                        arr[i] = data;
+                        return true;
                     }
+                }
+                return false;
+            }
 
-                    if (rfe.strats) {
-                        for (let j = 0; j < rfe.strats.length; j++) {
-                            const strat = rfe.strats[j];
+            for (const outcome of (hierarchyData.outcomes || [])) {
+                if (itemType === 'outcome' && outcome.key === issueKey) {
+                    replaceInArray(hierarchyData.outcomes, issueKey, newData);
+                    rerenderFns[itemType]?.(newData);
+                    populateAssigneeFilter();
+                    return;
+                }
 
-                            if (itemType === 'strat' && strat.key === issueKey) {
-                                rfe.strats[j] = newData;
-                                rerenderStrat(newData);
-                                populateAssigneeFilter();
-                                return;
-                            }
+                if (itemType === 'rfe' && replaceInArray(outcome.rfes, issueKey, newData)) {
+                    rerenderRfe(newData); populateAssigneeFilter(); return;
+                }
+                if (itemType === 'initiative' && replaceInArray(outcome.initiatives, issueKey, newData)) {
+                    rerenderStrat(newData); populateAssigneeFilter(); return;
+                }
 
-                            if (strat.epics) {
-                                for (let k = 0; k < strat.epics.length; k++) {
-                                    const epic = strat.epics[k];
-
-                                    if (itemType === 'epic' && epic.key === issueKey) {
-                                        strat.epics[k] = newData;
-                                        rerenderEpic(newData);
-                                        populateAssigneeFilter();
-                                        return;
-                                    }
-
-                                    if (epic.tasks) {
-                                        for (let l = 0; l < epic.tasks.length; l++) {
-                                            const task = epic.tasks[l];
-
-                                            if (itemType === 'task' && task.key === issueKey) {
-                                                epic.tasks[l] = newData;
-                                                rerenderTask(newData);
-                                                populateAssigneeFilter();
-                                                return;
-                                            }
-                                        }
-                                    }
-                                }
+                for (const rfe of (outcome.rfes || [])) {
+                    if (itemType === 'strat' && replaceInArray(rfe.strats, issueKey, newData)) {
+                        rerenderStrat(newData); populateAssigneeFilter(); return;
+                    }
+                    for (const strat of (rfe.strats || [])) {
+                        if (itemType === 'epic' && replaceInArray(strat.epics, issueKey, newData)) {
+                            rerenderEpic(newData); populateAssigneeFilter(); return;
+                        }
+                        for (const epic of (strat.epics || [])) {
+                            if (itemType === 'task' && replaceInArray(epic.tasks, issueKey, newData)) {
+                                rerenderTask(newData); populateAssigneeFilter(); return;
                             }
                         }
                     }
                 }
-            }
 
-            // Handle STRAT mode
-            if (hierarchyData.strats) {
-                for (let i = 0; i < hierarchyData.strats.length; i++) {
-                    const strat = hierarchyData.strats[i];
-
-                    if (itemType === 'strat' && strat.key === issueKey) {
-                        hierarchyData.strats[i] = newData;
-                        rerenderStrat(newData);
-                        populateAssigneeFilter();
-                        return;
+                for (const init of (outcome.initiatives || [])) {
+                    if (itemType === 'epic' && replaceInArray(init.epics, issueKey, newData)) {
+                        rerenderEpic(newData); populateAssigneeFilter(); return;
                     }
-
-                    if (strat.epics) {
-                        for (let j = 0; j < strat.epics.length; j++) {
-                            const epic = strat.epics[j];
-
-                            if (itemType === 'epic' && epic.key === issueKey) {
-                                strat.epics[j] = newData;
-                                rerenderEpic(newData);
-                                populateAssigneeFilter();
-                                return;
-                            }
-
-                            if (epic.tasks) {
-                                for (let k = 0; k < epic.tasks.length; k++) {
-                                    const task = epic.tasks[k];
-
-                                    if (itemType === 'task' && task.key === issueKey) {
-                                        epic.tasks[k] = newData;
-                                        rerenderTask(newData);
-                                        populateAssigneeFilter();
-                                        return;
-                                    }
-                                }
-                            }
+                    for (const epic of (init.epics || [])) {
+                        if (itemType === 'task' && replaceInArray(epic.tasks, issueKey, newData)) {
+                            rerenderTask(newData); populateAssigneeFilter(); return;
                         }
                     }
                 }
