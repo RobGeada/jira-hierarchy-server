@@ -5421,7 +5421,7 @@
                             for (const outcome of (hierarchyData.outcomes || [])) {
                                 let found = false;
                                 for (const rfe of (outcome.rfes || [])) {
-                                    const strat = (rfe.strats || []).find(s => s.key === strat_key);
+                                    const strat = (rfe.strats || []).find(s => s.key === parentKey);
                                     if (strat && strat.epics) {
                                         const epic = strat.epics.find(e => e.key === currentEpicKey);
                                         if (epic) {
