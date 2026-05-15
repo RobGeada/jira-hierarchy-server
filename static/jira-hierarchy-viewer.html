@@ -3258,6 +3258,17 @@
                 const epic = JSON.parse(e.data);
                 hierarchyData.metadata.total_epics++;
 
+                if (epic.initiative_key === '__orphan__') {
+                    const orphanInit = ensureOrphanInitiative(tree);
+                    if (!orphanInit.epics) orphanInit.epics = [];
+                    orphanInit.epics.push(epic);
+                    if (tree) {
+                        addEpicToTree(epic);
+                        updateStats(hierarchyData);
+                    }
+                    return;
+                }
+
                 let found = false;
                 for (const outcome of hierarchyData.outcomes) {
                     // Check STRAT path: epic.strat_key
@@ -3469,6 +3480,45 @@
                 }
             }
             return orphan;
+        }
+
+        function ensureOrphanInitiative(tree) {
+            const orphanOutcome = ensureOrphanOutcome(tree);
+            let orphanInit = (orphanOutcome.initiatives || []).find(i => i.key === '__orphan__');
+            if (!orphanInit) {
+                orphanInit = { key: '__orphan__', summary: 'Unlinked Epics', epics: [] };
+                if (!orphanOutcome.initiatives) orphanOutcome.initiatives = [];
+                orphanOutcome.initiatives.push(orphanInit);
+                if (tree && !document.getElementById('initiative-__orphan__')) {
+                    const outcomeContainer = document.getElementById('outcome-__orphan__');
+                    if (outcomeContainer) {
+                        const outcomeNodeDiv = document.getElementById('node-__orphan__');
+                        if (outcomeNodeDiv && outcomeNodeDiv.classList.contains('empty')) {
+                            outcomeNodeDiv.classList.remove('empty');
+                        }
+                        const initHtml = `
+                            <div class="tree-item" id="item-__orphan_init__" data-assignee="" data-type="initiative" data-version="">
+                                <div class="tree-node initiative" id="node-__orphan_init__" onclick="toggleNode('initiative-__orphan__')">
+                                    <span class="expand-icon">▶</span>
+                                    <div class="tree-content">
+                                        <span class="issue-key">—</span>
+                                        <span class="issue-summary-link" style="font-style: italic;">Unlinked Epics (no STRAT/Initiative link)</span>
+                                        <span class="issue-version no-version"></span>
+                                        <span class="issue-status"></span>
+                                        <span class="issue-priority"></span>
+                                        <span class="issue-assignee"></span>
+                                        <span class="issue-updated"></span>
+                                        <span style="width: 32px; flex-shrink: 0;"></span>
+                                    </div>
+                                </div>
+                                <div class="children" id="initiative-__orphan__"></div>
+                            </div>
+                        `;
+                        outcomeContainer.insertAdjacentHTML('beforeend', initHtml);
+                    }
+                }
+            }
+            return orphanInit;
         }
 
         function addOutcomeToTree(tree, outcome) {
@@ -5371,7 +5421,7 @@
                             for (const outcome of (hierarchyData.outcomes || [])) {
                                 let found = false;
                                 for (const rfe of (outcome.rfes || [])) {
-                                    const strat = (rfe.strats || []).find(s => s.key === strat_key);
+                                    const strat = (rfe.strats || []).find(s => s.key === parentKey);
                                     if (strat && strat.epics) {
                                         const epic = strat.epics.find(e => e.key === currentEpicKey);
                                         if (epic) {
