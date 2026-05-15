@@ -191,6 +191,7 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
     strats_jql += ' ORDER BY priority DESC, created DESC'
 
     strat_field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,issuelinks'
+    epic_field_list = strat_field_list + ',parent'
     strat_issues = run_jira_query(strats_jql, strat_field_list, jira_email, jira_pat)
     print(f"Found {len(strat_issues)} STRATs", file=sys.stderr)
 
@@ -202,7 +203,6 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
     for strat in strat_issues:
         strat_data = build_issue_data(strat, 'strat')
         strat_key = strat_data['key']
-        strat_keys_list.append(strat_key)
 
         # Find which RFE this STRAT is linked to via "Cloners" issuelinks (clone/cloned-by)
         links = strat.get('fields', {}).get('issuelinks', [])
@@ -223,6 +223,7 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
                 break
 
         if found_rfe:
+            strat_keys_list.append(strat_key)
             if found_rfe not in strats_by_rfe:
                 strats_by_rfe[found_rfe] = []
             strats_by_rfe[found_rfe].append(strat_data)
@@ -267,7 +268,6 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
         if not show_closed_epics:
             epics_jql += ' AND status NOT IN (Closed, Resolved)'
 
-        epic_field_list = strat_field_list + ',parent'
         epic_issues = run_jira_query(epics_jql, epic_field_list, jira_email, jira_pat)
         print(f"Found {len(epic_issues)} Epics via Parent Link", file=sys.stderr)
 
@@ -385,6 +385,43 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
                 print(f"  WARNING: Epic {epic_key} has no Parent Link to our STRATs/Initiatives", file=sys.stderr)
 
     # =========================================================================
+    # Step 5b: Fetch orphan Epics (in component but not under any discovered STRAT/Initiative)
+    # =========================================================================
+    print("Checking for orphan Epics...", file=sys.stderr)
+    orphan_epics_jql = (
+        f'project = RHOAIENG '
+        f'AND issuetype = Epic '
+        f'AND {component_clause} '
+        f'AND updated >= {cutoff_date}'
+    )
+    if not show_closed_epics:
+        orphan_epics_jql += ' AND status NOT IN (Closed, Resolved)'
+
+    all_component_epics = run_jira_query(orphan_epics_jql, epic_field_list, jira_email, jira_pat)
+    existing_epic_key_set = set(epic_keys_list)
+    orphan_epic_count = 0
+
+    for epic in all_component_epics:
+        if epic['key'] in existing_epic_key_set:
+            continue
+        epic_data = build_issue_data(epic, 'epic')
+        epic_key = epic_data['key']
+        epic_keys_list.append(epic_key)
+        existing_epic_key_set.add(epic_key)
+        epic_data['initiative_key'] = '__orphan__'
+        epic_data['outcome_key'] = '__orphan__'
+        epic_data['tasks'] = []
+        if '__orphan__' not in epics_by_parent:
+            epics_by_parent['__orphan__'] = []
+        epics_by_parent['__orphan__'].append(epic_data)
+        send_sse_event(wfile, 'epic', epic_data)
+        total_epics += 1
+        orphan_epic_count += 1
+
+    if orphan_epic_count:
+        print(f"  Found {orphan_epic_count} orphan Epics (in component but not linked to any STRAT/Initiative)", file=sys.stderr)
+
+    # =========================================================================
     # Step 6: Fetch Tasks
     # =========================================================================
     tasks_by_epic = {}
@@ -444,6 +481,9 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
                                 if any(i['key'] == parent_key for i in init_list):
                                     task_data['outcome_key'] = o_key
                                     break
+                        elif parent_key == '__orphan__':
+                            task_data['initiative_key'] = '__orphan__'
+                            task_data['outcome_key'] = '__orphan__'
                         break
 
             send_sse_event(wfile, 'task', task_data)
