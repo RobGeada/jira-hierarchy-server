@@ -5,6 +5,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Safety JIRA Hierarchy Viewer</title>
     <style>
+        :root {
+            --bg-page: #f4f5f7;
+            --bg-surface: white;
+            --bg-subtle: #F4F5F7;
+            --bg-subtler: #FAFBFC;
+            --bg-muted: #EBECF0;
+            --text: #172B4D;
+            --text-muted: #6B778C;
+            --border: #DFE1E6;
+            --brand: #0052CC;
+            --brand-hover: #0747A6;
+            --brand-disabled: #B3D4FF;
+            --focus-ring: rgba(0, 82, 204, 0.2);
+            --version-text: #006644;
+            --outcome-bg: #FFEBE6;
+            --outcome-accent: #BF2600;
+            --rfe-bg: #EAE6FF;
+            --rfe-accent: #6554C0;
+            --initiative-bg: #E6FCFF;
+            --initiative-accent: #00B8D9;
+            --strat-bg: #DEEBFF;
+            --epic-bg: #E3FCEF;
+            --epic-accent: #00875A;
+            --task-bg: #FFF0B3;
+            --task-accent: #FF991F;
+            --subtask-bg: #FFF7D6;
+            --subtask-accent: #FFAB00;
+            --pre-bg: #172B4D;
+            --pre-text: #F4F5F7;
+        }
+
+        [data-theme="dark"] {
+            --bg-page: #141517;
+            --bg-surface: #1e1f23;
+            --bg-subtle: #25262b;
+            --bg-subtler: #1a1b1f;
+            --bg-muted: #2e2f36;
+            --text: #c9d1d9;
+            --text-muted: #8b949e;
+            --border: #444950;
+            --brand: #4c9eeb;
+            --brand-hover: #2e8cd3;
+            --brand-disabled: #1d3557;
+            --focus-ring: rgba(76, 158, 235, 0.3);
+            --version-text: #3ecf8e;
+            --outcome-bg: #3d1a14;
+            --outcome-accent: #ff6b4a;
+            --rfe-bg: #2d2848;
+            --rfe-accent: #8b7fd4;
+            --initiative-bg: #0d2f35;
+            --initiative-accent: #33c5e0;
+            --strat-bg: #0d2340;
+            --epic-bg: #0d2e1e;
+            --epic-accent: #3ecf8e;
+            --task-bg: #2e2000;
+            --task-accent: #ffa940;
+            --subtask-bg: #2a1f00;
+            --subtask-accent: #ffc53d;
+            --pre-bg: #0d0f10;
+            --pre-text: #c9d1d9;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,23 +75,23 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: #f4f5f7;
+            background: var(--bg-page);
             padding: 20px;
-            color: #172B4D;
+            color: var(--text);
         }
 
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            background: white;
+            background: var(--bg-surface);
             border-radius: 8px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.12);
         }
 
         .header {
             padding: 24px;
-            border-bottom: 2px solid #DFE1E6;
-            background: linear-gradient(135deg, #0052CC 0%, #0747A6 100%);
+            border-bottom: 2px solid var(--border);
+            background: linear-gradient(135deg, var(--brand) 0%, var(--brand-hover) 100%);
             color: white;
             border-radius: 8px 8px 0 0;
         }
@@ -46,8 +108,8 @@
 
         .controls {
             padding: 16px 24px;
-            background: #F4F5F7;
-            border-bottom: 1px solid #DFE1E6;
+            background: var(--bg-subtle);
+            border-bottom: 1px solid var(--border);
             display: flex;
             gap: 12px;
             align-items: center;
@@ -56,7 +118,7 @@
 
         .btn {
             padding: 8px 16px;
-            background: #0052CC;
+            background: var(--brand);
             color: white;
             border: none;
             border-radius: 4px;
@@ -67,13 +129,13 @@
         }
 
         .btn:hover {
-            background: #0747A6;
+            background: var(--brand-hover);
         }
 
         .btn-secondary {
-            background: #F4F5F7;
-            color: #172B4D;
-            border: 1px solid #DFE1E6;
+            background: var(--bg-subtle);
+            color: var(--text);
+            border: 1px solid var(--border);
         }
 
         .btn-secondary:hover {
@@ -83,7 +145,7 @@
         .loading {
             text-align: center;
             padding: 40px;
-            color: #6B778C;
+            color: var(--text-muted);
         }
 
         .tree {
@@ -107,26 +169,26 @@
         }
 
         .tree-node:hover {
-            background: #F4F5F7;
+            background: var(--bg-subtle);
         }
 
         /* When expanded, make the tree-node the title bar of a card */
         .tree-item:has(.issue-details[style*="display: block"]) > .tree-node {
             border-radius: 4px 4px 0 0;
-            border: 1px solid #DFE1E6;
+            border: 1px solid var(--border);
             border-bottom: none;
         }
 
         .tree-node.outcome {
-            border-left-color: #BF2600;
-            background: #FFEBE6;
+            border-left-color: var(--outcome-accent);
+            background: var(--outcome-bg);
             font-weight: 700;
             font-size: 18px;
         }
 
         .tree-node.outcome.empty {
-            background: #F4F5F7;
-            border-left-color: #DFE1E6;
+            background: var(--bg-subtle);
+            border-left-color: var(--border);
         }
 
         .tree-node.outcome.empty .tree-content {
@@ -134,16 +196,16 @@
         }
 
         .tree-node.rfe {
-            border-left-color: #6554C0;
-            background: #EAE6FF;
+            border-left-color: var(--rfe-accent);
+            background: var(--rfe-bg);
             font-weight: 700;
             font-size: 16px;
             margin-left: 24px;
         }
 
         .tree-node.rfe.empty {
-            background: #F4F5F7;
-            border-left-color: #DFE1E6;
+            background: var(--bg-subtle);
+            border-left-color: var(--border);
         }
 
         .tree-node.rfe.empty .tree-content {
@@ -151,15 +213,15 @@
         }
 
         .tree-node.initiative {
-            border-left-color: #00B8D9;
-            background: #E6FCFF;
+            border-left-color: var(--initiative-accent);
+            background: var(--initiative-bg);
             font-weight: 600;
             margin-left: 24px;
         }
 
         .tree-node.initiative.empty {
-            background: #F4F5F7;
-            border-left-color: #DFE1E6;
+            background: var(--bg-subtle);
+            border-left-color: var(--border);
         }
 
         .tree-node.initiative.empty .tree-content {
@@ -167,15 +229,15 @@
         }
 
         .tree-node.strat {
-            border-left-color: #0052CC;
-            background: #DEEBFF;
+            border-left-color: var(--brand);
+            background: var(--strat-bg);
             font-weight: 600;
             margin-left: 48px;
         }
 
         .tree-node.strat.empty {
-            background: #F4F5F7;
-            border-left-color: #DFE1E6;
+            background: var(--bg-subtle);
+            border-left-color: var(--border);
         }
 
         .tree-node.strat.empty .tree-content {
@@ -183,20 +245,20 @@
         }
 
         .tree-node.epic {
-            border-left-color: #00875A;
-            background: #E3FCEF;
+            border-left-color: var(--epic-accent);
+            background: var(--epic-bg);
             margin-left: 72px;
         }
 
         .tree-node.task {
-            border-left-color: #FF991F;
-            background: #FFF0B3;
+            border-left-color: var(--task-accent);
+            background: var(--task-bg);
             margin-left: 96px;
         }
 
         .tree-node.subtask {
-            border-left-color: #FFAB00;
-            background: #FFF7D6;
+            border-left-color: var(--subtask-accent);
+            background: var(--subtask-bg);
             margin-left: 120px;
             font-size: 14px;
         }
@@ -208,7 +270,7 @@
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            color: #6B778C;
+            color: var(--text-muted);
             user-select: none;
         }
 
@@ -223,7 +285,7 @@
             font-family: 'Monaco', 'Courier New', monospace;
             font-size: 13px;
             padding: 4px 8px;
-            background: white;
+            background: var(--bg-surface);
             border-radius: 3px;
             font-weight: 600;
             width: 120px;
@@ -233,8 +295,8 @@
         .issue-version {
             font-size: 11px;
             padding: 3px 8px;
-            background: #E3FCEF;
-            color: #006644;
+            background: var(--epic-bg);
+            color: var(--version-text);
             border-radius: 3px;
             font-weight: 600;
             white-space: nowrap;
@@ -248,8 +310,8 @@
         }
 
         .issue-version.no-version {
-            background: #F4F5F7;
-            color: #6B778C;
+            background: var(--bg-subtle);
+            color: var(--text-muted);
             font-style: italic;
         }
 
@@ -265,7 +327,7 @@
 
         .issue-summary-link:hover {
             text-decoration: underline;
-            color: #0052CC;
+            color: var(--brand);
         }
 
         .issue-status {
@@ -290,8 +352,8 @@
 
         .status-dropdown {
             position: fixed;  /* Changed from absolute to fixed for better stacking */
-            background: white;
-            border: 1px solid #DFE1E6;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
             border-radius: 3px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.25);
             z-index: 10000;  /* Much higher z-index */
@@ -313,18 +375,18 @@
         }
 
         .status-option:hover {
-            background: #F4F5F7;
+            background: var(--bg-subtle);
         }
 
         .dropdown-header {
             padding: 8px 12px;
             font-size: 11px;
             font-weight: 600;
-            color: #6B778C;
+            color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 0.5px;
             cursor: default;
-            border-bottom: 1px solid #DFE1E6;
+            border-bottom: 1px solid var(--border);
             margin-bottom: 4px;
         }
 
@@ -332,10 +394,10 @@
             padding: 8px 12px;
             font-size: 11px;
             font-weight: 600;
-            color: #6B778C;
+            color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            border-bottom: 1px solid #DFE1E6;
+            border-bottom: 1px solid var(--border);
             margin-top: 4px;
             margin-bottom: 4px;
         }
@@ -345,11 +407,11 @@
         .hierarchy-header-epic { margin-left: 72px; }
         .hierarchy-header-task { margin-left: 96px; }
 
-        .status-new { background: #DFE1E6; color: #172B4D; }
-        .status-in-progress { background: #0052CC; color: white; }
-        .status-approved { background: #00875A; color: white; }
-        .status-closed { background: #6B778C; color: white; }
-        .status-review { background: #FF991F; color: white; }
+        .status-new { background: var(--border); color: var(--text); }
+        .status-in-progress { background: var(--brand); color: white; }
+        .status-approved { background: var(--epic-accent); color: white; }
+        .status-closed { background: var(--text-muted); color: white; }
+        .status-review { background: var(--task-accent); color: white; }
 
         .issue-priority {
             font-size: 12px;
@@ -373,14 +435,14 @@
 
         .priority-critical { background: #DE350B; color: white; }
         .priority-major { background: #FF5630; color: white; }
-        .priority-normal { background: #FFC400; color: #172B4D; }
+        .priority-normal { background: #FFC400; color: var(--text); }
 
         .issue-assignee {
             font-size: 12px;
             padding: 4px 8px;
             border-radius: 3px;
-            background: #EBECF0;
-            color: #172B4D;
+            background: var(--bg-muted);
+            color: var(--text);
             font-weight: 500;
             width: 140px;
             flex-shrink: 0;
@@ -403,7 +465,7 @@
         .issue-updated {
             font-size: 12px;
             padding: 4px 8px;
-            color: #6B778C;
+            color: var(--text-muted);
             width: 110px;
             flex-shrink: 0;
             text-align: center;
@@ -420,15 +482,15 @@
         .add-item-tree-node {
             padding: 12px;
             cursor: pointer;
-            color: #0052CC;
+            color: var(--brand);
             font-size: 14px;
             border-radius: 4px;
             display: flex;
             align-items: center;
             gap: 8px;
             transition: all 0.2s;
-            border: 1px dashed #DFE1E6;
-            background: #FAFBFC;
+            border: 1px dashed var(--border);
+            background: var(--bg-subtler);
         }
 
         .add-item-tree-node.add-epic {
@@ -441,7 +503,7 @@
 
         .add-item-tree-node:hover {
             background: #EBF5FF;
-            border-color: #0052CC;
+            border-color: var(--brand);
         }
 
         .add-item-tree-node .add-icon {
@@ -469,18 +531,18 @@
 
         .toast {
             padding: 16px 20px;
-            background: white;
+            background: var(--bg-surface);
             border-radius: 6px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             display: flex;
             align-items: flex-start;
             gap: 12px;
             animation: slideIn 0.3s ease-out;
-            border-left: 4px solid #DFE1E6;
+            border-left: 4px solid var(--border);
         }
 
         .toast.success {
-            border-left-color: #00875A;
+            border-left-color: var(--epic-accent);
         }
 
         .toast.error {
@@ -488,7 +550,7 @@
         }
 
         .toast.info {
-            border-left-color: #0052CC;
+            border-left-color: var(--brand);
         }
 
         .toast-icon {
@@ -498,7 +560,7 @@
         }
 
         .toast.success .toast-icon {
-            color: #00875A;
+            color: var(--epic-accent);
         }
 
         .toast.error .toast-icon {
@@ -506,19 +568,19 @@
         }
 
         .toast.info .toast-icon {
-            color: #0052CC;
+            color: var(--brand);
         }
 
         .toast-content {
             flex: 1;
             font-size: 14px;
             line-height: 1.5;
-            color: #172B4D;
+            color: var(--text);
         }
 
         .toast-close {
             cursor: pointer;
-            color: #6B778C;
+            color: var(--text-muted);
             font-size: 18px;
             line-height: 1;
             padding: 0 4px;
@@ -526,7 +588,7 @@
         }
 
         .toast-close:hover {
-            color: #172B4D;
+            color: var(--text);
         }
 
         @keyframes slideIn {
@@ -557,12 +619,12 @@
 
         .stats {
             padding: 16px 24px;
-            background: #F4F5F7;
-            border-top: 1px solid #DFE1E6;
+            background: var(--bg-subtle);
+            border-top: 1px solid var(--border);
             display: flex;
             gap: 24px;
             font-size: 14px;
-            color: #6B778C;
+            color: var(--text-muted);
         }
 
         .stat-item {
@@ -572,12 +634,12 @@
 
         .stat-value {
             font-weight: 600;
-            color: #172B4D;
+            color: var(--text);
         }
 
         .filter-input {
             padding: 8px 12px;
-            border: 1px solid #DFE1E6;
+            border: 1px solid var(--border);
             border-radius: 4px;
             font-size: 14px;
             flex: 1;
@@ -586,10 +648,10 @@
 
         .assignee-filter, .filter-level {
             padding: 8px 12px;
-            border: 1px solid #DFE1E6;
+            border: 1px solid var(--border);
             border-radius: 4px;
             font-size: 14px;
-            background: white;
+            background: var(--bg-surface);
             cursor: pointer;
             position: relative;
             z-index: 1;
@@ -606,13 +668,13 @@
         }
 
         .assignee-filter:hover, .filter-level:hover {
-            border-color: #0052CC;
+            border-color: var(--brand);
         }
 
         .assignee-filter:focus, .filter-level:focus {
             outline: none;
-            border-color: #0052CC;
-            box-shadow: 0 0 0 2px rgba(0, 82, 204, 0.2);
+            border-color: var(--brand);
+            box-shadow: 0 0 0 2px var(--focus-ring);
         }
 
         .filter-group {
@@ -624,7 +686,7 @@
 
         .filter-label {
             font-size: 13px;
-            color: #6B778C;
+            color: var(--text-muted);
             font-weight: 500;
             white-space: nowrap;
             pointer-events: none;
@@ -634,8 +696,8 @@
             position: sticky;
             top: 0;
             z-index: 100;
-            background: #F4F5F7;
-            border-bottom: 2px solid #DFE1E6;
+            background: var(--bg-subtle);
+            border-bottom: 2px solid var(--border);
             padding: 12px 24px 12px 72px;
             margin: 0 0px 4px 0px;
             display: flex;
@@ -643,7 +705,7 @@
             gap: 8px;
             font-weight: 600;
             font-size: 16px;
-            color: #172B4D;
+            color: var(--text);
         }
 
         .hierarchy-table-header .expand-icon-spacer {
@@ -668,7 +730,7 @@
         }
 
         .hierarchy-table-header .header-sortable:hover {
-            color: #0052CC;
+            color: var(--brand);
         }
 
         /* Standardize all header cell formatting */
@@ -683,7 +745,7 @@
             padding: 0;
             border-radius: 0;
             font-weight: 600;
-            color: #172B4D;
+            color: var(--text);
             font-size: 14px;
             font-family: inherit;
         }
@@ -701,7 +763,7 @@
         }
 
         .header-cell.sortable:hover {
-            color: #0052CC;
+            color: var(--brand);
         }
 
         .header-cell:nth-child(1) { width: 120px; } /* Key */
@@ -714,27 +776,27 @@
 
         .sort-indicator {
             font-size: 10px;
-            color: #6B778C;
+            color: var(--text-muted);
             margin-left: 2px;
         }
 
         .sort-indicator.active {
-            color: #0052CC;
+            color: var(--brand);
         }
 
         .empty-state {
             text-align: center;
             padding: 60px 24px;
-            color: #6B778C;
+            color: var(--text-muted);
         }
 
         .empty-state h3 {
             margin-bottom: 8px;
-            color: #172B4D;
+            color: var(--text);
         }
 
         .link {
-            color: #0052CC;
+            color: var(--brand);
             text-decoration: none;
         }
 
@@ -756,7 +818,7 @@
         }
 
         .btn-add:hover {
-            background: #00875A;
+            background: var(--epic-accent);
         }
 
         .modal {
@@ -777,7 +839,7 @@
         }
 
         .modal-content {
-            background: white;
+            background: var(--bg-surface);
             padding: 24px;
             border-radius: 8px;
             max-width: 600px;
@@ -796,7 +858,7 @@
 
         .modal-tabs {
             display: flex;
-            border-bottom: 2px solid #DFE1E6;
+            border-bottom: 2px solid var(--border);
             margin-bottom: 20px;
             gap: 4px;
         }
@@ -809,18 +871,18 @@
             cursor: pointer;
             font-size: 14px;
             font-weight: 500;
-            color: #6B778C;
+            color: var(--text-muted);
             transition: all 0.2s;
         }
 
         .modal-tab:hover {
-            color: #172B4D;
-            background: #F4F5F7;
+            color: var(--text);
+            background: var(--bg-subtle);
         }
 
         .modal-tab.active {
-            color: #0052CC;
-            border-bottom-color: #0052CC;
+            color: var(--brand);
+            border-bottom-color: var(--brand);
         }
 
         .modal-tab-content {
@@ -834,7 +896,7 @@
         .assignee-checkbox-list {
             max-height: 300px;
             overflow-y: auto;
-            background: #F4F5F7;
+            background: var(--bg-subtle);
             border-radius: 3px;
             padding: 12px;
         }
@@ -849,7 +911,7 @@
         }
 
         .assignee-checkbox-item:hover {
-            background: #EBECF0;
+            background: var(--bg-muted);
         }
 
         .assignee-checkbox-item input[type="checkbox"] {
@@ -882,7 +944,7 @@
         .form-group select {
             width: 100%;
             padding: 8px 12px;
-            border: 1px solid #DFE1E6;
+            border: 1px solid var(--border);
             border-radius: 4px;
             font-size: 14px;
             font-family: inherit;
@@ -898,8 +960,8 @@
             top: 100%;
             left: 0;
             right: 0;
-            background: white;
-            border: 1px solid #DFE1E6;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
             border-top: none;
             border-radius: 0 0 4px 4px;
             max-height: 200px;
@@ -912,7 +974,7 @@
             padding: 8px 12px;
             cursor: pointer;
             font-size: 14px;
-            border-bottom: 1px solid #F4F5F7;
+            border-bottom: 1px solid var(--bg-subtle);
         }
 
         .autocomplete-item:last-child {
@@ -920,23 +982,23 @@
         }
 
         .autocomplete-item:hover {
-            background: #F4F5F7;
+            background: var(--bg-subtle);
         }
 
         .autocomplete-item.selected {
-            background: #DEEBFF;
+            background: var(--strat-bg);
         }
 
         .autocomplete-loading {
             padding: 8px 12px;
-            color: #6B778C;
+            color: var(--text-muted);
             font-size: 14px;
             text-align: center;
         }
 
         .autocomplete-no-results {
             padding: 8px 12px;
-            color: #6B778C;
+            color: var(--text-muted);
             font-size: 14px;
             text-align: center;
         }
@@ -950,9 +1012,9 @@
 
         .btn-cancel {
             padding: 8px 16px;
-            background: #F4F5F7;
-            color: #172B4D;
-            border: 1px solid #DFE1E6;
+            background: var(--bg-subtle);
+            color: var(--text);
+            border: 1px solid var(--border);
             border-radius: 4px;
             cursor: pointer;
             font-size: 14px;
@@ -965,7 +1027,7 @@
 
         .btn-submit {
             padding: 8px 16px;
-            background: #0052CC;
+            background: var(--brand);
             color: white;
             border: none;
             border-radius: 4px;
@@ -975,20 +1037,20 @@
         }
 
         .btn-submit:hover {
-            background: #0747A6;
+            background: var(--brand-hover);
         }
 
         .btn-submit:disabled {
-            background: #B3D4FF;
+            background: var(--brand-disabled);
             cursor: not-allowed;
         }
 
         .issue-details {
             margin: 0;
             padding: 16px;
-            background: white;
-            border: 1px solid #DFE1E6;
-            border-top: 1px solid #EBECF0;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-top: 1px solid var(--bg-muted);
             border-radius: 0 0 4px 4px;
             font-size: 13px;
         }
@@ -1020,11 +1082,11 @@
 
         .detail-row strong {
             margin-bottom: 4px;
-            color: #172B4D;
+            color: var(--text);
         }
 
         .description {
-            background: #F4F5F7;
+            background: var(--bg-subtle);
             padding: 12px;
             border-radius: 3px;
             height: 300px;
@@ -1039,7 +1101,7 @@
             margin-top: 16px;
             margin-bottom: 8px;
             font-weight: 600;
-            color: #172B4D;
+            color: var(--text);
         }
 
         .description h1:first-child,
@@ -1066,7 +1128,7 @@
 
         .description strong {
             font-weight: 600;
-            color: #172B4D;
+            color: var(--text);
         }
 
         .description em {
@@ -1091,7 +1153,7 @@
         }
 
         .description code {
-            background: #DFE1E6;
+            background: var(--border);
             padding: 2px 6px;
             border-radius: 3px;
             font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
@@ -1099,8 +1161,8 @@
         }
 
         .description pre {
-            background: #172B4D;
-            color: #F4F5F7;
+            background: var(--pre-bg);
+            color: var(--pre-text);
             padding: 12px;
             border-radius: 3px;
             overflow-x: auto;
@@ -1110,19 +1172,19 @@
         .description pre code {
             background: transparent;
             padding: 0;
-            color: #F4F5F7;
+            color: var(--pre-text);
         }
 
         .description blockquote {
-            border-left: 3px solid #0052CC;
+            border-left: 3px solid var(--brand);
             padding-left: 12px;
             margin-left: 0;
-            color: #6B778C;
+            color: var(--text-muted);
             margin-bottom: 12px;
         }
 
         .description a {
-            color: #0052CC;
+            color: var(--brand);
             text-decoration: none;
         }
 
@@ -1138,19 +1200,19 @@
 
         .description table th,
         .description table td {
-            border: 1px solid #DFE1E6;
+            border: 1px solid var(--border);
             padding: 8px;
             text-align: left;
         }
 
         .description table th {
-            background: #DFE1E6;
+            background: var(--border);
             font-weight: 600;
         }
 
         .description .jira-panel {
-            background: #F4F5F7;
-            border: 1px solid #DFE1E6;
+            background: var(--bg-subtle);
+            border: 1px solid var(--border);
             padding: 12px;
             border-radius: 3px;
             margin-bottom: 12px;
@@ -1164,7 +1226,7 @@
 
         .description cite {
             font-style: italic;
-            color: #6B778C;
+            color: var(--text-muted);
         }
 
         .description u {
@@ -1173,7 +1235,7 @@
 
         .description del {
             text-decoration: line-through;
-            color: #6B778C;
+            color: var(--text-muted);
         }
 
         .comment-body {
@@ -1184,7 +1246,7 @@
             margin-top: 12px;
             margin-bottom: 6px;
             font-weight: 600;
-            color: #172B4D;
+            color: var(--text);
         }
 
         .comment-body h1:first-child,
@@ -1211,7 +1273,7 @@
 
         .comment-body strong {
             font-weight: 600;
-            color: #172B4D;
+            color: var(--text);
         }
 
         .comment-body em {
@@ -1236,7 +1298,7 @@
         }
 
         .comment-body code {
-            background: #DFE1E6;
+            background: var(--border);
             padding: 2px 6px;
             border-radius: 3px;
             font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
@@ -1244,8 +1306,8 @@
         }
 
         .comment-body pre {
-            background: #172B4D;
-            color: #F4F5F7;
+            background: var(--pre-bg);
+            color: var(--pre-text);
             padding: 12px;
             border-radius: 3px;
             overflow-x: auto;
@@ -1255,19 +1317,19 @@
         .comment-body pre code {
             background: transparent;
             padding: 0;
-            color: #F4F5F7;
+            color: var(--pre-text);
         }
 
         .comment-body blockquote {
-            border-left: 3px solid #0052CC;
+            border-left: 3px solid var(--brand);
             padding-left: 12px;
             margin-left: 0;
-            color: #6B778C;
+            color: var(--text-muted);
             margin-bottom: 8px;
         }
 
         .comment-body a {
-            color: #0052CC;
+            color: var(--brand);
             text-decoration: none;
         }
 
@@ -1283,19 +1345,19 @@
 
         .comment-body table th,
         .comment-body table td {
-            border: 1px solid #DFE1E6;
+            border: 1px solid var(--border);
             padding: 6px;
             text-align: left;
         }
 
         .comment-body table th {
-            background: #DFE1E6;
+            background: var(--border);
             font-weight: 600;
         }
 
         .comment-body .jira-panel {
-            background: #F4F5F7;
-            border: 1px solid #DFE1E6;
+            background: var(--bg-subtle);
+            border: 1px solid var(--border);
             padding: 12px;
             border-radius: 3px;
             margin-bottom: 8px;
@@ -1309,7 +1371,7 @@
 
         .comment-body cite {
             font-style: italic;
-            color: #6B778C;
+            color: var(--text-muted);
         }
 
         .comment-body u {
@@ -1318,7 +1380,7 @@
 
         .comment-body del {
             text-decoration: line-through;
-            color: #6B778C;
+            color: var(--text-muted);
         }
 
         .labels {
@@ -1328,7 +1390,7 @@
         }
 
         .label {
-            background: #0052CC;
+            background: var(--brand);
             color: white;
             padding: 2px 8px;
             border-radius: 3px;
@@ -1357,7 +1419,7 @@
 
         .label-input {
             padding: 4px 8px;
-            border: 1px solid #DFE1E6;
+            border: 1px solid var(--border);
             border-radius: 3px;
             font-size: 12px;
             flex: 1;
@@ -1375,7 +1437,7 @@
         }
 
         .btn-add-label:hover {
-            background: #00875A;
+            background: var(--epic-accent);
         }
 
         .comments-section {
@@ -1383,7 +1445,7 @@
         }
 
         .comments-list {
-            background: #F4F5F7;
+            background: var(--bg-subtle);
             padding: 8px;
             border-radius: 3px;
             max-height: 400px;
@@ -1393,7 +1455,7 @@
         .comment {
             margin-bottom: 12px;
             padding-bottom: 12px;
-            border-bottom: 1px solid #DFE1E6;
+            border-bottom: 1px solid var(--border);
         }
 
         .comment:last-child {
@@ -1402,24 +1464,24 @@
 
         .comment-header {
             margin-bottom: 6px;
-            color: #172B4D;
+            color: var(--text);
         }
 
         .comment-date {
-            color: #6B778C;
+            color: var(--text-muted);
             font-size: 11px;
             margin-left: 8px;
         }
 
         .comment-body {
-            color: #172B4D;
+            color: var(--text);
             white-space: pre-wrap;
         }
 
         .btn-add-comment {
             margin-top: 8px;
             padding: 6px 12px;
-            background: #0052CC;
+            background: var(--brand);
             color: white;
             border: none;
             border-radius: 3px;
@@ -1428,12 +1490,12 @@
         }
 
         .btn-add-comment:hover {
-            background: #0747A6;
+            background: var(--brand-hover);
         }
 
         .btn-edit-description {
             padding: 2px 8px;
-            background: #0052CC;
+            background: var(--brand);
             color: white;
             border: none;
             border-radius: 3px;
@@ -1443,13 +1505,13 @@
         }
 
         .btn-edit-description:hover {
-            background: #0747A6;
+            background: var(--brand-hover);
         }
 
         .btn-reload {
             margin-left: 8px;
             padding: 2px 8px;
-            background: #6B778C;
+            background: var(--text-muted);
             color: white;
             border: none;
             border-radius: 3px;
@@ -1463,22 +1525,22 @@
         }
 
         .no-data {
-            color: #6B778C;
+            color: var(--text-muted);
             font-style: italic;
         }
 
         .status-update-strat {
-            background: #F4F5F7;
+            background: var(--bg-subtle);
             padding: 16px;
             margin-bottom: 12px;
             border-radius: 4px;
-            border-left: 4px solid #0052CC;
+            border-left: 4px solid var(--brand);
             transition: opacity 0.2s, border-left-color 0.2s;
         }
 
         .status-update-strat.skipped {
             opacity: 0.5;
-            border-left-color: #6B778C;
+            border-left-color: var(--text-muted);
         }
 
         .status-update-strat-header {
@@ -1490,7 +1552,7 @@
 
         .status-update-strat-key {
             font-weight: 600;
-            color: #0052CC;
+            color: var(--brand);
             text-decoration: none;
         }
 
@@ -1500,7 +1562,7 @@
 
         .status-update-strat-summary {
             flex: 1;
-            color: #172B4D;
+            color: var(--text);
         }
 
         .status-update-controls {
@@ -1509,7 +1571,7 @@
             align-items: center;
             margin-bottom: 8px;
             padding: 8px;
-            background: white;
+            background: var(--bg-surface);
             border-radius: 3px;
         }
 
@@ -1518,7 +1580,7 @@
             align-items: center;
             gap: 6px;
             font-size: 13px;
-            color: #172B4D;
+            color: var(--text);
             cursor: pointer;
         }
 
@@ -1528,22 +1590,22 @@
 
         .status-update-controls button {
             padding: 4px 12px;
-            background: #F4F5F7;
-            border: 1px solid #DFE1E6;
+            background: var(--bg-subtle);
+            border: 1px solid var(--border);
             border-radius: 3px;
             font-size: 13px;
             cursor: pointer;
-            color: #172B4D;
+            color: var(--text);
         }
 
         .status-update-controls button:hover {
-            background: #DFE1E6;
+            background: var(--border);
         }
 
         .status-update-comment-input {
             width: 100%;
             padding: 8px;
-            border: 1px solid #DFE1E6;
+            border: 1px solid var(--border);
             border-radius: 3px;
             font-size: 14px;
             font-family: inherit;
@@ -1553,27 +1615,27 @@
 
         .status-update-comment-input:focus {
             outline: none;
-            border-color: #0052CC;
-            box-shadow: 0 0 0 2px rgba(0, 82, 204, 0.2);
+            border-color: var(--brand);
+            box-shadow: 0 0 0 2px var(--focus-ring);
         }
 
         .status-update-comment-input:disabled {
-            background: #F4F5F7;
-            color: #6B778C;
+            background: var(--bg-subtle);
+            color: var(--text-muted);
             cursor: not-allowed;
         }
 
         .status-update-loading {
             text-align: center;
             padding: 40px;
-            color: #6B778C;
+            color: var(--text-muted);
         }
 
         .comment-source-badge {
             display: inline-block;
             padding: 2px 8px;
-            background: #DFE1E6;
-            color: #172B4D;
+            background: var(--border);
+            color: var(--text);
             border-radius: 3px;
             font-size: 11px;
             font-weight: 600;
@@ -1587,19 +1649,19 @@
 
         .assignee-group {
             margin-bottom: 32px;
-            background: white;
+            background: var(--bg-surface);
             border-radius: 6px;
-            border: 1px solid #DFE1E6;
+            border: 1px solid var(--border);
             overflow: hidden;
         }
 
         .assignee-header {
-            background: #F4F5F7;
+            background: var(--bg-subtle);
             padding: 16px 20px;
-            border-bottom: 2px solid #DFE1E6;
+            border-bottom: 2px solid var(--border);
             font-size: 18px;
             font-weight: 600;
-            color: #172B4D;
+            color: var(--text);
             cursor: pointer;
             user-select: none;
             display: flex;
@@ -1609,7 +1671,7 @@
         }
 
         .assignee-header:hover {
-            background: #EBECF0;
+            background: var(--bg-muted);
         }
 
         .assignee-header-text {
@@ -1618,7 +1680,7 @@
 
         .assignee-collapse-icon {
             font-size: 14px;
-            color: #6B778C;
+            color: var(--text-muted);
             transition: transform 0.2s;
         }
 
@@ -1638,9 +1700,9 @@
         .standup-task {
             margin-bottom: 20px;
             padding: 16px;
-            background: #F4F5F7;
+            background: var(--bg-subtle);
             border-radius: 4px;
-            border-left: 4px solid #0052CC;
+            border-left: 4px solid var(--brand);
         }
 
         .standup-task:last-child {
@@ -1650,7 +1712,7 @@
         .standup-task-key {
             font-weight: 600;
             font-size: 14px;
-            color: #0052CC;
+            color: var(--brand);
             margin-bottom: 8px;
             display: flex;
             justify-content: space-between;
@@ -1660,7 +1722,7 @@
         .standup-task-summary {
             font-size: 15px;
             font-weight: 500;
-            color: #172B4D;
+            color: var(--text);
             margin-bottom: 12px;
         }
 
@@ -1669,10 +1731,10 @@
             flex-direction: column;
             gap: 4px;
             font-size: 13px;
-            color: #6B778C;
+            color: var(--text-muted);
             margin-top: 8px;
             padding-top: 8px;
-            border-top: 1px solid #DFE1E6;
+            border-top: 1px solid var(--border);
         }
 
         .standup-hierarchy-item {
@@ -1687,7 +1749,7 @@
         }
 
         .standup-hierarchy-value {
-            color: #172B4D;
+            color: var(--text);
         }
 
         .standup-task-meta {
@@ -1700,7 +1762,31 @@
         .standup-empty {
             padding: 40px;
             text-align: center;
-            color: #6B778C;
+            color: var(--text-muted);
+        }
+
+        [data-theme="dark"] input,
+        [data-theme="dark"] textarea,
+        [data-theme="dark"] select {
+            background: var(--bg-subtle);
+            color: var(--text);
+            border-color: var(--border);
+        }
+
+        .theme-toggle {
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.25);
         }
     </style>
 </head>
@@ -1709,15 +1795,18 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <!-- Version update banner -->
-    <div id="versionBanner" style="display: none; position: fixed; top: 0; left: 0; right: 0; background: #FFAB00; color: #172B4D; padding: 12px; text-align: center; z-index: 10001; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+    <div id="versionBanner" style="display: none; position: fixed; top: 0; left: 0; right: 0; background: var(--subtask-accent); color: var(--text); padding: 12px; text-align: center; z-index: 10001; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
         ⚠️ Server is out of date. Please pull the latest changes from GitHub: <code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 3px; font-family: monospace;">git pull origin main</code>
-        <button onclick="dismissVersionBanner()" style="margin-left: 16px; padding: 4px 12px; background: #172B4D; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Dismiss</button>
+        <button onclick="dismissVersionBanner()" style="margin-left: 16px; padding: 4px 12px; background: var(--pre-bg); color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Dismiss</button>
     </div>
 
     <div class="container">
-        <div class="header">
-            <h1 id="pageTitle">🛡️ JIRA Hierarchy Viewer</h1>
-            <p>Expandable tree view of Outcomes → RFEs/Initiatives → STRATs → Epics → Tasks</p>
+        <div class="header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+                <h1 id="pageTitle">🛡️ JIRA Hierarchy Viewer</h1>
+                <p>Expandable tree view of Outcomes → RFEs/Initiatives → STRATs → Epics → Tasks</p>
+            </div>
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeToggleBtn">🌙 Dark</button>
         </div>
 
         <div class="controls">
@@ -1744,7 +1833,7 @@
                 </select>
             </div>
             <input type="text" class="filter-input" id="searchInput" placeholder="Search issues..." onkeyup="filterIssues()">
-            <span id="loadingIndicator" style="display: none; color: #0052CC; font-size: 14px;">⏳ Loading...</span>
+            <span id="loadingIndicator" style="display: none; color: var(--brand); font-size: 14px;">⏳ Loading...</span>
         </div>
 
         <div id="content">
@@ -1800,21 +1889,21 @@
                 <div class="form-group">
                     <label for="epicComponent">Component *</label>
                     <input type="text" id="epicComponent" required>
-                    <small style="color: #6B778C; font-size: 12px;">Component to assign to this epic</small>
+                    <small style="color: var(--text-muted); font-size: 12px;">Component to assign to this epic</small>
                 </div>
                 <div class="form-group">
                     <label for="epicAssignee">Assignee</label>
                     <select id="epicAssignee">
                         <option value="">Unassigned</option>
                     </select>
-                    <small style="color: #6B778C; font-size: 12px;">Select from known assignees or leave unassigned</small>
+                    <small style="color: var(--text-muted); font-size: 12px;">Select from known assignees or leave unassigned</small>
                 </div>
                 <div class="form-group">
                     <label for="epicSprint">Sprint</label>
                     <select id="epicSprint">
                         <option value="">Loading sprints...</option>
                     </select>
-                    <small style="color: #6B778C; font-size: 12px;">Sprint to assign this epic to</small>
+                    <small style="color: var(--text-muted); font-size: 12px;">Sprint to assign this epic to</small>
                 </div>
                 <div class="form-group">
                     <label for="epicDescription">Description</label>
@@ -1852,21 +1941,21 @@
                 <div class="form-group">
                     <label for="taskComponent">Component *</label>
                     <input type="text" id="taskComponent" required>
-                    <small style="color: #6B778C; font-size: 12px;">Component to assign to this task</small>
+                    <small style="color: var(--text-muted); font-size: 12px;">Component to assign to this task</small>
                 </div>
                 <div class="form-group">
                     <label for="taskAssignee">Assignee</label>
                     <select id="taskAssignee">
                         <option value="">Unassigned</option>
                     </select>
-                    <small style="color: #6B778C; font-size: 12px;">Select from known assignees or leave unassigned</small>
+                    <small style="color: var(--text-muted); font-size: 12px;">Select from known assignees or leave unassigned</small>
                 </div>
                 <div class="form-group">
                     <label for="taskSprint">Sprint</label>
                     <select id="taskSprint">
                         <option value="">Loading sprints...</option>
                     </select>
-                    <small style="color: #6B778C; font-size: 12px;">Sprint to assign this task to</small>
+                    <small style="color: var(--text-muted); font-size: 12px;">Sprint to assign this task to</small>
                 </div>
                 <div class="form-group">
                     <label for="taskDescription">Description</label>
@@ -1875,7 +1964,7 @@
                 <div class="form-group">
                     <label for="taskPullRequest">Pull Request URL</label>
                     <input type="url" id="taskPullRequest" placeholder="https://github.com/org/repo/pull/123">
-                    <small style="color: #6B778C; font-size: 12px;">Link to the pull request for this task</small>
+                    <small style="color: var(--text-muted); font-size: 12px;">Link to the pull request for this task</small>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-cancel" onclick="closeModal('createTaskModal')">Cancel</button>
@@ -1903,12 +1992,12 @@
                 <div class="form-group">
                     <label for="configEmail">Email Address *</label>
                     <input type="email" id="configEmail" required placeholder="your.email@redhat.com">
-                    <small style="color: #6B778C; font-size: 12px;">Your JIRA account email address</small>
+                    <small style="color: var(--text-muted); font-size: 12px;">Your JIRA account email address</small>
                 </div>
                 <div class="form-group">
                     <label for="configPAT">API Token *</label>
                     <input type="password" id="configPAT" required placeholder="Enter your JIRA API token">
-                    <small style="color: #6B778C; font-size: 12px;">Stored locally in your browser only. Generate at https://id.atlassian.com/manage-profile/security/api-tokens</small>
+                    <small style="color: var(--text-muted); font-size: 12px;">Stored locally in your browser only. Generate at https://id.atlassian.com/manage-profile/security/api-tokens</small>
                 </div>
                 <div class="form-group">
                     <label for="configComponent">Component Filter *</label>
@@ -1916,7 +2005,7 @@
                         <input type="text" id="configComponent" required placeholder="Start typing to search components..." autocomplete="off">
                         <div id="componentDropdown" class="autocomplete-dropdown" style="display: none;"></div>
                     </div>
-                    <small style="color: #6B778C; font-size: 12px;">Start typing to search. Use comma-separated list for multiple components (e.g., "AI Safety, Trust & Safety")</small>
+                    <small style="color: var(--text-muted); font-size: 12px;">Start typing to search. Use comma-separated list for multiple components (e.g., "AI Safety, Trust & Safety")</small>
                 </div>
                 <div class="form-group">
                     <label for="configTeam">Team</label>
@@ -1925,19 +2014,19 @@
                         <div id="teamDropdown" class="autocomplete-dropdown" style="display: none;"></div>
                         <input type="hidden" id="configTeamId">
                     </div>
-                    <small style="color: #6B778C; font-size: 12px;">
+                    <small style="color: var(--text-muted); font-size: 12px;">
                         Team automatically set on all newly created tickets. Start typing to search for your team.
                     </small>
                 </div>
                 <div class="form-group">
                     <label for="configMaxAgeDays">Maximum Ticket Age (days)</label>
                     <input type="number" id="configMaxAgeDays" min="1" max="3650" placeholder="365">
-                    <small style="color: #6B778C; font-size: 12px;">Only show tickets updated within the last N days. Default: 365 (1 year)</small>
+                    <small style="color: var(--text-muted); font-size: 12px;">Only show tickets updated within the last N days. Default: 365 (1 year)</small>
                 </div>
                 <div class="form-group">
                     <label>Show Closed Items</label>
-                    <small style="color: #6B778C; font-size: 12px; display: block; margin-bottom: 12px;">Select which closed items to display in the hierarchy</small>
-                    <div style="background: #F4F5F7; border-radius: 3px; padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <small style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 12px;">Select which closed items to display in the hierarchy</small>
+                    <div style="background: var(--bg-subtle); border-radius: 3px; padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                         <label style="display: flex; align-items: center; font-weight: normal; cursor: pointer; user-select: none;">
                             <input type="checkbox" id="showClosedRFEs" style="width: 16px; height: 16px; margin-right: 8px; cursor: pointer;">
                             <span style="font-size: 14px;">RFEs</span>
@@ -1961,11 +2050,11 @@
                 <div id="tab-assignees" class="modal-tab-content">
                     <div class="form-group">
                         <label>Visible Assignees</label>
-                        <small style="color: #6B778C; font-size: 12px; display: block; margin-bottom: 12px;">
+                        <small style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 12px;">
                             Select which assignees to show in filters and standup view. Only tasks assigned to selected people will be fetched from JIRA. Leave all unchecked to fetch all tasks.
                         </small>
                         <div class="assignee-checkbox-list" id="assigneeCheckboxList">
-                            <p style="color: #6B778C; font-style: italic; padding: 20px; text-align: center;">
+                            <p style="color: var(--text-muted); font-style: italic; padding: 20px; text-align: center;">
                                 Load data first to see available assignees
                             </p>
                         </div>
@@ -1973,11 +2062,11 @@
                             <button type="button" class="btn-secondary btn" onclick="selectAllAssignees()" style="flex: 1;">Select All</button>
                             <button type="button" class="btn-secondary btn" onclick="deselectAllAssignees()" style="flex: 1;">Deselect All</button>
                         </div>
-                        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #DFE1E6;">
+                        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
                             <button type="button" class="btn-secondary btn" onclick="refreshAssigneeList()" style="width: 100%;" id="refreshAssigneesBtn">
                                 🔄 Refresh Assignee List (fetch all assignees)
                             </button>
-                            <small style="color: #6B778C; font-size: 11px; display: block; margin-top: 8px;">
+                            <small style="color: var(--text-muted); font-size: 11px; display: block; margin-top: 8px;">
                                 Fetches all tasks without assignee filter to discover all possible assignees.
                             </small>
                         </div>
@@ -2051,7 +2140,7 @@
                 <h2>Status Report</h2>
             </div>
             <div class="form-group">
-                <div id="statusReportOutput" style="max-height: 600px; overflow-y: auto; padding: 12px; background: #F4F5F7; border-radius: 3px; line-height: 1.6;"></div>
+                <div id="statusReportOutput" style="max-height: 600px; overflow-y: auto; padding: 12px; background: var(--bg-subtle); border-radius: 3px; line-height: 1.6;"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn-cancel" onclick="backToStatusUpdate()" style="margin-right: auto;">← Back</button>
@@ -2075,8 +2164,32 @@
         let sprintCache = []; // Cached sprint data fetched in background
         let currentView = 'hierarchy'; // 'hierarchy' or 'standup'
 
+        // Theme management
+        function toggleTheme() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const newTheme = isDark ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            document.getElementById('themeToggleBtn').textContent = newTheme === 'dark' ? '☀️ Light' : '🌙 Dark';
+        }
+
+        // Apply saved theme on load
+        (function() {
+            const saved = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            if (saved === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+
         // Track if we're currently loading
         let isLoading = false;
+
+        // Sync button label with current theme on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const btn = document.getElementById('themeToggleBtn');
+            if (btn) btn.textContent = isDark ? '☀️ Light' : '🌙 Dark';
+        });
 
         // Track current top level mode
         
@@ -2334,15 +2447,15 @@
                     html += `
                         <div class="standup-task">
                             <div class="standup-task-key">
-                                <a href="${JIRA_CONFIG.baseUrl}/browse/${task.key}" target="_blank" style="color: #0052CC; text-decoration: none;">${task.key}</a>
+                                <a href="${JIRA_CONFIG.baseUrl}/browse/${task.key}" target="_blank" style="color: var(--brand); text-decoration: none;">${task.key}</a>
                                 <button class="btn-reload" onclick="event.stopPropagation(); reloadTaskInStandup('${task.key}')" title="Reload from JIRA">↻</button>
                             </div>
                             <div class="standup-task-summary">${task.summary}</div>
                             <div class="standup-task-meta">
-                                <span class="issue-type" style="background: #DFE1E6; color: #42526E; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; text-transform: uppercase;">${task.issuetype || 'Task'}</span>
+                                <span class="issue-type" style="background: var(--border); color: #42526E; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; text-transform: uppercase;">${task.issuetype || 'Task'}</span>
                                 <span class="issue-status ${getStatusClass(task.status)}" onclick="event.stopPropagation(); showStatusDropdown('${task.key}', this)">${task.status}</span>
                                 <span class="issue-priority ${getPriorityClass(task.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${task.key}', this)">${task.priority}</span>
-                                <span class="issue-updated" style="background: #F4F5F7; color: #42526E; padding: 2px 8px; border-radius: 3px; font-size: 11px;" title="Updated ${formatDate(task.updated)}">Updated ${formatRelativeTime(task.updated)}</span>
+                                <span class="issue-updated" style="background: var(--bg-subtle); color: #42526E; padding: 2px 8px; border-radius: 3px; font-size: 11px;" title="Updated ${formatDate(task.updated)}">Updated ${formatRelativeTime(task.updated)}</span>
                             </div>
                             <div class="standup-hierarchy">
                     `;
@@ -2352,7 +2465,7 @@
                                 <div class="standup-hierarchy-item">
                                     <span class="standup-hierarchy-label">Epic:</span>
                                     <span class="standup-hierarchy-value">
-                                        <a href="${JIRA_CONFIG.baseUrl}/browse/${task.epic.key}" target="_blank" style="color: #172B4D; text-decoration: none;">${task.epic.key}</a> - ${task.epic.summary}
+                                        <a href="${JIRA_CONFIG.baseUrl}/browse/${task.epic.key}" target="_blank" style="color: var(--text); text-decoration: none;">${task.epic.key}</a> - ${task.epic.summary}
                                     </span>
                                 </div>
                         `;
@@ -2363,7 +2476,7 @@
                                 <div class="standup-hierarchy-item">
                                     <span class="standup-hierarchy-label">STRAT:</span>
                                     <span class="standup-hierarchy-value">
-                                        <a href="${JIRA_CONFIG.baseUrl}/browse/${task.strat.key}" target="_blank" style="color: #172B4D; text-decoration: none;">${task.strat.key}</a> - ${task.strat.summary}
+                                        <a href="${JIRA_CONFIG.baseUrl}/browse/${task.strat.key}" target="_blank" style="color: var(--text); text-decoration: none;">${task.strat.key}</a> - ${task.strat.summary}
                                     </span>
                                 </div>
                         `;
@@ -2374,7 +2487,7 @@
                                 <div class="standup-hierarchy-item">
                                     <span class="standup-hierarchy-label">RFE:</span>
                                     <span class="standup-hierarchy-value">
-                                        <a href="${JIRA_CONFIG.baseUrl}/browse/${task.rfe.key}" target="_blank" style="color: #172B4D; text-decoration: none;">${task.rfe.key}</a> - ${task.rfe.summary}
+                                        <a href="${JIRA_CONFIG.baseUrl}/browse/${task.rfe.key}" target="_blank" style="color: var(--text); text-decoration: none;">${task.rfe.key}</a> - ${task.rfe.summary}
                                     </span>
                                 </div>
                         `;
@@ -2383,7 +2496,7 @@
                     if (!task.epic && !task.strat && !task.rfe) {
                         html += `
                                 <div class="standup-hierarchy-item">
-                                    <span class="standup-hierarchy-value" style="color: #6B778C; font-style: italic;">No hierarchy information</span>
+                                    <span class="standup-hierarchy-value" style="color: var(--text-muted); font-style: italic;">No hierarchy information</span>
                                 </div>
                         `;
                     }
@@ -2499,7 +2612,7 @@
 
             if (knownAssignees.size === 0) {
                 container.innerHTML = `
-                    <p style="color: #6B778C; font-style: italic; padding: 20px; text-align: center;">
+                    <p style="color: var(--text-muted); font-style: italic; padding: 20px; text-align: center;">
                         Load data first to see available assignees
                     </p>
                 `;
@@ -4228,24 +4341,24 @@
                         <div id="pr-container-${issue.key}">
                             ${issue.pull_request && issue.pull_request.trim() ? `
                                 <div id="pr-display-${issue.key}">
-                                    <a href="${issue.pull_request}" target="_blank" style="color: #0052CC; text-decoration: none;">${issue.pull_request}</a>
-                                    <button onclick="editPullRequestMode('${issue.key}')" style="margin-left: 8px; padding: 2px 8px; background: #F4F5F7; border: 1px solid #DFE1E6; border-radius: 3px; cursor: pointer; font-size: 12px;">Edit</button>
+                                    <a href="${issue.pull_request}" target="_blank" style="color: var(--brand); text-decoration: none;">${issue.pull_request}</a>
+                                    <button onclick="editPullRequestMode('${issue.key}')" style="margin-left: 8px; padding: 2px 8px; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; font-size: 12px;">Edit</button>
                                 </div>
                                 <div id="pr-edit-${issue.key}" style="display: none;" class="label-input-container">
                                     <input type="text" class="label-input" id="pr-input-${issue.key}" placeholder="Enter PR URL" value="${issue.pull_request}" style="flex: 1;">
                                     <button class="btn-add-label" onclick="updatePullRequest('${issue.key}')">Update</button>
                                     <button class="btn-add-label" onclick="clearPullRequest('${issue.key}')" style="background: #FF5630; color: white;">Clear</button>
-                                    <button class="btn-add-label" onclick="cancelEditPullRequest('${issue.key}')" style="background: #6B778C; color: white;">Cancel</button>
+                                    <button class="btn-add-label" onclick="cancelEditPullRequest('${issue.key}')" style="background: var(--text-muted); color: white;">Cancel</button>
                                 </div>
                             ` : `
                                 <div id="pr-display-${issue.key}">
-                                    <span style="color: #6B778C;">None</span>
-                                    <button onclick="editPullRequestMode('${issue.key}')" style="margin-left: 8px; padding: 2px 8px; background: #F4F5F7; border: 1px solid #DFE1E6; border-radius: 3px; cursor: pointer; font-size: 12px;">Add</button>
+                                    <span style="color: var(--text-muted);">None</span>
+                                    <button onclick="editPullRequestMode('${issue.key}')" style="margin-left: 8px; padding: 2px 8px; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; font-size: 12px;">Add</button>
                                 </div>
                                 <div id="pr-edit-${issue.key}" style="display: none;" class="label-input-container">
                                     <input type="text" class="label-input" id="pr-input-${issue.key}" placeholder="Enter PR URL" value="" style="flex: 1;">
                                     <button class="btn-add-label" onclick="updatePullRequest('${issue.key}')">Add</button>
-                                    <button class="btn-add-label" onclick="cancelEditPullRequest('${issue.key}')" style="background: #6B778C; color: white;">Cancel</button>
+                                    <button class="btn-add-label" onclick="cancelEditPullRequest('${issue.key}')" style="background: var(--text-muted); color: white;">Cancel</button>
                                 </div>
                             `}
                         </div>
@@ -5122,7 +5235,7 @@
                 const reportHTML = reportLines.map(item => `
                     <div style="margin-bottom: 24px;">
                         <div style="margin-bottom: 8px;">
-                            <a href="${JIRA_CONFIG.baseUrl}/browse/${item.key}" target="_blank" style="font-weight: 600; color: #0052CC; text-decoration: none; font-size: 14px;">${item.key}: ${item.summary}</a>
+                            <a href="${JIRA_CONFIG.baseUrl}/browse/${item.key}" target="_blank" style="font-weight: 600; color: var(--brand); text-decoration: none; font-size: 14px;">${item.key}: ${item.summary}</a>
                         </div>
                         <div class="comment-body">${renderJiraText(item.comment)}</div>
                         <br>
@@ -5792,7 +5905,7 @@
                 .join('');
 
             dropdown.innerHTML = `
-                <input type="text" id="assignee-input-${issueKey}" placeholder="Type to filter..." style="width: 100%; padding: 8px; border: 1px solid #DFE1E6; border-radius: 3px; margin-bottom: 8px;" />
+                <input type="text" id="assignee-input-${issueKey}" placeholder="Type to filter..." style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 3px; margin-bottom: 8px;" />
                 <div class="status-option assignee-option-unassigned" onclick="changeAssignee('${issueKey}', '')">Unassigned</div>
                 ${assigneeOptions}
             `;
@@ -6119,14 +6232,14 @@
                     if (container) {
                         container.innerHTML = `
                             <div id="pr-display-${issueKey}">
-                                <a href="${prUrl}" target="_blank" style="color: #0052CC; text-decoration: none;">${prUrl}</a>
-                                <button onclick="editPullRequestMode('${issueKey}')" style="margin-left: 8px; padding: 2px 8px; background: #F4F5F7; border: 1px solid #DFE1E6; border-radius: 3px; cursor: pointer; font-size: 12px;">Edit</button>
+                                <a href="${prUrl}" target="_blank" style="color: var(--brand); text-decoration: none;">${prUrl}</a>
+                                <button onclick="editPullRequestMode('${issueKey}')" style="margin-left: 8px; padding: 2px 8px; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; font-size: 12px;">Edit</button>
                             </div>
                             <div id="pr-edit-${issueKey}" style="display: none;" class="label-input-container">
                                 <input type="text" class="label-input" id="pr-input-${issueKey}" placeholder="Enter PR URL" value="${prUrl}" style="flex: 1;">
                                 <button class="btn-add-label" onclick="updatePullRequest('${issueKey}')">Update</button>
                                 <button class="btn-add-label" onclick="clearPullRequest('${issueKey}')" style="background: #FF5630; color: white;">Clear</button>
-                                <button class="btn-add-label" onclick="cancelEditPullRequest('${issueKey}')" style="background: #6B778C; color: white;">Cancel</button>
+                                <button class="btn-add-label" onclick="cancelEditPullRequest('${issueKey}')" style="background: var(--text-muted); color: white;">Cancel</button>
                             </div>
                         `;
                     }
@@ -6172,13 +6285,13 @@
                     if (container) {
                         container.innerHTML = `
                             <div id="pr-display-${issueKey}">
-                                <span style="color: #6B778C;">None</span>
-                                <button onclick="editPullRequestMode('${issueKey}')" style="margin-left: 8px; padding: 2px 8px; background: #F4F5F7; border: 1px solid #DFE1E6; border-radius: 3px; cursor: pointer; font-size: 12px;">Add</button>
+                                <span style="color: var(--text-muted);">None</span>
+                                <button onclick="editPullRequestMode('${issueKey}')" style="margin-left: 8px; padding: 2px 8px; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; font-size: 12px;">Add</button>
                             </div>
                             <div id="pr-edit-${issueKey}" style="display: none;" class="label-input-container">
                                 <input type="text" class="label-input" id="pr-input-${issueKey}" placeholder="Enter PR URL" value="" style="flex: 1;">
                                 <button class="btn-add-label" onclick="updatePullRequest('${issueKey}')">Add</button>
-                                <button class="btn-add-label" onclick="cancelEditPullRequest('${issueKey}')" style="background: #6B778C; color: white;">Cancel</button>
+                                <button class="btn-add-label" onclick="cancelEditPullRequest('${issueKey}')" style="background: var(--text-muted); color: white;">Cancel</button>
                             </div>
                         `;
                     }
