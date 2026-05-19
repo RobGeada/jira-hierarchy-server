@@ -1643,6 +1643,23 @@
             border-left: 4px solid #0052CC;
         }
 
+        .standup-task .issue-details {
+            margin-left: 0;
+            margin-top: 12px;
+            border-radius: 4px;
+        }
+
+        .standup-task-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .standup-task-header .expand-icon {
+            flex-shrink: 0;
+        }
+
         .standup-task:last-child {
             margin-bottom: 0;
         }
@@ -2333,18 +2350,21 @@
                 sortedTasks.forEach(task => {
                     html += `
                         <div class="standup-task">
-                            <div class="standup-task-key">
-                                <a href="${JIRA_CONFIG.baseUrl}/browse/${task.key}" target="_blank" style="color: #0052CC; text-decoration: none;">${task.key}</a>
-                                <button class="btn-reload" onclick="event.stopPropagation(); reloadTaskInStandup('${task.key}')" title="Reload from JIRA">↻</button>
-                            </div>
-                            <div class="standup-task-summary">${task.summary}</div>
-                            <div class="standup-task-meta">
-                                <span class="issue-type" style="background: #DFE1E6; color: #42526E; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; text-transform: uppercase;">${task.issuetype || 'Task'}</span>
-                                <span class="issue-status ${getStatusClass(task.status)}" onclick="event.stopPropagation(); showStatusDropdown('${task.key}', this)">${task.status}</span>
-                                <span class="issue-priority ${getPriorityClass(task.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${task.key}', this)">${task.priority}</span>
-                                <span class="issue-updated" style="background: #F4F5F7; color: #42526E; padding: 2px 8px; border-radius: 3px; font-size: 11px;" title="Updated ${formatDate(task.updated)}">Updated ${formatRelativeTime(task.updated)}</span>
-                            </div>
-                            <div class="standup-hierarchy">
+                            <div class="standup-task-header" onclick="toggleStandupDetails('standup-details-${task.key}', this)">
+                                <span class="expand-icon">▶</span>
+                                <div style="flex: 1; min-width: 0;">
+                                    <div class="standup-task-key">
+                                        <a href="${JIRA_CONFIG.baseUrl}/browse/${task.key}" target="_blank" style="color: #0052CC; text-decoration: none;" onclick="event.stopPropagation()">${task.key}</a>
+                                        <button class="btn-reload" onclick="event.stopPropagation(); reloadTaskInStandup('${task.key}')" title="Reload from JIRA">↻</button>
+                                    </div>
+                                    <div class="standup-task-summary">${task.summary}</div>
+                                    <div class="standup-task-meta">
+                                        <span class="issue-type" style="background: #DFE1E6; color: #42526E; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; text-transform: uppercase;">${task.issuetype || 'Task'}</span>
+                                        <span class="issue-status ${getStatusClass(task.status)}" onclick="event.stopPropagation(); showStatusDropdown('${task.key}', this)">${task.status}</span>
+                                        <span class="issue-priority ${getPriorityClass(task.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${task.key}', this)">${task.priority}</span>
+                                        <span class="issue-updated" style="background: #F4F5F7; color: #42526E; padding: 2px 8px; border-radius: 3px; font-size: 11px;" title="Updated ${formatDate(task.updated)}">Updated ${formatRelativeTime(task.updated)}</span>
+                                    </div>
+                                    <div class="standup-hierarchy">
                     `;
 
                     if (task.epic) {
@@ -2389,7 +2409,10 @@
                     }
 
                     html += `
+                                    </div>
+                                </div>
                             </div>
+                            ${generateStandupDetailsHTML(task)}
                         </div>
                     `;
                 });
@@ -3236,10 +3259,11 @@
                 const strat = JSON.parse(e.data);
                 hierarchyData.metadata.total_strats++;
 
-                // Find parent RFE within its Outcome
+                // Find parent RFE within the specific Outcome (many-to-many)
                 let found = false;
-                for (const outcome of hierarchyData.outcomes) {
-                    const rfe = (outcome.rfes || []).find(r => r.key === strat.rfe_key);
+                const targetOutcome = hierarchyData.outcomes.find(o => o.key === strat.outcome_key);
+                if (targetOutcome) {
+                    const rfe = (targetOutcome.rfes || []).find(r => r.key === strat.rfe_key);
                     if (rfe) {
                         if (!rfe.strats) rfe.strats = [];
                         rfe.strats.push(strat);
@@ -3249,7 +3273,22 @@
                             addStratToTree(strat);
                             updateStats(hierarchyData);
                         }
-                        break;
+                    }
+                }
+                if (!found) {
+                    // Fallback: search all outcomes
+                    for (const outcome of hierarchyData.outcomes) {
+                        const rfe = (outcome.rfes || []).find(r => r.key === strat.rfe_key);
+                        if (rfe) {
+                            if (!rfe.strats) rfe.strats = [];
+                            strat.outcome_key = outcome.key;
+                            rfe.strats.push(strat);
+                            if (tree) {
+                                addStratToTree(strat);
+                                updateStats(hierarchyData);
+                            }
+                            break;
+                        }
                     }
                 }
             });
@@ -3259,7 +3298,12 @@
                 hierarchyData.metadata.total_epics++;
 
                 let found = false;
-                for (const outcome of hierarchyData.outcomes) {
+
+                // First try to find parent in the specific outcome (many-to-many)
+                const targetOutcome = epic.outcome_key ? hierarchyData.outcomes.find(o => o.key === epic.outcome_key) : null;
+                const searchOutcomes = targetOutcome ? [targetOutcome] : hierarchyData.outcomes;
+
+                for (const outcome of searchOutcomes) {
                     // Check STRAT path: epic.strat_key
                     if (epic.strat_key) {
                         for (const rfe of (outcome.rfes || [])) {
@@ -3267,6 +3311,7 @@
                             if (strat) {
                                 if (!strat.epics) strat.epics = [];
                                 strat.epics.push(epic);
+                                if (!epic.outcome_key) epic.outcome_key = outcome.key;
                                 found = true;
 
                                 if (tree) {
@@ -3285,6 +3330,7 @@
                         if (initiative) {
                             if (!initiative.epics) initiative.epics = [];
                             initiative.epics.push(epic);
+                            if (!epic.outcome_key) epic.outcome_key = outcome.key;
                             found = true;
 
                             if (tree) {
@@ -3306,7 +3352,10 @@
 
                 let found = false;
                 if (task.epic_key) {
-                    for (const outcome of hierarchyData.outcomes) {
+                    const targetOutcome = task.outcome_key ? hierarchyData.outcomes.find(o => o.key === task.outcome_key) : null;
+                    const searchOutcomes = targetOutcome ? [targetOutcome] : hierarchyData.outcomes;
+
+                    for (const outcome of searchOutcomes) {
                         // Check STRAT path
                         if (task.strat_key) {
                             for (const rfe of (outcome.rfes || [])) {
@@ -3316,6 +3365,7 @@
                                     if (epic) {
                                         if (!epic.tasks) epic.tasks = [];
                                         epic.tasks.push(task);
+                                        if (!task.outcome_key) task.outcome_key = outcome.key;
                                         found = true;
 
                                         if (tree) {
@@ -3337,6 +3387,7 @@
                                 if (epic) {
                                     if (!epic.tasks) epic.tasks = [];
                                     epic.tasks.push(task);
+                                    if (!task.outcome_key) task.outcome_key = outcome.key;
                                     found = true;
 
                                     if (tree) {
@@ -3528,12 +3579,12 @@
 
             ensureContainerHeader(`outcome-${rfe.outcome_key}`, 'RFEs:', 'rfe');
 
-            const rfeId = `rfe-${rfe.key}`;
+            const rfeId = `rfe-${rfe.outcome_key}-${rfe.key}`;
             const versionInfo = extractVersionLabel(rfe.labels);
             const versionClass = versionInfo.display === 'No version label' ? 'issue-version no-version' : 'issue-version';
             const rfeHtml = `
-                <div class="tree-item" id="item-${rfe.key}" data-assignee="${rfe.assignee_username || ''}" data-type="rfe" data-version="${versionInfo.sortValue}">
-                    <div class="tree-node rfe empty" id="node-${rfe.key}" onclick="toggleNode('${rfeId}')">
+                <div class="tree-item" id="item-${rfe.outcome_key}-${rfe.key}" data-assignee="${rfe.assignee_username || ''}" data-type="rfe" data-version="${versionInfo.sortValue}">
+                    <div class="tree-node rfe empty" id="node-${rfe.outcome_key}-${rfe.key}" onclick="toggleNode('${rfeId}')">
                         <span class="expand-icon">▶</span>
                         <div class="tree-content">
                             <span class="issue-key">${rfe.key}</span>
@@ -3594,22 +3645,23 @@
 
         function addStratToTree(strat) {
             trackAssignee(strat.assignee, strat.assignee_username);
-            const rfeContainer = document.getElementById(`rfe-${strat.rfe_key}`);
+            const rfeContainerId = `rfe-${strat.outcome_key}-${strat.rfe_key}`;
+            const rfeContainer = document.getElementById(rfeContainerId);
             if (!rfeContainer) return;
 
-            const rfeNodeDiv = document.getElementById(`node-${strat.rfe_key}`);
+            const rfeNodeDiv = document.getElementById(`node-${strat.outcome_key}-${strat.rfe_key}`);
             if (rfeNodeDiv && rfeNodeDiv.classList.contains('empty')) {
                 rfeNodeDiv.classList.remove('empty');
             }
 
-            ensureContainerHeader(`rfe-${strat.rfe_key}`, 'STRATS:', 'strat');
+            ensureContainerHeader(rfeContainerId, 'STRATS:', 'strat');
 
-            const stratId = `strat-${strat.key}`;
+            const stratId = `strat-${strat.outcome_key}-${strat.key}`;
             const versionInfo = extractVersionLabel(strat.labels);
             const versionClass = versionInfo.display === 'No version label' ? 'issue-version no-version' : 'issue-version';
             const stratHtml = `
-                <div class="tree-item" id="item-${strat.key}" data-assignee="${strat.assignee_username || ''}" data-type="strat" data-version="${versionInfo.sortValue}">
-                    <div class="tree-node strat empty" id="node-${strat.key}" onclick="toggleNode('${stratId}')">
+                <div class="tree-item" id="item-${strat.outcome_key}-${strat.key}" data-assignee="${strat.assignee_username || ''}" data-type="strat" data-version="${versionInfo.sortValue}">
+                    <div class="tree-node strat empty" id="node-${strat.outcome_key}-${strat.key}" onclick="toggleNode('${stratId}')">
                         <span class="expand-icon">▶</span>
                         <div class="tree-content">
                             <span class="issue-key">${strat.key}</span>
@@ -3662,14 +3714,30 @@
         function addEpicToTree(epic) {
             trackAssignee(epic.assignee, epic.assignee_username);
 
-            // Determine parent: STRAT or Initiative
+            // Determine parent: STRAT or Initiative (with composite IDs including outcome_key)
             let parentKey = epic.strat_key || epic.initiative_key;
             let parentType = epic.strat_key ? 'strat' : 'initiative';
-            let parentContainer = document.getElementById(`${parentType}-${parentKey}`);
+            const outcomeKey = epic.outcome_key || '';
+
+            // Strats use composite IDs: strat-{outcome_key}-{strat_key}
+            // Initiatives use: initiative-{initiative_key}
+            let parentContainerId;
+            if (parentType === 'strat') {
+                parentContainerId = `strat-${outcomeKey}-${parentKey}`;
+            } else {
+                parentContainerId = `initiative-${parentKey}`;
+            }
+
+            let parentContainer = document.getElementById(parentContainerId);
             if (!parentContainer && parentKey) {
                 // Try the other type (handles create-epic which always sets strat_key)
                 parentType = parentType === 'strat' ? 'initiative' : 'strat';
-                parentContainer = document.getElementById(`${parentType}-${parentKey}`);
+                if (parentType === 'strat') {
+                    parentContainerId = `strat-${outcomeKey}-${parentKey}`;
+                } else {
+                    parentContainerId = `initiative-${parentKey}`;
+                }
+                parentContainer = document.getElementById(parentContainerId);
                 if (parentContainer && parentType === 'initiative') {
                     epic.initiative_key = epic.strat_key;
                     delete epic.strat_key;
@@ -3677,16 +3745,17 @@
             }
             if (!parentContainer) return;
 
-            const parentNodeDiv = document.getElementById(`node-${parentKey}`);
+            const parentNodeId = parentType === 'strat' ? `node-${outcomeKey}-${parentKey}` : `node-${parentKey}`;
+            const parentNodeDiv = document.getElementById(parentNodeId);
             if (parentNodeDiv && parentNodeDiv.classList.contains('empty')) {
                 parentNodeDiv.classList.remove('empty');
             }
 
-            ensureContainerHeader(`${parentType}-${parentKey}`, 'EPICS:', 'epic');
+            ensureContainerHeader(parentContainerId, 'EPICS:', 'epic');
 
-            const epicId = `epic-${parentKey}-${epic.key}`;
+            const epicId = `epic-${outcomeKey}-${parentKey}-${epic.key}`;
             const epicHtml = `
-                <div class="tree-item" id="item-${parentKey}-${epic.key}" data-assignee="${epic.assignee_username || ''}" data-type="epic">
+                <div class="tree-item" id="item-${outcomeKey}-${parentKey}-${epic.key}" data-assignee="${epic.assignee_username || ''}" data-type="epic">
                     <div class="tree-node epic" onclick="toggleNode('${epicId}')">
                         <span class="expand-icon">▶</span>
                         <div class="tree-content">
@@ -3706,17 +3775,19 @@
             `;
             parentContainer.insertAdjacentHTML('beforeend', epicHtml);
 
-            addCreateButton(`${parentType}-${parentKey}`, 'epic', parentKey);
+            addCreateButton(parentContainerId, 'epic', parentKey);
             addCreateButton(epicId, 'task', epic.key);
         }
 
         function addTaskToTree(task) {
             trackAssignee(task.assignee, task.assignee_username);
             const parentKey = task.strat_key || task.initiative_key;
-            const epicContainer = document.getElementById(`epic-${parentKey}-${task.epic_key}`);
+            const outcomeKey = task.outcome_key || '';
+            const epicContainerId = `epic-${outcomeKey}-${parentKey}-${task.epic_key}`;
+            const epicContainer = document.getElementById(epicContainerId);
             if (!epicContainer) return;
 
-            ensureContainerHeader(`epic-${parentKey}-${task.epic_key}`, 'TASKS:', 'task');
+            ensureContainerHeader(epicContainerId, 'TASKS:', 'task');
 
             const taskId = `task-${task.key}`;
             const taskHtml = `
@@ -4269,6 +4340,74 @@
                     </div>
                 </div>
             `;
+        }
+
+        function generateStandupDetailsHTML(issue) {
+            const commentsHTML = issue.comments && issue.comments.length > 0
+                ? issue.comments.slice().reverse().map(c => `
+                    <div class="comment">
+                        <div class="comment-header"><strong>${c.author}</strong> <span class="comment-date">${new Date(c.created).toLocaleString()}</span></div>
+                        <div class="comment-body">${renderJiraText(c.body || '')}</div>
+                    </div>
+                  `).join('')
+                : '<div class="no-data">No comments</div>';
+
+            const descriptionHTML = issue.description
+                ? renderJiraText(issue.description)
+                : '<span class="no-data">No description</span>';
+
+            const labelsHTML = issue.labels && issue.labels.length > 0
+                ? issue.labels.map(l => `<span class="label">${l}</span>`).join('')
+                : '<span class="no-data">No labels</span>';
+
+            const componentsHTML = issue.components && issue.components.length > 0
+                ? issue.components.map(c => `<span class="label">${c}</span>`).join('')
+                : '<span class="no-data">No components</span>';
+
+            return `
+                <div class="issue-details" id="standup-details-${issue.key}" style="display: none;">
+                    <div class="detail-row">
+                        <strong>Reporter:</strong> <span>${issue.reporter || 'Unknown'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <strong>Created:</strong> <span>${formatDate(issue.created) || 'Unknown'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <strong>Labels:</strong>
+                        <div class="labels">${labelsHTML}</div>
+                    </div>
+                    <div class="detail-row">
+                        <strong>Components:</strong> <div class="labels">${componentsHTML}</div>
+                    </div>
+                    <div class="detail-row">
+                        <strong>Git Pull Request:</strong>
+                        ${issue.pull_request && issue.pull_request.trim()
+                            ? `<a href="${issue.pull_request}" target="_blank" style="color: #0052CC; text-decoration: none;">${issue.pull_request}</a>`
+                            : '<span style="color: #6B778C;">None</span>'}
+                    </div>
+                    <div class="detail-row">
+                        <strong>Description:</strong>
+                        <div class="description">${descriptionHTML}</div>
+                    </div>
+                    <div class="detail-row comments-section">
+                        <strong>Comments:</strong>
+                        <div class="comments-list">${commentsHTML}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleStandupDetails(detailsId, headerEl) {
+            const details = document.getElementById(detailsId);
+            if (!details) return;
+            const icon = headerEl.querySelector('.expand-icon');
+            if (details.style.display === 'none') {
+                details.style.display = 'block';
+                if (icon) icon.textContent = '▼';
+            } else {
+                details.style.display = 'none';
+                if (icon) icon.textContent = '▶';
+            }
         }
 
         function toggleNode(nodeId) {
@@ -5349,16 +5488,19 @@
                     document.getElementById('createTaskForm').reset();
 
                     // Find the parent key by looking for the epic container in the DOM
-                    // Epic containers have IDs like: epic-{parent_key}-{epic_key}
+                    // Epic containers have IDs like: epic-{outcome_key}-{parent_key}-{epic_key}
                     const epicContainers = document.querySelectorAll(`[id^="epic-"][id$="-${currentEpicKey}"]`);
 
                     if (epicContainers.length > 0) {
                         const containerId = epicContainers[0].id;
-                        const match = containerId.match(/^epic-(.+)-([A-Z]+-\d+)$/);
+                        // Match: epic-{outcomeKey}-{parentKey}-{epicKey}
+                        const match = containerId.match(/^epic-([A-Z]+-\d+)-([A-Z]+-\d+)-([A-Z]+-\d+)$/);
                         if (match) {
-                            const parentKey = match[1];
+                            const outcomeKey = match[1];
+                            const parentKey = match[2];
+                            result.task.outcome_key = outcomeKey;
                             // Check if parent is a STRAT or Initiative container
-                            if (document.getElementById(`strat-${parentKey}`)) {
+                            if (document.getElementById(`strat-${outcomeKey}-${parentKey}`)) {
                                 result.task.strat_key = parentKey;
                             } else {
                                 result.task.initiative_key = parentKey;
@@ -6054,8 +6196,17 @@
                         updatedSpan.title = `Updated ${formatDate(taskData.updated)}`;
                     }
 
-                    // Note: If assignee changed, we'd need to move the task to a different assignee section
-                    // For now, we'll just update in place. User can refresh the full view if needed.
+                    // Update the details panel if it exists
+                    const detailsPanel = taskElement.querySelector(`#standup-details-${issueKey}`);
+                    if (detailsPanel) {
+                        const wasVisible = detailsPanel.style.display !== 'none';
+                        const newDetails = generateStandupDetailsHTML(taskData);
+                        const temp = document.createElement('div');
+                        temp.innerHTML = newDetails;
+                        const newPanel = temp.firstElementChild;
+                        if (wasVisible) newPanel.style.display = 'block';
+                        detailsPanel.replaceWith(newPanel);
+                    }
 
                     return;
                 }
@@ -6201,215 +6352,197 @@
         }
 
         function updateItemInHierarchy(issueKey, itemType, newData) {
-            const rerenderFns = {
-                outcome: rerenderRfe, // outcomes use same re-render pattern
-                rfe: rerenderRfe,
-                initiative: rerenderStrat,
-                strat: rerenderStrat,
-                epic: rerenderEpic,
-                task: rerenderTask
-            };
-
             function replaceInArray(arr, key, data) {
                 if (!arr) return false;
+                let found = false;
                 for (let i = 0; i < arr.length; i++) {
                     if (arr[i].key === key) {
-                        arr[i] = data;
-                        return true;
+                        // Preserve outcome_key and other parent context from existing data
+                        const copy = {...data, outcome_key: arr[i].outcome_key, rfe_key: arr[i].rfe_key};
+                        if (arr[i].strats) copy.strats = arr[i].strats;
+                        if (arr[i].epics) copy.epics = arr[i].epics;
+                        if (arr[i].tasks) copy.tasks = arr[i].tasks;
+                        arr[i] = copy;
+                        found = true;
                     }
                 }
-                return false;
+                return found;
             }
 
+            let found = false;
             for (const outcome of (hierarchyData.outcomes || [])) {
                 if (itemType === 'outcome' && outcome.key === issueKey) {
                     replaceInArray(hierarchyData.outcomes, issueKey, newData);
-                    rerenderFns[itemType]?.(newData);
-                    populateAssigneeFilter();
-                    return;
+                    found = true;
                 }
 
-                if (itemType === 'rfe' && replaceInArray(outcome.rfes, issueKey, newData)) {
-                    rerenderRfe(newData); populateAssigneeFilter(); return;
-                }
-                if (itemType === 'initiative' && replaceInArray(outcome.initiatives, issueKey, newData)) {
-                    rerenderStrat(newData); populateAssigneeFilter(); return;
-                }
+                if (itemType === 'rfe') replaceInArray(outcome.rfes, issueKey, newData) && (found = true);
+                if (itemType === 'initiative') replaceInArray(outcome.initiatives, issueKey, newData) && (found = true);
 
                 for (const rfe of (outcome.rfes || [])) {
-                    if (itemType === 'strat' && replaceInArray(rfe.strats, issueKey, newData)) {
-                        rerenderStrat(newData); populateAssigneeFilter(); return;
-                    }
+                    if (itemType === 'strat') replaceInArray(rfe.strats, issueKey, newData) && (found = true);
                     for (const strat of (rfe.strats || [])) {
-                        if (itemType === 'epic' && replaceInArray(strat.epics, issueKey, newData)) {
-                            rerenderEpic(newData); populateAssigneeFilter(); return;
-                        }
+                        if (itemType === 'epic') replaceInArray(strat.epics, issueKey, newData) && (found = true);
                         for (const epic of (strat.epics || [])) {
-                            if (itemType === 'task' && replaceInArray(epic.tasks, issueKey, newData)) {
-                                rerenderTask(newData); populateAssigneeFilter(); return;
-                            }
+                            if (itemType === 'task') replaceInArray(epic.tasks, issueKey, newData) && (found = true);
                         }
                     }
                 }
 
                 for (const init of (outcome.initiatives || [])) {
-                    if (itemType === 'epic' && replaceInArray(init.epics, issueKey, newData)) {
-                        rerenderEpic(newData); populateAssigneeFilter(); return;
-                    }
+                    if (itemType === 'epic') replaceInArray(init.epics, issueKey, newData) && (found = true);
                     for (const epic of (init.epics || [])) {
-                        if (itemType === 'task' && replaceInArray(epic.tasks, issueKey, newData)) {
-                            rerenderTask(newData); populateAssigneeFilter(); return;
-                        }
+                        if (itemType === 'task') replaceInArray(epic.tasks, issueKey, newData) && (found = true);
                     }
                 }
             }
 
+            if (found) {
+                const rerenderFns = { outcome: rerenderRfe, rfe: rerenderRfe, initiative: rerenderStrat, strat: rerenderStrat, epic: rerenderEpic, task: rerenderTask };
+                rerenderFns[itemType]?.(newData);
+            }
             populateAssigneeFilter();
         }
 
         function rerenderRfe(rfe) {
             trackAssignee(rfe.assignee, rfe.assignee_username);
-            const itemElement = document.getElementById(`item-${rfe.key}`);
-            if (!itemElement) return;
+            // Find all instances of this RFE (many-to-many: may appear under multiple Outcomes)
+            const itemElements = document.querySelectorAll(`[id^="item-"][id$="-${rfe.key}"][data-type="rfe"]`);
+            if (itemElements.length === 0) return;
 
-            // Update data-assignee attribute
-            itemElement.setAttribute('data-assignee', rfe.assignee_username || '');
+            itemElements.forEach(itemElement => {
+                // Update data-assignee attribute
+                itemElement.setAttribute('data-assignee', rfe.assignee_username || '');
 
-            // Update the tree-node content in place
-            const treeNode = itemElement.querySelector('.tree-node');
-            if (treeNode) {
-                const summaryLink = treeNode.querySelector('.issue-summary-link');
-                const statusSpan = treeNode.querySelector('.issue-status');
-                const prioritySpan = treeNode.querySelector('.issue-priority');
-                const assigneeSpan = treeNode.querySelector('.issue-assignee');
-                const updatedSpan = treeNode.querySelector('.issue-updated');
-
-                if (summaryLink) summaryLink.textContent = rfe.summary;
-                if (statusSpan) {
-                    statusSpan.textContent = rfe.status;
-                    statusSpan.className = `issue-status ${getStatusClass(rfe.status)}`;
-                }
-                if (prioritySpan) {
-                    prioritySpan.textContent = rfe.priority;
-                    prioritySpan.className = `issue-priority ${getPriorityClass(rfe.priority)}`;
-                }
-                if (assigneeSpan) assigneeSpan.textContent = rfe.assignee || 'Unassigned';
-                if (updatedSpan) updatedSpan.textContent = formatDate(rfe.updated);
-            }
-
-            // Update the details section
-            const detailsElement = itemElement.querySelector('.issue-details');
-            if (detailsElement) {
-                detailsElement.outerHTML = generateDetailsHTML(rfe);
-            }
-
-            // Clear and rebuild children
-            const childrenContainer = document.getElementById(`rfe-${rfe.key}`);
-            if (childrenContainer) {
-                // Collapse the container and reset icon
-                childrenContainer.classList.remove('expanded');
-                const icon = itemElement.querySelector('.expand-icon');
-                if (icon) icon.textContent = '▶';
-
-                // Hide details
-                const details = itemElement.querySelector('.issue-details');
-                if (details) details.style.display = 'none';
-
-                childrenContainer.innerHTML = '';
-                if (rfe.strats) {
-                    rfe.strats.forEach(strat => {
-                        addStratToTree(strat);
-                        if (strat.epics) {
-                            strat.epics.forEach(epic => {
-                                addEpicToTree(epic);
-                                if (epic.tasks) {
-                                    epic.tasks.forEach(task => addTaskToTree(task));
-                                }
-                            });
-                        }
-                    });
-                }
-
-                // Update empty class based on whether there are STRATs
+                // Update the tree-node content in place
+                const treeNode = itemElement.querySelector('.tree-node');
                 if (treeNode) {
-                    if (rfe.strats && rfe.strats.length > 0) {
-                        treeNode.classList.remove('empty');
-                    } else {
-                        treeNode.classList.add('empty');
+                    const summaryLink = treeNode.querySelector('.issue-summary-link');
+                    const statusSpan = treeNode.querySelector('.issue-status');
+                    const prioritySpan = treeNode.querySelector('.issue-priority');
+                    const assigneeSpan = treeNode.querySelector('.issue-assignee');
+                    const updatedSpan = treeNode.querySelector('.issue-updated');
+
+                    if (summaryLink) summaryLink.textContent = rfe.summary;
+                    if (statusSpan) {
+                        statusSpan.textContent = rfe.status;
+                        statusSpan.className = `issue-status ${getStatusClass(rfe.status)}`;
+                    }
+                    if (prioritySpan) {
+                        prioritySpan.textContent = rfe.priority;
+                        prioritySpan.className = `issue-priority ${getPriorityClass(rfe.priority)}`;
+                    }
+                    if (assigneeSpan) assigneeSpan.textContent = rfe.assignee || 'Unassigned';
+                    if (updatedSpan) updatedSpan.textContent = formatDate(rfe.updated);
+                }
+
+                // Update the details section
+                const detailsElement = itemElement.querySelector('.issue-details');
+                if (detailsElement) {
+                    detailsElement.outerHTML = generateDetailsHTML(rfe);
+                }
+
+                // Clear and rebuild children - find the children container by looking for rfe-*-{key}
+                const childrenContainer = itemElement.querySelector(`[id^="rfe-"][id$="-${rfe.key}"]`);
+                if (childrenContainer) {
+                    childrenContainer.classList.remove('expanded');
+                    const icon = itemElement.querySelector('.expand-icon');
+                    if (icon) icon.textContent = '▶';
+
+                    const details = itemElement.querySelector('.issue-details');
+                    if (details) details.style.display = 'none';
+
+                    childrenContainer.innerHTML = '';
+                    if (rfe.strats) {
+                        rfe.strats.forEach(strat => {
+                            addStratToTree(strat);
+                            if (strat.epics) {
+                                strat.epics.forEach(epic => {
+                                    addEpicToTree(epic);
+                                    if (epic.tasks) {
+                                        epic.tasks.forEach(task => addTaskToTree(task));
+                                    }
+                                });
+                            }
+                        });
+                    }
+
+                    if (treeNode) {
+                        if (rfe.strats && rfe.strats.length > 0) {
+                            treeNode.classList.remove('empty');
+                        } else {
+                            treeNode.classList.add('empty');
+                        }
                     }
                 }
-            }
+            });
         }
 
         function rerenderStrat(strat) {
             trackAssignee(strat.assignee, strat.assignee_username);
-            const itemElement = document.getElementById(`item-${strat.key}`);
-            if (!itemElement) return;
+            // Find all instances of this Strat (many-to-many: may appear under multiple Outcomes)
+            const itemElements = document.querySelectorAll(`[id^="item-"][id$="-${strat.key}"][data-type="strat"]`);
+            if (itemElements.length === 0) return;
 
-            // Update data-assignee attribute
-            itemElement.setAttribute('data-assignee', strat.assignee_username || '');
+            itemElements.forEach(itemElement => {
+                itemElement.setAttribute('data-assignee', strat.assignee_username || '');
 
-            // Update the tree-node content in place
-            const treeNode = itemElement.querySelector('.tree-node');
-            if (treeNode) {
-                const summaryLink = treeNode.querySelector('.issue-summary-link');
-                const statusSpan = treeNode.querySelector('.issue-status');
-                const prioritySpan = treeNode.querySelector('.issue-priority');
-                const assigneeSpan = treeNode.querySelector('.issue-assignee');
-                const updatedSpan = treeNode.querySelector('.issue-updated');
-
-                if (summaryLink) summaryLink.textContent = strat.summary;
-                if (statusSpan) {
-                    statusSpan.textContent = strat.status;
-                    statusSpan.className = `issue-status ${getStatusClass(strat.status)}`;
-                }
-                if (prioritySpan) {
-                    prioritySpan.textContent = strat.priority;
-                    prioritySpan.className = `issue-priority ${getPriorityClass(strat.priority)}`;
-                }
-                if (assigneeSpan) assigneeSpan.textContent = strat.assignee || 'Unassigned';
-                if (updatedSpan) updatedSpan.textContent = formatDate(strat.updated);
-            }
-
-            // Update the details section
-            const detailsElement = itemElement.querySelector('.issue-details');
-            if (detailsElement) {
-                detailsElement.outerHTML = generateDetailsHTML(strat);
-            }
-
-            // Clear and rebuild children
-            const childrenContainer = document.getElementById(`strat-${strat.key}`);
-            if (childrenContainer) {
-                // Collapse the container and reset icon
-                childrenContainer.classList.remove('expanded');
-                const icon = itemElement.querySelector('.expand-icon');
-                if (icon) icon.textContent = '▶';
-
-                // Hide details
-                const details = itemElement.querySelector('.issue-details');
-                if (details) details.style.display = 'none';
-
-                childrenContainer.innerHTML = '';
-                if (strat.epics) {
-                    strat.epics.forEach(epic => {
-                        addEpicToTree(epic);
-                        if (epic.tasks) {
-                            epic.tasks.forEach(task => addTaskToTree(task));
-                        }
-                    });
-                }
-                // Re-add the create button
-                addCreateButton(`strat-${strat.key}`, 'epic', strat.key);
-
-                // Update empty class based on whether there are Epics
+                const treeNode = itemElement.querySelector('.tree-node');
                 if (treeNode) {
-                    if (strat.epics && strat.epics.length > 0) {
-                        treeNode.classList.remove('empty');
-                    } else {
-                        treeNode.classList.add('empty');
+                    const summaryLink = treeNode.querySelector('.issue-summary-link');
+                    const statusSpan = treeNode.querySelector('.issue-status');
+                    const prioritySpan = treeNode.querySelector('.issue-priority');
+                    const assigneeSpan = treeNode.querySelector('.issue-assignee');
+                    const updatedSpan = treeNode.querySelector('.issue-updated');
+
+                    if (summaryLink) summaryLink.textContent = strat.summary;
+                    if (statusSpan) {
+                        statusSpan.textContent = strat.status;
+                        statusSpan.className = `issue-status ${getStatusClass(strat.status)}`;
+                    }
+                    if (prioritySpan) {
+                        prioritySpan.textContent = strat.priority;
+                        prioritySpan.className = `issue-priority ${getPriorityClass(strat.priority)}`;
+                    }
+                    if (assigneeSpan) assigneeSpan.textContent = strat.assignee || 'Unassigned';
+                    if (updatedSpan) updatedSpan.textContent = formatDate(strat.updated);
+                }
+
+                const detailsElement = itemElement.querySelector('.issue-details');
+                if (detailsElement) {
+                    detailsElement.outerHTML = generateDetailsHTML(strat);
+                }
+
+                // Clear and rebuild children - find children container by looking for strat-*-{key}
+                const childrenContainer = itemElement.querySelector(`[id^="strat-"][id$="-${strat.key}"]`);
+                if (childrenContainer) {
+                    childrenContainer.classList.remove('expanded');
+                    const icon = itemElement.querySelector('.expand-icon');
+                    if (icon) icon.textContent = '▶';
+
+                    const details = itemElement.querySelector('.issue-details');
+                    if (details) details.style.display = 'none';
+
+                    childrenContainer.innerHTML = '';
+                    if (strat.epics) {
+                        strat.epics.forEach(epic => {
+                            addEpicToTree(epic);
+                            if (epic.tasks) {
+                                epic.tasks.forEach(task => addTaskToTree(task));
+                            }
+                        });
+                    }
+                    addCreateButton(childrenContainer.id, 'epic', strat.key);
+
+                    if (treeNode) {
+                        if (strat.epics && strat.epics.length > 0) {
+                            treeNode.classList.remove('empty');
+                        } else {
+                            treeNode.classList.add('empty');
+                        }
                     }
                 }
-            }
+            });
         }
 
         function rerenderEpic(epic) {

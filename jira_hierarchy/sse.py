@@ -75,7 +75,7 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
     total_tasks = 0
 
     # =========================================================================
-    # Step 1: Fetch Outcomes
+    # Step 1: Fetch Outcomes and parse depends-on links
     # =========================================================================
     print("Fetching Outcomes...", file=sys.stderr)
     send_sse_event(wfile, 'progress', {'message': 'Loading Outcomes...'})
@@ -86,14 +86,41 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
 
     outcome_keys = [o['key'] for o in outcomes]
 
+    # Parse depends-on links from Outcomes: outcome_key -> set of issue keys it depends on
+    # Also build reverse mapping: issue_key -> set of outcome_keys that depend on it
+    outcome_depends_on = {}
+    depended_on_by_outcomes = {}
     for outcome_data in outcomes:
+        depends_on_keys = set()
+        for link in outcome_data.get('issuelinks', []):
+            link_type = link.get('type', {}).get('name', '').lower()
+            if 'depend' not in link_type:
+                continue
+            # "depends on" = outwardIssue; "is depended on by" = inwardIssue
+            outward = link.get('outwardIssue', {})
+            inward = link.get('inwardIssue', {})
+            outward_desc = link.get('type', {}).get('outward', '').lower()
+            if outward.get('key') and 'depends on' in outward_desc:
+                depends_on_keys.add(outward['key'])
+            elif inward.get('key') and 'depends on' not in outward_desc:
+                depends_on_keys.add(inward['key'])
+        if depends_on_keys:
+            outcome_depends_on[outcome_data['key']] = depends_on_keys
+            for dep_key in depends_on_keys:
+                if dep_key not in depended_on_by_outcomes:
+                    depended_on_by_outcomes[dep_key] = set()
+                depended_on_by_outcomes[dep_key].add(outcome_data['key'])
+            print(f"  Outcome {outcome_data['key']} depends on: {depends_on_keys}", file=sys.stderr)
+
+    for outcome_data in outcomes:
+        outcome_data.pop('issuelinks', None)
         outcome_data['rfes'] = []
         outcome_data['initiatives'] = []
         send_sse_event(wfile, 'outcome', outcome_data)
         total_outcomes += 1
 
     # =========================================================================
-    # Step 2: Fetch RFEs and link to Outcomes
+    # Step 2: Fetch RFEs and link to Outcomes (many-to-many)
     # =========================================================================
     print("Fetching RFEs...", file=sys.stderr)
     send_sse_event(wfile, 'progress', {'message': 'Loading RFEs...'})
@@ -106,22 +133,34 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
     rfes_by_outcome = {}
 
     for rfe_data in rfes:
+        rfe_data.pop('issuelinks', None)
         rfe_data['strats'] = []
-        outcome_key = rfe_data.get('outcome_key')
 
-        if outcome_key and outcome_key in outcome_keys:
-            if outcome_key not in rfes_by_outcome:
-                rfes_by_outcome[outcome_key] = []
-            rfes_by_outcome[outcome_key].append(rfe_data)
-        else:
-            rfe_data['outcome_key'] = '__orphan__'
-            if '__orphan__' not in rfes_by_outcome:
-                rfes_by_outcome['__orphan__'] = []
-            rfes_by_outcome['__orphan__'].append(rfe_data)
+        # Collect all outcome_keys for this RFE (parent + depends-on)
+        rfe_outcome_keys = []
+        parent_outcome_key = rfe_data.get('outcome_key')
+        if parent_outcome_key and parent_outcome_key in outcome_keys:
+            rfe_outcome_keys.append(parent_outcome_key)
+
+        # Check if any Outcomes depend on this RFE
+        for dep_outcome_key in depended_on_by_outcomes.get(rfe_data['key'], set()):
+            if dep_outcome_key in outcome_keys and dep_outcome_key not in rfe_outcome_keys:
+                rfe_outcome_keys.append(dep_outcome_key)
+
+        if not rfe_outcome_keys:
+            rfe_outcome_keys = ['__orphan__']
             print(f"  RFE {rfe_data['key']} has no Outcome link, treating as orphan", file=sys.stderr)
 
-        send_sse_event(wfile, 'rfe', rfe_data)
-        total_rfes += 1
+        # Send one SSE event per Outcome this RFE belongs to
+        for outcome_key in rfe_outcome_keys:
+            rfe_copy = rfe_data.copy()
+            rfe_copy['strats'] = []
+            rfe_copy['outcome_key'] = outcome_key
+            if outcome_key not in rfes_by_outcome:
+                rfes_by_outcome[outcome_key] = []
+            rfes_by_outcome[outcome_key].append(rfe_copy)
+            send_sse_event(wfile, 'rfe', rfe_copy)
+            total_rfes += 1
 
     # =========================================================================
     # Step 3: Fetch Initiatives and link to Outcomes
@@ -190,7 +229,7 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
         strats_jql += ' AND status NOT IN (Closed, Resolved)'
     strats_jql += ' ORDER BY priority DESC, created DESC'
 
-    strat_field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,issuelinks'
+    strat_field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,issuelinks,parent'
     strat_issues = run_jira_query(strats_jql, strat_field_list, jira_email, jira_pat)
     print(f"Found {len(strat_issues)} STRATs", file=sys.stderr)
 
@@ -222,26 +261,70 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
                 found_rfe = outward_issue.get('key')
                 break
 
+        # Collect all Outcome keys this STRAT should appear under
+        strat_outcome_keys = set()
+
         if found_rfe:
             if found_rfe not in strats_by_rfe:
                 strats_by_rfe[found_rfe] = []
             strats_by_rfe[found_rfe].append(strat_data)
-
             strat_data['rfe_key'] = found_rfe
 
-            # Find Outcome key for this STRAT via its parent RFE
-            outcome_key = None
+            # Find all Outcomes this RFE belongs to
             for o_key, rfe_list in rfes_by_outcome.items():
                 if any(r['key'] == found_rfe for r in rfe_list):
-                    outcome_key = o_key
-                    break
-            if outcome_key:
-                strat_data['outcome_key'] = outcome_key
+                    strat_outcome_keys.add(o_key)
 
-            strat_data['epics'] = []
-            send_sse_event(wfile, 'strat', strat_data)
-            total_strats += 1
-        else:
+        # Check if this STRAT has a direct parent that is an Outcome
+        strat_parent_field = strat.get('fields', {}).get('parent')
+        if strat_parent_field and isinstance(strat_parent_field, dict):
+            parent_key = strat_parent_field.get('key')
+            if parent_key and parent_key in outcome_keys and parent_key not in strat_outcome_keys:
+                strat_outcome_keys.add(parent_key)
+                print(f"  STRAT {strat_key} has direct parent Outcome {parent_key}", file=sys.stderr)
+
+        # Check if any Outcomes depend on this STRAT directly
+        for dep_outcome_key in depended_on_by_outcomes.get(strat_key, set()):
+            if dep_outcome_key in outcome_keys and dep_outcome_key not in strat_outcome_keys:
+                strat_outcome_keys.add(dep_outcome_key)
+
+        # For any Outcome that needs this STRAT (via depends-on or direct parent),
+        # ensure the RFE also appears under that Outcome
+        for extra_outcome_key in strat_outcome_keys:
+            if found_rfe:
+                if extra_outcome_key not in rfes_by_outcome:
+                    rfes_by_outcome[extra_outcome_key] = []
+                rfe_already_under_outcome = any(r['key'] == found_rfe for r in rfes_by_outcome.get(extra_outcome_key, []))
+                if not rfe_already_under_outcome:
+                    original_rfe = next((r for r in rfes if r['key'] == found_rfe), None)
+                    if original_rfe:
+                        rfe_copy = original_rfe.copy()
+                        rfe_copy['strats'] = []
+                        rfe_copy['outcome_key'] = extra_outcome_key
+                        rfe_copy.pop('issuelinks', None)
+                        rfes_by_outcome[extra_outcome_key].append(rfe_copy)
+                        send_sse_event(wfile, 'rfe', rfe_copy)
+                        total_rfes += 1
+                        print(f"  Injected RFE {found_rfe} under Outcome {extra_outcome_key} (via STRAT {strat_key})", file=sys.stderr)
+
+        if found_rfe and strat_outcome_keys:
+            # Send one STRAT event per Outcome it should appear under
+            for o_key in strat_outcome_keys:
+                strat_copy = strat_data.copy()
+                strat_copy['epics'] = []
+                strat_copy['rfe_key'] = found_rfe
+                strat_copy['outcome_key'] = o_key
+                send_sse_event(wfile, 'strat', strat_copy)
+                total_strats += 1
+        elif not found_rfe and strat_outcome_keys:
+            # Strat with no RFE but depended-on by Outcomes - show as orphan under those Outcomes
+            for o_key in strat_outcome_keys:
+                strat_copy = strat_data.copy()
+                strat_copy['epics'] = []
+                strat_copy['outcome_key'] = o_key
+                send_sse_event(wfile, 'strat', strat_copy)
+                total_strats += 1
+        elif not found_rfe:
             print(f"  WARNING: STRAT {strat_key} has no RFE link, checking all links:", file=sys.stderr)
             for link in links:
                 print(f"    Link type: {link.get('type', {}).get('name')}, inward: {link.get('inwardIssue', {}).get('key')}, outward: {link.get('outwardIssue', {}).get('key')}", file=sys.stderr)
@@ -306,7 +389,7 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
 
         # Fetch full details for documented-by Epics not already in our list
         existing_epic_keys = {e['key'] for e in epic_issues}
-        for epic_key, linked_parents in documented_by_epics.items():
+        for epic_key in documented_by_epics:
             if epic_key not in existing_epic_keys:
                 try:
                     epic_data = get_jira_issue(epic_key, fields=epic_field_list, jira_email=jira_email, jira_pat=jira_pat)
@@ -350,37 +433,42 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
                         epics_by_parent[parent_key] = []
                     epics_by_parent[parent_key].append(epic_data)
 
-                    epic_data_copy = epic_data.copy()
-                    epic_data_copy['tasks'] = []
-
                     # Determine if parent is a STRAT or Initiative
                     if parent_key in strat_keys_list:
-                        epic_data_copy['strat_key'] = parent_key
-                        # Find RFE and Outcome keys
+                        # Find RFE for this STRAT
                         rfe_key = None
-                        outcome_key = None
                         for r_key, strats in strats_by_rfe.items():
                             if any(s['key'] == parent_key for s in strats):
                                 rfe_key = r_key
                                 break
+                        # Find all Outcomes this strat/rfe appears under
+                        epic_outcome_keys = set()
                         if rfe_key:
-                            epic_data_copy['rfe_key'] = rfe_key
                             for o_key, rfe_list in rfes_by_outcome.items():
                                 if any(r['key'] == rfe_key for r in rfe_list):
-                                    outcome_key = o_key
-                                    break
-                        if outcome_key:
-                            epic_data_copy['outcome_key'] = outcome_key
+                                    epic_outcome_keys.add(o_key)
+                        if not epic_outcome_keys:
+                            epic_outcome_keys.add(None)
+                        for o_key in epic_outcome_keys:
+                            epic_data_copy = epic_data.copy()
+                            epic_data_copy['tasks'] = []
+                            epic_data_copy['strat_key'] = parent_key
+                            if rfe_key:
+                                epic_data_copy['rfe_key'] = rfe_key
+                            if o_key:
+                                epic_data_copy['outcome_key'] = o_key
+                            send_sse_event(wfile, 'epic', epic_data_copy)
+                            total_epics += 1
                     elif parent_key in initiative_keys_list:
+                        epic_data_copy = epic_data.copy()
+                        epic_data_copy['tasks'] = []
                         epic_data_copy['initiative_key'] = parent_key
-                        # Find Outcome key
                         for o_key, init_list in initiatives_by_outcome.items():
                             if any(i['key'] == parent_key for i in init_list):
                                 epic_data_copy['outcome_key'] = o_key
                                 break
-
-                    send_sse_event(wfile, 'epic', epic_data_copy)
-                    total_epics += 1
+                        send_sse_event(wfile, 'epic', epic_data_copy)
+                        total_epics += 1
             else:
                 print(f"  WARNING: Epic {epic_key} has no Parent Link to our STRATs/Initiatives", file=sys.stderr)
 
@@ -425,29 +513,50 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
 
                 task_data['epic_key'] = epic_link
 
-                # Find hierarchy context for this task
+                # Find all hierarchy contexts for this task (many-to-many)
+                task_contexts = []
                 for parent_key, epics in epics_by_parent.items():
                     if any(e['key'] == epic_link for e in epics):
                         if parent_key in strat_keys_list:
-                            task_data['strat_key'] = parent_key
+                            rfe_key = None
                             for r_key, strats in strats_by_rfe.items():
                                 if any(s['key'] == parent_key for s in strats):
-                                    task_data['rfe_key'] = r_key
-                                    for o_key, rfe_list in rfes_by_outcome.items():
-                                        if any(r['key'] == r_key for r in rfe_list):
-                                            task_data['outcome_key'] = o_key
-                                            break
+                                    rfe_key = r_key
                                     break
+                            outcome_keys_for_task = set()
+                            if rfe_key:
+                                for o_key, rfe_list in rfes_by_outcome.items():
+                                    if any(r['key'] == rfe_key for r in rfe_list):
+                                        outcome_keys_for_task.add(o_key)
+                            for o_key in (outcome_keys_for_task or {None}):
+                                task_contexts.append({
+                                    'strat_key': parent_key,
+                                    'rfe_key': rfe_key,
+                                    'outcome_key': o_key,
+                                })
                         elif parent_key in initiative_keys_list:
-                            task_data['initiative_key'] = parent_key
-                            for o_key, init_list in initiatives_by_outcome.items():
+                            o_key = None
+                            for ok, init_list in initiatives_by_outcome.items():
                                 if any(i['key'] == parent_key for i in init_list):
-                                    task_data['outcome_key'] = o_key
+                                    o_key = ok
                                     break
-                        break
+                            task_contexts.append({
+                                'initiative_key': parent_key,
+                                'outcome_key': o_key,
+                            })
 
-            send_sse_event(wfile, 'task', task_data)
-            total_tasks += 1
+                if task_contexts:
+                    for ctx in task_contexts:
+                        task_copy = task_data.copy()
+                        task_copy.update(ctx)
+                        send_sse_event(wfile, 'task', task_copy)
+                        total_tasks += 1
+                else:
+                    send_sse_event(wfile, 'task', task_data)
+                    total_tasks += 1
+            else:
+                send_sse_event(wfile, 'task', task_data)
+                total_tasks += 1
 
     print(f"Found {total_task_issues} Tasks total for component", file=sys.stderr)
 

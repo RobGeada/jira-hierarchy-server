@@ -120,10 +120,15 @@ def fetch_outcomes(component, jira_email, jira_pat, show_closed=False, max_age_d
         outcomes_jql += ' AND status NOT IN (Closed, Resolved)'
     outcomes_jql += ' ORDER BY priority DESC, created DESC'
 
-    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components'
+    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,issuelinks'
     outcome_issues = run_jira_query(outcomes_jql, field_list, jira_email, jira_pat)
 
-    return [build_issue_data(outcome, 'outcome') for outcome in outcome_issues]
+    results = []
+    for outcome in outcome_issues:
+        outcome_data = build_issue_data(outcome, 'outcome')
+        outcome_data['issuelinks'] = outcome.get('fields', {}).get('issuelinks', [])
+        results.append(outcome_data)
+    return results
 
 
 def fetch_rfes(component, jira_email, jira_pat, show_closed=False, max_age_days=365):
@@ -163,7 +168,7 @@ def fetch_rfes(component, jira_email, jira_pat, show_closed=False, max_age_days=
         rfes_jql += ' AND status NOT IN (Closed, Resolved)'
     rfes_jql += ' ORDER BY priority DESC, created DESC'
 
-    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,parent'
+    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,parent,issuelinks'
     rfe_issues = run_jira_query(rfes_jql, field_list, jira_email, jira_pat)
 
     results = []
@@ -172,6 +177,7 @@ def fetch_rfes(component, jira_email, jira_pat, show_closed=False, max_age_days=
         parent_field = rfe.get('fields', {}).get('parent')
         if parent_field and isinstance(parent_field, dict):
             rfe_data['outcome_key'] = parent_field.get('key')
+        rfe_data['issuelinks'] = rfe.get('fields', {}).get('issuelinks', [])
         results.append(rfe_data)
     return results
 
