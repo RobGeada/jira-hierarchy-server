@@ -2430,6 +2430,10 @@
         function toggleAssigneeSection(assigneeUsername) {
             const taskList = document.getElementById(`tasks-${assigneeUsername}`);
             const icon = document.getElementById(`icon-${assigneeUsername}`);
+            const header = taskList.previousElementSibling;
+
+            // Record where the header is on screen before any DOM changes
+            const headerRect = header.getBoundingClientRect();
 
             // Check if this section is currently expanded
             const isExpanded = taskList.classList.contains('expanded');
@@ -2446,6 +2450,13 @@
             if (!isExpanded) {
                 taskList.classList.add('expanded');
                 icon.classList.add('expanded');
+            }
+
+            // Keep the header at the same screen position
+            const newRect = header.getBoundingClientRect();
+            const drift = newRect.top - headerRect.top;
+            if (drift !== 0) {
+                window.scrollBy(0, drift);
             }
         }
 
