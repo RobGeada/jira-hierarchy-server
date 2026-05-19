@@ -3347,7 +3347,9 @@
                 const task = JSON.parse(e.data);
                 hierarchyData.metadata.total_tasks++;
 
-                hierarchyData.allTasks.push(task);
+                if (!hierarchyData.allTasks.some(t => t.key === task.key)) {
+                    hierarchyData.allTasks.push(task);
+                }
                 trackAssignee(task.assignee, task.assignee_username);
 
                 let found = false;
@@ -5506,8 +5508,10 @@
                                 result.task.initiative_key = parentKey;
                             }
 
-                            // Add to allTasks array for standup view
-                            hierarchyData.allTasks.push(result.task);
+                            // Add to allTasks array for standup view (deduplicate across outcome contexts)
+                            if (!hierarchyData.allTasks.some(t => t.key === result.task.key)) {
+                                hierarchyData.allTasks.push(result.task);
+                            }
 
                             // Add to the hierarchy data structure
                             for (const outcome of (hierarchyData.outcomes || [])) {
