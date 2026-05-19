@@ -5690,7 +5690,7 @@
                     return;
                 }
 
-                const response = await fetch(`/api/transitions?issue_key=${issueKey}&email=${encodeURIComponent(config.email)}&pat=${config.pat}`);
+                const response = await fetch(`/api/transitions?issue_key=${issueKey}&email=${encodeURIComponent(config.email)}&pat=${encodeURIComponent(config.pat)}`);
                 const result = await response.json();
 
                 if (response.ok && result.transitions) {
