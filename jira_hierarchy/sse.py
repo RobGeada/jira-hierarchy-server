@@ -493,7 +493,7 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
         assignee_list = ', '.join([f'"{a}"' for a in assignees])
         tasks_jql += f' AND assignee IN ({assignee_list})'
 
-    task_field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components,customfield_10014,customfield_10875'
+    task_field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components,customfield_10014,customfield_10875,customfield_10028'
 
     from .jira_client import iter_jira_query
     for task_batch, fetched_so_far in iter_jira_query(tasks_jql, task_field_list, jira_email, jira_pat):

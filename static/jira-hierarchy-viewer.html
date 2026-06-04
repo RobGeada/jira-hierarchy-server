@@ -400,6 +400,40 @@
             opacity: 1 !important;
         }
 
+        .issue-story-points {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 3px;
+            background: #E3FCEF;
+            color: #006644;
+            font-weight: 600;
+            width: 90px;
+            flex-shrink: 0;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .issue-story-points.no-points {
+            background: #F4F5F7;
+            color: #A5ADBA;
+            font-weight: 400;
+        }
+
+        .issue-story-points:hover {
+            opacity: 0.8;
+        }
+
+        .story-points-input {
+            width: 50px;
+            padding: 2px 4px;
+            font-size: 12px;
+            border: 2px solid #0052CC;
+            border-radius: 3px;
+            text-align: center;
+            outline: none;
+        }
+
         .issue-updated {
             font-size: 12px;
             padding: 4px 8px;
@@ -677,6 +711,7 @@
         .hierarchy-table-header .issue-summary-link,
         .hierarchy-table-header .issue-status,
         .hierarchy-table-header .issue-priority,
+        .hierarchy-table-header .issue-story-points,
         .hierarchy-table-header .issue-assignee,
         .hierarchy-table-header .issue-updated {
             background: none;
@@ -709,8 +744,9 @@
         .header-cell:nth-child(3) { flex: 1; } /* Summary */
         .header-cell:nth-child(4) { width: 100px; } /* Status */
         .header-cell:nth-child(5) { width: 80px; } /* Priority */
-        .header-cell:nth-child(6) { width: 140px; } /* Assignee */
-        .header-cell:nth-child(7) { width: 110px; } /* Updated */
+        .header-cell:nth-child(6) { width: 90px; } /* Story Points */
+        .header-cell:nth-child(7) { width: 140px; } /* Assignee */
+        .header-cell:nth-child(8) { width: 110px; } /* Updated */
 
         .sort-indicator {
             font-size: 10px;
@@ -2357,11 +2393,12 @@
                                         <a href="${JIRA_CONFIG.baseUrl}/browse/${task.key}" target="_blank" style="color: #0052CC; text-decoration: none;" onclick="event.stopPropagation()">${task.key}</a>
                                         <button class="btn-reload" onclick="event.stopPropagation(); reloadTaskInStandup('${task.key}')" title="Reload from JIRA">↻</button>
                                     </div>
-                                    <div class="standup-task-summary">${task.summary}</div>
+                                    <div class="standup-task-summary">${escapeHtml(task.summary)}</div>
                                     <div class="standup-task-meta">
                                         <span class="issue-type" style="background: #DFE1E6; color: #42526E; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; text-transform: uppercase;">${task.issuetype || 'Task'}</span>
                                         <span class="issue-status ${getStatusClass(task.status)}" onclick="event.stopPropagation(); showStatusDropdown('${task.key}', this)">${task.status}</span>
                                         <span class="issue-priority ${getPriorityClass(task.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${task.key}', this)">${task.priority}</span>
+                                        <span class="issue-story-points ${formatStoryPoints(task.story_points).cssClass}" onclick="event.stopPropagation(); showStoryPointsInput('${task.key}', this)" style="font-size: 11px; padding: 2px 8px; border-radius: 3px;">${formatStoryPoints(task.story_points).display} pts</span>
                                         <span class="issue-updated" style="background: #F4F5F7; color: #42526E; padding: 2px 8px; border-radius: 3px; font-size: 11px;" title="Updated ${formatDate(task.updated)}">Updated ${formatRelativeTime(task.updated)}</span>
                                     </div>
                                     <div class="standup-hierarchy">
@@ -2372,7 +2409,7 @@
                                 <div class="standup-hierarchy-item">
                                     <span class="standup-hierarchy-label">Epic:</span>
                                     <span class="standup-hierarchy-value">
-                                        <a href="${JIRA_CONFIG.baseUrl}/browse/${task.epic.key}" target="_blank" style="color: #172B4D; text-decoration: none;">${task.epic.key}</a> - ${task.epic.summary}
+                                        <a href="${JIRA_CONFIG.baseUrl}/browse/${task.epic.key}" target="_blank" style="color: #172B4D; text-decoration: none;">${task.epic.key}</a> - ${escapeHtml(task.epic.summary)}
                                     </span>
                                 </div>
                         `;
@@ -2383,7 +2420,7 @@
                                 <div class="standup-hierarchy-item">
                                     <span class="standup-hierarchy-label">STRAT:</span>
                                     <span class="standup-hierarchy-value">
-                                        <a href="${JIRA_CONFIG.baseUrl}/browse/${task.strat.key}" target="_blank" style="color: #172B4D; text-decoration: none;">${task.strat.key}</a> - ${task.strat.summary}
+                                        <a href="${JIRA_CONFIG.baseUrl}/browse/${task.strat.key}" target="_blank" style="color: #172B4D; text-decoration: none;">${task.strat.key}</a> - ${escapeHtml(task.strat.summary)}
                                     </span>
                                 </div>
                         `;
@@ -2394,7 +2431,7 @@
                                 <div class="standup-hierarchy-item">
                                     <span class="standup-hierarchy-label">RFE:</span>
                                     <span class="standup-hierarchy-value">
-                                        <a href="${JIRA_CONFIG.baseUrl}/browse/${task.rfe.key}" target="_blank" style="color: #172B4D; text-decoration: none;">${task.rfe.key}</a> - ${task.rfe.summary}
+                                        <a href="${JIRA_CONFIG.baseUrl}/browse/${task.rfe.key}" target="_blank" style="color: #172B4D; text-decoration: none;">${task.rfe.key}</a> - ${escapeHtml(task.rfe.summary)}
                                     </span>
                                 </div>
                         `;
@@ -2472,6 +2509,7 @@
                         <span class="issue-version header-sortable" onclick="handleColumnSort('version')">Version<span class="sort-indicator" id="sort-version"></span></span>
                         <span class="issue-status header-sortable" onclick="handleColumnSort('status')">Status<span class="sort-indicator" id="sort-status"></span></span>
                         <span class="issue-priority header-sortable" onclick="handleColumnSort('priority')">Priority<span class="sort-indicator" id="sort-priority"></span></span>
+                        <span class="issue-story-points">Story Points</span>
                         <span class="issue-assignee header-sortable" onclick="handleColumnSort('assignee')">Assignee<span class="sort-indicator" id="sort-assignee"></span></span>
                         <span class="issue-updated header-sortable" onclick="handleColumnSort('updated')">Updated<span class="sort-indicator" id="sort-updated"></span></span>
                         <span style="width: 32px; flex-shrink: 0;"></span>
@@ -3153,6 +3191,7 @@
                                 <span class="issue-version header-sortable" onclick="handleColumnSort('version')">Version<span class="sort-indicator" id="sort-version"></span></span>
                                 <span class="issue-status header-sortable" onclick="handleColumnSort('status')">Status<span class="sort-indicator" id="sort-status"></span></span>
                                 <span class="issue-priority header-sortable" onclick="handleColumnSort('priority')">Priority<span class="sort-indicator" id="sort-priority"></span></span>
+                                <span class="issue-story-points">Story Points</span>
                                 <span class="issue-assignee header-sortable" onclick="handleColumnSort('assignee')">Assignee<span class="sort-indicator" id="sort-assignee"></span></span>
                                 <span class="issue-updated header-sortable" onclick="handleColumnSort('updated')">Updated<span class="sort-indicator" id="sort-updated"></span></span>
                                 <span style="width: 32px; flex-shrink: 0;"></span>
@@ -3551,6 +3590,7 @@
                             <span class="issue-version no-version"></span>
                             <span class="issue-status"></span>
                             <span class="issue-priority"></span>
+                            <span class="issue-story-points no-points"></span>
                             <span class="issue-assignee"></span>
                             <span class="issue-updated"></span>
                             <span style="width: 32px; flex-shrink: 0;"></span>
@@ -3564,10 +3604,11 @@
                         <span class="expand-icon">▶</span>
                         <div class="tree-content">
                             <span class="issue-key">${outcome.key}</span>
-                            <a href="${JIRA_CONFIG.baseUrl}/browse/${outcome.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${outcome.summary}</a>
+                            <a href="${JIRA_CONFIG.baseUrl}/browse/${outcome.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${escapeHtml(outcome.summary)}</a>
                             <span class="${versionClass}">${versionInfo.display}</span>
                             <span class="issue-status ${getStatusClass(outcome.status)}" onclick="event.stopPropagation(); showStatusDropdown('${outcome.key}', this)">${outcome.status}</span>
                             <span class="issue-priority ${getPriorityClass(outcome.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${outcome.key}', this)">${outcome.priority}</span>
+                            <span class="issue-story-points ${formatStoryPoints(outcome.story_points).cssClass}" onclick="event.stopPropagation(); showStoryPointsInput('${outcome.key}', this)">${formatStoryPoints(outcome.story_points).display}</span>
                             <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${outcome.key}', this)">${outcome.assignee || 'Unassigned'}</span>
                             <span class="issue-updated">${formatDate(outcome.updated)}</span>
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${outcome.key}', 'outcome')">↻</button>
@@ -3601,10 +3642,11 @@
                         <span class="expand-icon">▶</span>
                         <div class="tree-content">
                             <span class="issue-key">${rfe.key}</span>
-                            <a href="${JIRA_CONFIG.baseUrl}/browse/${rfe.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${rfe.summary}</a>
+                            <a href="${JIRA_CONFIG.baseUrl}/browse/${rfe.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${escapeHtml(rfe.summary)}</a>
                             <span class="${versionClass}">${versionInfo.display}</span>
                             <span class="issue-status ${getStatusClass(rfe.status)}" onclick="event.stopPropagation(); showStatusDropdown('${rfe.key}', this)">${rfe.status}</span>
                             <span class="issue-priority ${getPriorityClass(rfe.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${rfe.key}', this)">${rfe.priority}</span>
+                            <span class="issue-story-points ${formatStoryPoints(rfe.story_points).cssClass}" onclick="event.stopPropagation(); showStoryPointsInput('${rfe.key}', this)">${formatStoryPoints(rfe.story_points).display}</span>
                             <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${rfe.key}', this)">${rfe.assignee || 'Unassigned'}</span>
                             <span class="issue-updated">${formatDate(rfe.updated)}</span>
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${rfe.key}', 'rfe')">↻</button>
@@ -3638,10 +3680,11 @@
                         <span class="expand-icon">▶</span>
                         <div class="tree-content">
                             <span class="issue-key">${initiative.key}</span>
-                            <a href="${JIRA_CONFIG.baseUrl}/browse/${initiative.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${initiative.summary}</a>
+                            <a href="${JIRA_CONFIG.baseUrl}/browse/${initiative.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${escapeHtml(initiative.summary)}</a>
                             <span class="${versionClass}">${versionInfo.display}</span>
                             <span class="issue-status ${getStatusClass(initiative.status)}" onclick="event.stopPropagation(); showStatusDropdown('${initiative.key}', this)">${initiative.status}</span>
                             <span class="issue-priority ${getPriorityClass(initiative.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${initiative.key}', this)">${initiative.priority}</span>
+                            <span class="issue-story-points ${formatStoryPoints(initiative.story_points).cssClass}" onclick="event.stopPropagation(); showStoryPointsInput('${initiative.key}', this)">${formatStoryPoints(initiative.story_points).display}</span>
                             <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${initiative.key}', this)">${initiative.assignee || 'Unassigned'}</span>
                             <span class="issue-updated">${formatDate(initiative.updated)}</span>
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${initiative.key}', 'initiative')">↻</button>
@@ -3678,10 +3721,11 @@
                         <span class="expand-icon">▶</span>
                         <div class="tree-content">
                             <span class="issue-key">${strat.key}</span>
-                            <a href="${JIRA_CONFIG.baseUrl}/browse/${strat.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${strat.summary}</a>
+                            <a href="${JIRA_CONFIG.baseUrl}/browse/${strat.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${escapeHtml(strat.summary)}</a>
                             <span class="${versionClass}">${versionInfo.display}</span>
                             <span class="issue-status ${getStatusClass(strat.status)}" onclick="event.stopPropagation(); showStatusDropdown('${strat.key}', this)">${strat.status}</span>
                             <span class="issue-priority ${getPriorityClass(strat.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${strat.key}', this)">${strat.priority}</span>
+                            <span class="issue-story-points ${formatStoryPoints(strat.story_points).cssClass}" onclick="event.stopPropagation(); showStoryPointsInput('${strat.key}', this)">${formatStoryPoints(strat.story_points).display}</span>
                             <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${strat.key}', this)">${strat.assignee || 'Unassigned'}</span>
                             <span class="issue-updated">${formatDate(strat.updated)}</span>
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${strat.key}', 'strat')">↻</button>
@@ -3773,10 +3817,11 @@
                         <span class="expand-icon">▶</span>
                         <div class="tree-content">
                             <span class="issue-key">${epic.key}</span>
-                            <a href="${JIRA_CONFIG.baseUrl}/browse/${epic.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${epic.summary}</a>
+                            <a href="${JIRA_CONFIG.baseUrl}/browse/${epic.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${escapeHtml(epic.summary)}</a>
                             <span class="issue-version"></span>
                             <span class="issue-status ${getStatusClass(epic.status)}" onclick="event.stopPropagation(); showStatusDropdown('${epic.key}', this)">${epic.status}</span>
                             <span class="issue-priority ${getPriorityClass(epic.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${epic.key}', this)">${epic.priority}</span>
+                            <span class="issue-story-points ${formatStoryPoints(epic.story_points).cssClass}" onclick="event.stopPropagation(); showStoryPointsInput('${epic.key}', this)">${formatStoryPoints(epic.story_points).display}</span>
                             <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${epic.key}', this)">${epic.assignee || 'Unassigned'}</span>
                             <span class="issue-updated">${formatDate(epic.updated)}</span>
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${epic.key}', 'epic')">↻</button>
@@ -3802,17 +3847,18 @@
 
             ensureContainerHeader(epicContainerId, 'TASKS:', 'task');
 
-            const taskId = `task-${task.key}`;
+            const taskId = `task-${outcomeKey}-${parentKey}-${task.epic_key}-${task.key}`;
             const taskHtml = `
-                <div class="tree-item" id="item-${task.key}" data-assignee="${task.assignee_username || ''}" data-type="task">
+                <div class="tree-item" id="item-${outcomeKey}-${parentKey}-${task.epic_key}-${task.key}" data-assignee="${task.assignee_username || ''}" data-type="task">
                     <div class="tree-node task" onclick="toggleNode('${taskId}')">
                         <span class="expand-icon">▶</span>
                         <div class="tree-content">
                             <span class="issue-key">${task.key}</span>
-                            <a href="${JIRA_CONFIG.baseUrl}/browse/${task.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${task.summary}</a>
+                            <a href="${JIRA_CONFIG.baseUrl}/browse/${task.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${escapeHtml(task.summary)}</a>
                             <span class="issue-version"></span>
                             <span class="issue-status ${getStatusClass(task.status)}" onclick="event.stopPropagation(); showStatusDropdown('${task.key}', this)">${task.status}</span>
                             <span class="issue-priority ${getPriorityClass(task.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${task.key}', this)">${task.priority}</span>
+                            <span class="issue-story-points ${formatStoryPoints(task.story_points).cssClass}" onclick="event.stopPropagation(); showStoryPointsInput('${task.key}', this)">${formatStoryPoints(task.story_points).display}</span>
                             <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${task.key}', this)">${task.assignee || 'Unassigned'}</span>
                             <span class="issue-updated">${formatDate(task.updated)}</span>
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${task.key}', 'task')">↻</button>
@@ -3852,7 +3898,7 @@
                             <span class="expand-icon">${hasChildren ? '▶' : '•'}</span>
                             <div class="tree-content">
                                 <span class="issue-key">${strat.key}</span>
-                                <span class="issue-summary">${strat.summary}</span>
+                                <span class="issue-summary">${escapeHtml(strat.summary)}</span>
                                 <span class="issue-status ${getStatusClass(strat.status)}">${strat.status}</span>
                                 <span class="issue-priority ${getPriorityClass(strat.priority)}">${strat.priority}</span>
                             </div>
@@ -3871,7 +3917,7 @@
                                     <span class="expand-icon">${hasEpicChildren ? '▶' : '•'}</span>
                                     <div class="tree-content">
                                         <span class="issue-key">${epic.key}</span>
-                                        <span class="issue-summary">${epic.summary}</span>
+                                        <span class="issue-summary">${escapeHtml(epic.summary)}</span>
                                         <span class="issue-status ${getStatusClass(epic.status)}">${epic.status}</span>
                                         <span class="issue-priority ${getPriorityClass(epic.priority)}">${epic.priority}</span>
                                     </div>
@@ -3887,7 +3933,7 @@
                                             <span class="expand-icon">•</span>
                                             <div class="tree-content">
                                                 <span class="issue-key">${task.key}</span>
-                                                <span class="issue-summary">${task.summary}</span>
+                                                <span class="issue-summary">${escapeHtml(task.summary)}</span>
                                                 <span class="issue-status ${getStatusClass(task.status)}">${task.status}</span>
                                                 <span class="issue-priority ${getPriorityClass(task.priority)}">${task.priority}</span>
                                             </div>
@@ -3914,6 +3960,11 @@
             content.innerHTML = html;
         }
 
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
         function convertAdfToHtml(adf) {
             if (!adf || !adf.content) return '';
 
@@ -3938,7 +3989,7 @@
                         return innerHtml ? `<p>${innerHtml}</p>` : '<p></p>';
 
                     case 'text':
-                        let text = node.text || '';
+                        let text = escapeHtml(node.text || '');
                         // Apply marks (bold, italic, etc.)
                         marks.forEach(mark => {
                             switch (mark.type) {
@@ -4294,6 +4345,10 @@
                         <strong>Assignee:</strong> <span>${issue.assignee || 'Unassigned'}</span>
                     </div>
                     <div class="detail-row">
+                        <strong>Story Points:</strong>
+                        <span class="issue-story-points ${formatStoryPoints(issue.story_points).cssClass}" onclick="showStoryPointsInput('${issue.key}', this)" style="cursor: pointer;">${formatStoryPoints(issue.story_points).display}</span>
+                    </div>
+                    <div class="detail-row">
                         <strong>Created:</strong> <span>${formatDate(issue.created) || 'Unknown'}</span>
                     </div>
                     <div class="detail-row">
@@ -4381,6 +4436,10 @@
                 <div class="issue-details" id="standup-details-${issue.key}" style="display: none;">
                     <div class="detail-row">
                         <strong>Reporter:</strong> <span>${issue.reporter || 'Unknown'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <strong>Story Points:</strong>
+                        <span class="issue-story-points ${formatStoryPoints(issue.story_points).cssClass}" onclick="showStoryPointsInput('${issue.key}', this)" style="cursor: pointer;">${formatStoryPoints(issue.story_points).display}</span>
                     </div>
                     <div class="detail-row">
                         <strong>Created:</strong> <span>${formatDate(issue.created) || 'Unknown'}</span>
@@ -4597,6 +4656,7 @@
                         <span class="issue-version header-sortable" onclick="handleColumnSort('version')">Version<span class="sort-indicator" id="sort-version"></span></span>
                         <span class="issue-status header-sortable" onclick="handleColumnSort('status')">Status<span class="sort-indicator" id="sort-status"></span></span>
                         <span class="issue-priority header-sortable" onclick="handleColumnSort('priority')">Priority<span class="sort-indicator" id="sort-priority"></span></span>
+                        <span class="issue-story-points">Story Points</span>
                         <span class="issue-assignee header-sortable" onclick="handleColumnSort('assignee')">Assignee<span class="sort-indicator" id="sort-assignee"></span></span>
                         <span class="issue-updated header-sortable" onclick="handleColumnSort('updated')">Updated<span class="sort-indicator" id="sort-updated"></span></span>
                         <span style="width: 32px; flex-shrink: 0;"></span>
@@ -4796,6 +4856,12 @@
             if (priorityLower === 'critical') return 'priority-critical';
             if (priorityLower === 'major') return 'priority-major';
             return 'priority-normal';
+        }
+
+        function formatStoryPoints(sp) {
+            if (sp === null || sp === undefined || sp === '') return {display: '—', cssClass: 'no-points'};
+            const val = Number(sp);
+            return {display: val % 1 === 0 ? String(val) : val.toFixed(1), cssClass: ''};
         }
 
         function formatDate(dateString) {
@@ -5121,7 +5187,7 @@
                         <div class="status-update-strat" data-strat-key="${strat.key}">
                             <div class="status-update-strat-header">
                                 <a href="${JIRA_CONFIG.baseUrl}/browse/${strat.key}" target="_blank" class="status-update-strat-key">${strat.key}</a>
-                                <span class="status-update-strat-summary">${strat.summary}</span>
+                                <span class="status-update-strat-summary">${escapeHtml(strat.summary)}</span>
                             </div>
                             <div class="status-update-controls">
                                 <label>
@@ -5135,7 +5201,7 @@
                                 class="status-update-comment-input"
                                 id="comment-input-${strat.key}"
                                 data-strat-key="${strat.key}"
-                                data-strat-summary="${strat.summary}"
+                                data-strat-summary="${escapeHtml(strat.summary)}"
                                 data-last-comment="${hasLastComment ? 'true' : 'false'}"
                                 data-used-last-comment="false"
                                 placeholder="Add status update for ${strat.key}..."
@@ -5274,7 +5340,7 @@
                 const reportHTML = reportLines.map(item => `
                     <div style="margin-bottom: 24px;">
                         <div style="margin-bottom: 8px;">
-                            <a href="${JIRA_CONFIG.baseUrl}/browse/${item.key}" target="_blank" style="font-weight: 600; color: #0052CC; text-decoration: none; font-size: 14px;">${item.key}: ${item.summary}</a>
+                            <a href="${JIRA_CONFIG.baseUrl}/browse/${item.key}" target="_blank" style="font-weight: 600; color: #0052CC; text-decoration: none; font-size: 14px;">${item.key}: ${escapeHtml(item.summary)}</a>
                         </div>
                         <div class="comment-body">${renderJiraText(item.comment)}</div>
                         <br>
@@ -5928,6 +5994,103 @@
             });
         }
 
+        function showStoryPointsInput(issueKey, spElement) {
+            const currentValue = spElement.textContent.replace(' pts', '').trim();
+            const displayValue = currentValue === '—' ? '' : currentValue;
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.inputMode = 'numeric';
+            input.className = 'story-points-input';
+            input.value = displayValue;
+            input.placeholder = '—';
+
+            const originalHTML = spElement.innerHTML;
+            const originalClass = spElement.className;
+            spElement.innerHTML = '';
+            spElement.appendChild(input);
+            input.focus();
+            input.select();
+
+            function save() {
+                const newValue = input.value.trim();
+                const spValue = newValue === '' ? null : parseFloat(newValue);
+                const fmt = formatStoryPoints(spValue);
+                const isSP = spElement.innerHTML.includes(' pts') || originalHTML.includes(' pts');
+                spElement.innerHTML = fmt.display + (isSP ? ' pts' : '');
+                spElement.className = originalClass.replace(/no-points/g, '').trim() + (fmt.cssClass ? ` ${fmt.cssClass}` : '');
+                updateStoryPoints(issueKey, spValue);
+            }
+
+            input.addEventListener('blur', save);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+                if (e.key === 'Escape') {
+                    spElement.innerHTML = originalHTML;
+                    spElement.className = originalClass;
+                }
+            });
+        }
+
+        async function updateStoryPoints(issueKey, spValue) {
+            try {
+                const config = loadConfig();
+                if (!config.pat) {
+                    showError('Please configure your Personal Access Token in Settings');
+                    return;
+                }
+
+                const response = await fetch('/api/update-story-points', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: config.email,
+                        issue_key: issueKey,
+                        story_points: spValue,
+                        pat: config.pat
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    updateIssueInData(issueKey, (issue) => {
+                        issue.story_points = spValue;
+                    });
+
+                    document.querySelectorAll('.tree-node').forEach(node => {
+                        const keySpan = node.querySelector('.issue-key');
+                        if (keySpan && keySpan.textContent === issueKey) {
+                            const spSpan = node.querySelector('.issue-story-points');
+                            if (spSpan) {
+                                const fmt = formatStoryPoints(spValue);
+                                spSpan.textContent = fmt.display;
+                                spSpan.className = `issue-story-points ${fmt.cssClass}`;
+                            }
+                        }
+                    });
+
+                    document.querySelectorAll('.standup-task').forEach(task => {
+                        const keyLink = task.querySelector('.standup-task-key a');
+                        if (keyLink && keyLink.textContent === issueKey) {
+                            const spSpan = task.querySelector('.issue-story-points');
+                            if (spSpan) {
+                                const fmt = formatStoryPoints(spValue);
+                                spSpan.textContent = fmt.display + ' pts';
+                                spSpan.className = `issue-story-points ${fmt.cssClass}`;
+                            }
+                        }
+                    });
+
+                    showSuccess(`Story points updated`);
+                } else {
+                    showError(`Error updating story points: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Error updating story points: ${error.message}`);
+            }
+        }
+
         // Assignee dropdown management
         let currentAssigneeDropdown = null;
 
@@ -6202,6 +6365,14 @@
                     if (prioritySpan) {
                         prioritySpan.textContent = taskData.priority;
                         prioritySpan.className = `issue-priority ${getPriorityClass(taskData.priority)}`;
+                    }
+
+                    // Update story points
+                    const spSpan = taskElement.querySelector('.issue-story-points');
+                    if (spSpan) {
+                        const fmt = formatStoryPoints(taskData.story_points);
+                        spSpan.textContent = fmt.display + ' pts';
+                        spSpan.className = `issue-story-points ${fmt.cssClass}`;
                     }
 
                     // Update the updated time
@@ -6592,6 +6763,12 @@
                         prioritySpan.textContent = epic.priority;
                         prioritySpan.className = `issue-priority ${getPriorityClass(epic.priority)}`;
                     }
+                    const spSpan = treeNode.querySelector('.issue-story-points');
+                    if (spSpan) {
+                        const fmt = formatStoryPoints(epic.story_points);
+                        spSpan.textContent = fmt.display;
+                        spSpan.className = `issue-story-points ${fmt.cssClass}`;
+                    }
                     if (assigneeSpan) assigneeSpan.textContent = epic.assignee || 'Unassigned';
                     if (updatedSpan) updatedSpan.textContent = formatDate(epic.updated);
                 }
@@ -6638,48 +6815,58 @@
         }
 
         function rerenderTask(task) {
-            const itemElement = document.getElementById(`item-${task.key}`);
-            if (!itemElement) return;
-
-            // Update the tree-node content in place
-            const treeNode = itemElement.querySelector('.tree-node');
-            if (treeNode) {
-                const summaryLink = treeNode.querySelector('.issue-summary-link');
-                const statusSpan = treeNode.querySelector('.issue-status');
-                const prioritySpan = treeNode.querySelector('.issue-priority');
-                const assigneeSpan = treeNode.querySelector('.issue-assignee');
-                const updatedSpan = treeNode.querySelector('.issue-updated');
-
-                if (summaryLink) summaryLink.textContent = task.summary;
-                if (statusSpan) {
-                    statusSpan.textContent = task.status;
-                    statusSpan.className = `issue-status ${getStatusClass(task.status)}`;
+            const itemElements = document.querySelectorAll(`[data-type="task"] .issue-key`);
+            const matchingItems = [];
+            itemElements.forEach(el => {
+                if (el.textContent === task.key) {
+                    matchingItems.push(el.closest('.tree-item'));
                 }
-                if (prioritySpan) {
-                    prioritySpan.textContent = task.priority;
-                    prioritySpan.className = `issue-priority ${getPriorityClass(task.priority)}`;
+            });
+            if (matchingItems.length === 0) return;
+
+            matchingItems.forEach(itemElement => {
+                const treeNode = itemElement.querySelector('.tree-node');
+                if (treeNode) {
+                    const summaryLink = treeNode.querySelector('.issue-summary-link');
+                    const statusSpan = treeNode.querySelector('.issue-status');
+                    const prioritySpan = treeNode.querySelector('.issue-priority');
+                    const assigneeSpan = treeNode.querySelector('.issue-assignee');
+                    const updatedSpan = treeNode.querySelector('.issue-updated');
+
+                    if (summaryLink) summaryLink.textContent = task.summary;
+                    if (statusSpan) {
+                        statusSpan.textContent = task.status;
+                        statusSpan.className = `issue-status ${getStatusClass(task.status)}`;
+                    }
+                    if (prioritySpan) {
+                        prioritySpan.textContent = task.priority;
+                        prioritySpan.className = `issue-priority ${getPriorityClass(task.priority)}`;
+                    }
+                    const spSpan = treeNode.querySelector('.issue-story-points');
+                    if (spSpan) {
+                        const fmt = formatStoryPoints(task.story_points);
+                        spSpan.textContent = fmt.display;
+                        spSpan.className = `issue-story-points ${fmt.cssClass}`;
+                    }
+                    if (assigneeSpan) assigneeSpan.textContent = task.assignee || 'Unassigned';
+                    if (updatedSpan) updatedSpan.textContent = formatDate(task.updated);
                 }
-                if (assigneeSpan) assigneeSpan.textContent = task.assignee || 'Unassigned';
-                if (updatedSpan) updatedSpan.textContent = formatDate(task.updated);
-            }
 
-            // Update the details section
-            const detailsElement = itemElement.querySelector('.issue-details');
-            if (detailsElement) {
-                detailsElement.outerHTML = generateDetailsHTML(task);
-            }
+                const detailsElement = itemElement.querySelector('.issue-details');
+                if (detailsElement) {
+                    detailsElement.outerHTML = generateDetailsHTML(task);
+                }
 
-            // Collapse and reset icon
-            const taskContainer = document.getElementById(`task-${task.key}`);
-            if (taskContainer) {
-                taskContainer.classList.remove('expanded');
-            }
-            const icon = itemElement.querySelector('.expand-icon');
-            if (icon) icon.textContent = '▶';
+                const childrenDiv = itemElement.querySelector(':scope > .children');
+                if (childrenDiv) {
+                    childrenDiv.classList.remove('expanded');
+                }
+                const icon = itemElement.querySelector('.expand-icon');
+                if (icon) icon.textContent = '▶';
 
-            // Hide details
-            const details = itemElement.querySelector('.issue-details');
-            if (details) details.style.display = 'none';
+                const details = itemElement.querySelector('.issue-details');
+                if (details) details.style.display = 'none';
+            });
         }
 
         // Modals can only be closed via Cancel/Close buttons (not by clicking outside)

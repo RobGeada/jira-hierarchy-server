@@ -84,6 +84,7 @@ def build_issue_data(issue, issue_type='rfe'):
         "created": fields.get('created', ''),
         "updated": fields.get('updated', ''),
         "pull_request": pr_url,
+        "story_points": fields.get('customfield_10028'),
     }
 
 
@@ -120,7 +121,7 @@ def fetch_outcomes(component, jira_email, jira_pat, show_closed=False, max_age_d
         outcomes_jql += ' AND status NOT IN (Closed, Resolved)'
     outcomes_jql += ' ORDER BY priority DESC, created DESC'
 
-    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,issuelinks'
+    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,issuelinks,customfield_10028'
     outcome_issues = run_jira_query(outcomes_jql, field_list, jira_email, jira_pat)
 
     results = []
@@ -168,7 +169,7 @@ def fetch_rfes(component, jira_email, jira_pat, show_closed=False, max_age_days=
         rfes_jql += ' AND status NOT IN (Closed, Resolved)'
     rfes_jql += ' ORDER BY priority DESC, created DESC'
 
-    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,parent,issuelinks'
+    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,parent,issuelinks,customfield_10028'
     rfe_issues = run_jira_query(rfes_jql, field_list, jira_email, jira_pat)
 
     results = []
@@ -201,7 +202,7 @@ def fetch_strats_for_rfe(rfe_key, jira_email, jira_pat):
         f'AND status NOT IN (Closed, Resolved)'
     )
 
-    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components'
+    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,customfield_10028'
     strat_issues = run_jira_query(strats_jql, field_list, jira_email, jira_pat)
 
     return [build_issue_data(strat, 'strat') for strat in strat_issues]
@@ -228,7 +229,7 @@ def fetch_epics_for_strat(strat_key, jira_email, jira_pat):
     )
 
     # Include parent field (standard field in JIRA Cloud)
-    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,parent'
+    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,parent,customfield_10028'
     epic_issues = run_jira_query(epics_jql, field_list, jira_email, jira_pat)
 
     # Track epic keys we've already found to avoid duplicates
@@ -294,7 +295,7 @@ def fetch_tasks_for_epic(epic_key, jira_email, jira_pat):
     )
 
     # Include customfield_10014 (Epic Link) in the field list
-    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components,customfield_10014'
+    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components,customfield_10014,customfield_10028'
 
     try:
         task_issues = run_jira_query(tasks_jql, field_list, jira_email, jira_pat)
@@ -360,7 +361,7 @@ def create_epic(summary, description, strat_key, component=None, assignee=None, 
     print(f"Created epic {epic_key} linked to STRAT {strat_key}", file=sys.stderr)
 
     # Fetch and return full issue data
-    issue_data = get_jira_issue(epic_key, 'summary,status,priority,assignee,reporter,description,labels,components,created,updated', jira_email, jira_pat)
+    issue_data = get_jira_issue(epic_key, 'summary,status,priority,assignee,reporter,description,labels,components,created,updated,customfield_10028', jira_email, jira_pat)
     epic_data = build_issue_data(issue_data, 'epic')
     epic_data['strat_key'] = strat_key
 
@@ -446,7 +447,7 @@ def create_task(summary, description, epic_key, issue_type, component=None, assi
     print(f"Created task {task_key} under epic {epic_key}", file=sys.stderr)
 
     # Fetch and return full issue data (including the PR field)
-    issue_data = get_jira_issue(task_key, 'summary,status,priority,assignee,reporter,description,labels,components,created,updated,issuetype,customfield_10875', jira_email, jira_pat)
+    issue_data = get_jira_issue(task_key, 'summary,status,priority,assignee,reporter,description,labels,components,created,updated,issuetype,customfield_10875,customfield_10028', jira_email, jira_pat)
     task_data = build_issue_data(issue_data, 'task')
     task_data['epic_key'] = epic_key
     task_data['issuetype'] = issue_data['fields'].get('issuetype', {}).get('name', 'Task')
