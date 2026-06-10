@@ -466,11 +466,11 @@
         }
 
         .add-item-tree-node.add-epic {
-            margin-left: 48px;  /* Match epic indentation */
+            margin-left: 72px;  /* Match epic indentation */
         }
 
         .add-item-tree-node.add-task {
-            margin-left: 72px;  /* Match task indentation */
+            margin-left: 96px;  /* Match task indentation */
         }
 
         .add-item-tree-node:hover {
@@ -3870,7 +3870,7 @@
             `;
             epicContainer.insertAdjacentHTML('beforeend', taskHtml);
 
-            addCreateButton(`epic-${parentKey}-${task.epic_key}`, 'task', task.epic_key);
+            addCreateButton(`epic-${outcomeKey}-${parentKey}-${task.epic_key}`, 'task', task.epic_key);
         }
 
         function renderHierarchy(data) {
