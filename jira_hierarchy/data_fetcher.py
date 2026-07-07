@@ -85,6 +85,8 @@ def build_issue_data(issue, issue_type='rfe'):
         "updated": fields.get('updated', ''),
         "pull_request": pr_url,
         "story_points": fields.get('customfield_10028'),
+        "fix_versions": [v.get('name', '') for v in fields.get('fixVersions', [])],
+        "target_versions": [v.get('name', '') for v in fields.get('customfield_10855', []) or []],
     }
 
 
@@ -169,7 +171,7 @@ def fetch_rfes(component, jira_email, jira_pat, show_closed=False, max_age_days=
         rfes_jql += ' AND status NOT IN (Closed, Resolved)'
     rfes_jql += ' ORDER BY priority DESC, created DESC'
 
-    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,parent,issuelinks,customfield_10028'
+    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,parent,issuelinks,customfield_10028,fixVersions,customfield_10855'
     rfe_issues = run_jira_query(rfes_jql, field_list, jira_email, jira_pat)
 
     results = []
@@ -202,7 +204,7 @@ def fetch_strats_for_rfe(rfe_key, jira_email, jira_pat):
         f'AND status NOT IN (Closed, Resolved)'
     )
 
-    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,customfield_10028'
+    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,customfield_10028,fixVersions'
     strat_issues = run_jira_query(strats_jql, field_list, jira_email, jira_pat)
 
     return [build_issue_data(strat, 'strat') for strat in strat_issues]
@@ -229,7 +231,7 @@ def fetch_epics_for_strat(strat_key, jira_email, jira_pat):
     )
 
     # Include parent field (standard field in JIRA Cloud)
-    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,parent,customfield_10028'
+    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,parent,customfield_10028,fixVersions'
     epic_issues = run_jira_query(epics_jql, field_list, jira_email, jira_pat)
 
     # Track epic keys we've already found to avoid duplicates
@@ -295,7 +297,7 @@ def fetch_tasks_for_epic(epic_key, jira_email, jira_pat):
     )
 
     # Include customfield_10014 (Epic Link) in the field list
-    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components,customfield_10014,customfield_10028'
+    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components,customfield_10014,customfield_10028,fixVersions'
 
     try:
         task_issues = run_jira_query(tasks_jql, field_list, jira_email, jira_pat)

@@ -178,7 +178,7 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
         initiatives_jql += ' AND status NOT IN (Closed, Resolved)'
     initiatives_jql += ' ORDER BY priority DESC, created DESC'
 
-    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,parent,issuelinks'
+    field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,parent,issuelinks,fixVersions'
     initiative_issues = run_jira_query(initiatives_jql, field_list, jira_email, jira_pat)
     print(f"Found {len(initiative_issues)} Initiatives", file=sys.stderr)
 
@@ -229,13 +229,14 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
         strats_jql += ' AND status NOT IN (Closed, Resolved)'
     strats_jql += ' ORDER BY priority DESC, created DESC'
 
-    strat_field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,issuelinks,parent'
+    strat_field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,issuelinks,parent,fixVersions'
     strat_issues = run_jira_query(strats_jql, strat_field_list, jira_email, jira_pat)
     print(f"Found {len(strat_issues)} STRATs", file=sys.stderr)
 
     strat_issues.sort(key=lambda x: x.get('fields', {}).get('updated', ''), reverse=True)
 
     strats_by_rfe = {}
+    strats_by_outcome = {}
     strat_keys_list = []
 
     for strat in strat_issues:
@@ -307,27 +308,25 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
                         total_rfes += 1
                         print(f"  Injected RFE {found_rfe} under Outcome {extra_outcome_key} (via STRAT {strat_key})", file=sys.stderr)
 
-        if found_rfe and strat_outcome_keys:
-            # Send one STRAT event per Outcome it should appear under
-            for o_key in strat_outcome_keys:
-                strat_copy = strat_data.copy()
-                strat_copy['epics'] = []
+        if not strat_outcome_keys:
+            strat_outcome_keys.add('__orphan__')
+            if not found_rfe:
+                print(f"  STRAT {strat_key} has no RFE link and no Outcome, treating as orphan", file=sys.stderr)
+            else:
+                print(f"  STRAT {strat_key} has RFE {found_rfe} but no Outcome, treating as orphan", file=sys.stderr)
+
+        for o_key in strat_outcome_keys:
+            strat_copy = strat_data.copy()
+            strat_copy['epics'] = []
+            strat_copy['outcome_key'] = o_key
+            if found_rfe:
                 strat_copy['rfe_key'] = found_rfe
-                strat_copy['outcome_key'] = o_key
-                send_sse_event(wfile, 'strat', strat_copy)
-                total_strats += 1
-        elif not found_rfe and strat_outcome_keys:
-            # Strat with no RFE but depended-on by Outcomes - show as orphan under those Outcomes
-            for o_key in strat_outcome_keys:
-                strat_copy = strat_data.copy()
-                strat_copy['epics'] = []
-                strat_copy['outcome_key'] = o_key
-                send_sse_event(wfile, 'strat', strat_copy)
-                total_strats += 1
-        elif not found_rfe:
-            print(f"  WARNING: STRAT {strat_key} has no RFE link, checking all links:", file=sys.stderr)
-            for link in links:
-                print(f"    Link type: {link.get('type', {}).get('name')}, inward: {link.get('inwardIssue', {}).get('key')}, outward: {link.get('outwardIssue', {}).get('key')}", file=sys.stderr)
+            else:
+                if o_key not in strats_by_outcome:
+                    strats_by_outcome[o_key] = []
+                strats_by_outcome[o_key].append(strat_data)
+            send_sse_event(wfile, 'strat', strat_copy)
+            total_strats += 1
 
     # =========================================================================
     # Step 5: Fetch Epics for all STRATs and Initiatives
@@ -447,6 +446,10 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
                             for o_key, rfe_list in rfes_by_outcome.items():
                                 if any(r['key'] == rfe_key for r in rfe_list):
                                     epic_outcome_keys.add(o_key)
+                        else:
+                            for o_key, strat_list in strats_by_outcome.items():
+                                if any(s['key'] == parent_key for s in strat_list):
+                                    epic_outcome_keys.add(o_key)
                         if not epic_outcome_keys:
                             epic_outcome_keys.add(None)
                         for o_key in epic_outcome_keys:
@@ -493,7 +496,7 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
         assignee_list = ', '.join([f'"{a}"' for a in assignees])
         tasks_jql += f' AND assignee IN ({assignee_list})'
 
-    task_field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components,customfield_10014,customfield_10875,customfield_10028'
+    task_field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components,customfield_10014,customfield_10875,customfield_10028,fixVersions'
 
     from .jira_client import iter_jira_query
     for task_batch, fetched_so_far in iter_jira_query(tasks_jql, task_field_list, jira_email, jira_pat):
@@ -527,6 +530,10 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
                             if rfe_key:
                                 for o_key, rfe_list in rfes_by_outcome.items():
                                     if any(r['key'] == rfe_key for r in rfe_list):
+                                        outcome_keys_for_task.add(o_key)
+                            else:
+                                for o_key, strat_list in strats_by_outcome.items():
+                                    if any(s['key'] == parent_key for s in strat_list):
                                         outcome_keys_for_task.add(o_key)
                             for o_key in (outcome_keys_for_task or {None}):
                                 task_contexts.append({

@@ -95,9 +95,8 @@
         }
 
         .tree-node {
-            padding: 12px;
+            padding: 6px;
             border-left: 3px solid transparent;
-            cursor: pointer;
             transition: all 0.2s;
             border-radius: 4px;
             display: flex;
@@ -118,7 +117,7 @@
         }
 
         .tree-node.outcome {
-            border-left-color: #BF2600;
+            border-left-color: #FF5630;
             background: #FFEBE6;
             font-weight: 700;
             font-size: 18px;
@@ -137,8 +136,7 @@
             border-left-color: #6554C0;
             background: #EAE6FF;
             font-weight: 700;
-            font-size: 16px;
-            margin-left: 24px;
+            font-size: 18px;
         }
 
         .tree-node.rfe.empty {
@@ -154,7 +152,7 @@
             border-left-color: #00B8D9;
             background: #E6FCFF;
             font-weight: 600;
-            margin-left: 24px;
+            font-size: 18px;
         }
 
         .tree-node.initiative.empty {
@@ -170,7 +168,7 @@
             border-left-color: #0052CC;
             background: #DEEBFF;
             font-weight: 600;
-            margin-left: 48px;
+            margin-left: 24px;
         }
 
         .tree-node.strat.empty {
@@ -185,23 +183,48 @@
         .tree-node.epic {
             border-left-color: #00875A;
             background: #E3FCEF;
-            margin-left: 72px;
+            margin-left: 48px;
         }
 
         .tree-node.task {
             border-left-color: #FF991F;
             background: #FFF0B3;
-            margin-left: 96px;
+            margin-left: 72px;
         }
 
         .tree-node.subtask {
             border-left-color: #FFAB00;
             background: #FFF7D6;
-            margin-left: 120px;
+            margin-left: 96px;
             font-size: 14px;
         }
 
-        .expand-icon {
+        /* Outcome top-level: shift everything right one level */
+        .tree-level-outcome .tree-node.rfe { margin-left: 24px; font-size: 16px; }
+        .tree-level-outcome .tree-node.initiative { margin-left: 24px; font-size: 16px; }
+        .tree-level-outcome .tree-node.strat { margin-left: 48px; }
+        .tree-level-outcome .tree-node.epic { margin-left: 72px; }
+        .tree-level-outcome .tree-node.task { margin-left: 96px; }
+        .tree-level-outcome .tree-node.subtask { margin-left: 120px; }
+        .tree-level-outcome .hierarchy-header-rfe { margin-left: 24px; }
+        .tree-level-outcome .hierarchy-header-initiative { margin-left: 24px; }
+        .tree-level-outcome .hierarchy-header-strat { margin-left: 48px; }
+        .tree-level-outcome .hierarchy-header-epic { margin-left: 72px; }
+        .tree-level-outcome .hierarchy-header-task { margin-left: 96px; }
+        .tree-level-outcome .add-item-tree-node.epic { margin-left: 48px; }
+        .tree-level-outcome .add-item-tree-node.task { margin-left: 72px; }
+
+        /* STRAT top-level: shift everything left one level */
+        .tree-level-strat .tree-node.strat { margin-left: 0; font-size: 18px; font-weight: 700; }
+        .tree-level-strat .tree-node.epic { margin-left: 24px; }
+        .tree-level-strat .tree-node.task { margin-left: 48px; }
+        .tree-level-strat .tree-node.subtask { margin-left: 72px; }
+        .tree-level-strat .hierarchy-header-epic { margin-left: 24px; }
+        .tree-level-strat .hierarchy-header-task { margin-left: 48px; }
+        .tree-level-strat .add-item-tree-node.epic { margin-left: 0; }
+        .tree-level-strat .add-item-tree-node.task { margin-left: 24px; }
+
+        .expand-icon, .details-icon {
             width: 20px;
             height: 20px;
             display: flex;
@@ -210,6 +233,27 @@
             font-weight: bold;
             color: #6B778C;
             user-select: none;
+            cursor: pointer;
+        }
+
+        .details-icon {
+            font-size: 14px;
+            border-radius: 3px;
+        }
+
+        .details-icon:hover {
+            color: #0052CC;
+            background: #DEEBFF;
+        }
+
+        .details-icon.expanded {
+            color: white;
+            background: #0052CC;
+            border-radius: 3px;
+        }
+
+        .expand-icon:hover {
+            color: #0052CC;
         }
 
         .tree-content {
@@ -238,7 +282,8 @@
             border-radius: 3px;
             font-weight: 600;
             white-space: nowrap;
-            width: 100px;
+            min-width: 120px;
+            width: 150px;
             flex-shrink: 0;
             text-align: center;
         }
@@ -261,6 +306,7 @@
             color: inherit;
             text-decoration: none;
             flex: 1;
+            max-width: 360px;
         }
 
         .issue-summary-link:hover {
@@ -329,7 +375,7 @@
         }
 
         .hierarchy-header {
-            padding: 8px 12px;
+            padding: 2px 0px;
             font-size: 11px;
             font-weight: 600;
             color: #6B778C;
@@ -340,10 +386,9 @@
             margin-bottom: 4px;
         }
 
-        .hierarchy-header-rfe, .hierarchy-header-initiative { margin-left: 24px; }
-        .hierarchy-header-strat { margin-left: 48px; }
-        .hierarchy-header-epic { margin-left: 72px; }
-        .hierarchy-header-task { margin-left: 96px; }
+        .hierarchy-header-strat { margin-left: 24px; }
+        .hierarchy-header-epic { margin-left: 48px; }
+        .hierarchy-header-task { margin-left: 72px; }
 
         .status-new { background: #DFE1E6; color: #172B4D; }
         .status-in-progress { background: #0052CC; color: white; }
@@ -466,11 +511,11 @@
         }
 
         .add-item-tree-node.add-epic {
-            margin-left: 72px;  /* Match epic indentation */
+            margin-left: 48px;
         }
 
         .add-item-tree-node.add-task {
-            margin-left: 96px;  /* Match task indentation */
+            margin-left: 72px;
         }
 
         .add-item-tree-node:hover {
@@ -656,6 +701,80 @@
             flex-shrink: 0;
         }
 
+        .version-multiselect {
+            position: relative;
+            min-width: 140px;
+        }
+
+        .version-multiselect-display {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            padding: 4px 8px;
+            border: 1px solid #DFE1E6;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            font-size: 13px;
+            min-height: 28px;
+        }
+
+        .version-multiselect-display:hover {
+            border-color: #0052CC;
+        }
+
+        .version-multiselect-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #172B4D;
+        }
+
+        .version-multiselect-arrow {
+            color: #6B778C;
+            flex-shrink: 0;
+        }
+
+        .version-multiselect-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            z-index: 200;
+            background: white;
+            border: 1px solid #DFE1E6;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            max-height: 280px;
+            overflow-y: auto;
+            min-width: 100%;
+            margin-top: 2px;
+        }
+
+        .version-multiselect-dropdown.open {
+            display: block;
+        }
+
+        .version-multiselect-option {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .version-multiselect-option:hover {
+            background: #F4F5F7;
+        }
+
+        .version-multiselect-option input[type="checkbox"] {
+            margin: 0;
+            cursor: pointer;
+        }
+
         .filter-label {
             font-size: 13px;
             color: #6B778C;
@@ -670,18 +789,18 @@
             z-index: 100;
             background: #F4F5F7;
             border-bottom: 2px solid #DFE1E6;
-            padding: 12px 24px 12px 72px;
+            padding: 2px 24px 4px 24px;
             margin: 0 0px 4px 0px;
             display: flex;
             align-items: center;
             gap: 8px;
             font-weight: 600;
-            font-size: 16px;
+            font-size: 13px;
             color: #172B4D;
         }
 
         .hierarchy-table-header .expand-icon-spacer {
-            width: 20px;
+            width: 57px;
             flex-shrink: 0;
         }
 
@@ -696,8 +815,9 @@
             cursor: pointer;
             user-select: none;
             transition: color 0.2s;
-            display: inline-flex;
+            display: flex;
             align-items: center;
+            justify-content: center;
             gap: 4px;
         }
 
@@ -719,8 +839,9 @@
             border-radius: 0;
             font-weight: 600;
             color: #172B4D;
-            font-size: 14px;
+            font-size: 13px;
             font-family: inherit;
+            text-align: center;
         }
 
         .header-cell {
@@ -1030,24 +1151,16 @@
         }
 
         /* Match the left margin of the tree-node to align properly */
-        .rfe + .issue-details {
-            margin-left: 24px;
-        }
-
-        .initiative + .issue-details {
-            margin-left: 24px;
-        }
-
         .strat + .issue-details {
-            margin-left: 48px;
+            margin-left: 24px;
         }
 
         .epic + .issue-details {
-            margin-left: 72px;
+            margin-left: 48px;
         }
 
         .task + .issue-details {
-            margin-left: 96px;
+            margin-left: 72px;
         }
 
         .detail-row {
@@ -1717,6 +1830,21 @@
             margin-bottom: 12px;
         }
 
+        .standup-rfe-group {
+            margin-bottom: 8px;
+        }
+
+        .standup-rfe-header {
+            font-size: 13px;
+            font-weight: 600;
+            color: #403294;
+            padding: 6px 12px;
+            background: #EAE6FF;
+            border-left: 3px solid #6554C0;
+            border-radius: 3px;
+            margin-bottom: 4px;
+        }
+
         .standup-hierarchy {
             display: flex;
             flex-direction: column;
@@ -1780,6 +1908,42 @@
             <button class="btn-secondary btn" onclick="collapseAll()">⬆️ Collapse All</button>
             <button class="btn-secondary btn" onclick="showConfigModal()">⚙️ Settings</button>
             <button class="btn-secondary btn" onclick="showStatusUpdateModal()">📝 Status Update</button>
+            <div class="filter-group" id="standupAgeFilter" style="display: none;">
+                <span class="filter-label">Updated within:</span>
+                <select id="standupAgeDays" onchange="renderStandupView()" class="filter-level">
+                    <option value="7">7 days</option>
+                    <option value="14" selected>14 days</option>
+                    <option value="30">30 days</option>
+                    <option value="60">60 days</option>
+                    <option value="90">90 days</option>
+                    <option value="">All</option>
+                </select>
+            </div>
+            <div class="filter-group" id="standupSortFilter" style="display: none;">
+                <span class="filter-label">Sort by:</span>
+                <select id="standupSortBy" onchange="renderStandupView()" class="filter-level">
+                    <option value="updated">Last Updated</option>
+                    <option value="status">Status</option>
+                </select>
+            </div>
+            <div class="filter-group" id="topLevelFilter">
+                <span class="filter-label">Top Level:</span>
+                <select id="hierarchyTopLevel" onchange="renderHierarchyView()" class="filter-level">
+                    <option value="outcome">Outcome</option>
+                    <option value="rfe" selected>RFE</option>
+                    <option value="strat">STRAT</option>
+                </select>
+            </div>
+            <div class="filter-group" id="versionFilter">
+                <span class="filter-label">Version:</span>
+                <div class="version-multiselect" id="versionMultiselect">
+                    <div class="version-multiselect-display" onclick="toggleVersionDropdown(event)">
+                        <span class="version-multiselect-text">All Versions</span>
+                        <span class="version-multiselect-arrow">▾</span>
+                    </div>
+                    <div class="version-multiselect-dropdown" id="versionDropdown"></div>
+                </div>
+            </div>
             <div class="filter-group">
                 <span class="filter-label">Filter:</span>
                 <select id="filterLevel" onchange="filterByAssignee()" class="filter-level">
@@ -2248,8 +2412,12 @@
             const viewBtn = document.getElementById('viewToggleBtn');
             const expandAllBtn = document.querySelector('button[onclick="expandAll()"]');
             const collapseAllBtn = document.querySelector('button[onclick="collapseAll()"]');
-            const filterGroup = document.querySelector('.filter-group');
+            const filterGroup = document.querySelector('.filter-group:not(#standupAgeFilter):not(#standupSortFilter):not(#topLevelFilter):not(#versionFilter)');
             const searchInput = document.getElementById('searchInput');
+            const standupAgeFilter = document.getElementById('standupAgeFilter');
+            const standupSortFilter = document.getElementById('standupSortFilter');
+            const topLevelFilter = document.getElementById('topLevelFilter');
+            const versionFilter = document.getElementById('versionFilter');
 
             if (currentView === 'standup') {
                 viewBtn.textContent = 'View: Standup';
@@ -2257,6 +2425,10 @@
                 if (collapseAllBtn) collapseAllBtn.style.display = 'none';
                 if (filterGroup) filterGroup.style.display = 'none';
                 if (searchInput) searchInput.style.display = 'none';
+                if (topLevelFilter) topLevelFilter.style.display = 'none';
+                if (versionFilter) versionFilter.style.display = 'none';
+                if (standupAgeFilter) standupAgeFilter.style.display = 'flex';
+                if (standupSortFilter) standupSortFilter.style.display = 'flex';
                 renderStandupView();
             } else {
                 viewBtn.textContent = 'View: Hierarchy';
@@ -2264,15 +2436,18 @@
                 if (collapseAllBtn) collapseAllBtn.style.display = '';
                 if (filterGroup) filterGroup.style.display = 'flex';
                 if (searchInput) searchInput.style.display = '';
+                if (topLevelFilter) topLevelFilter.style.display = 'flex';
+                if (versionFilter) versionFilter.style.display = 'flex';
+                if (standupAgeFilter) standupAgeFilter.style.display = 'none';
+                if (standupSortFilter) standupSortFilter.style.display = 'none';
                 renderHierarchyView();
             }
         }
 
         function renderStandupView() {
             const content = document.getElementById('content');
-
-            // Collect all tasks with their hierarchy context
-            const tasksByAssignee = new Map();
+            const config = loadConfig();
+            const maxAgeDays = config.maxAgeDays || 365;
 
             // Helper function to find epic, strat, and rfe for a task
             const findTaskContext = (task) => {
@@ -2280,9 +2455,7 @@
                 let strat = null;
                 let rfe = null;
 
-                // Search through outcomes -> rfes -> strats -> epics
                 for (const outcome of (hierarchyData.outcomes || [])) {
-                    // Check RFE path: Outcome -> RFE -> Strat -> Epic
                     for (const r of (outcome.rfes || [])) {
                         if (r.key === task.rfe_key) {
                             rfe = r;
@@ -2295,7 +2468,15 @@
                     }
                     if (epic) break;
 
-                    // Check Initiative path: Outcome -> Initiative -> Epic
+                    if (task.strat_key) {
+                        const s = (outcome.strats || []).find(s => s.key === task.strat_key);
+                        if (s) {
+                            strat = s;
+                            epic = s.epics?.find(e => e.key === task.epic_key);
+                            if (epic) break;
+                        }
+                    }
+
                     for (const init of (outcome.initiatives || [])) {
                         if (init.key === task.initiative_key) {
                             epic = init.epics?.find(e => e.key === task.epic_key);
@@ -2308,8 +2489,18 @@
                 return { epic, strat, rfe };
             };
 
-            // Process all tasks from the flat allTasks array
-            hierarchyData.allTasks?.forEach(task => {
+            // Filter tasks by standup age
+            const standupAgeDaysEl = document.getElementById('standupAgeDays');
+            const standupAgeDays = standupAgeDaysEl ? standupAgeDaysEl.value : '';
+            const standupCutoff = standupAgeDays ? Date.now() - (parseInt(standupAgeDays) * 24 * 60 * 60 * 1000) : 0;
+
+            // Group tasks by assignee, then sub-group by STRAT
+            const tasksByAssignee = new Map();
+
+            hierarchyData.allTasks?.filter(task => {
+                if (!standupCutoff) return true;
+                return task.updated && new Date(task.updated).getTime() >= standupCutoff;
+            }).forEach(task => {
                 const assignee = task.assignee_username || 'unassigned';
                 const displayName = task.assignee || 'Unassigned';
 
@@ -2320,7 +2511,6 @@
                     });
                 }
 
-                // Find the task's context in the hierarchy
                 const { epic, strat, rfe } = findTaskContext(task);
 
                 tasksByAssignee.get(assignee).tasks.push({
@@ -2331,7 +2521,6 @@
                 });
             });
 
-            // Build HTML
             if (tasksByAssignee.size === 0) {
                 content.innerHTML = `
                     <div class="standup-view">
@@ -2344,12 +2533,10 @@
                 return;
             }
 
-            // Sort assignees by display name and filter by selected assignees
             const sortedAssignees = Array.from(tasksByAssignee.entries())
                 .filter(([username]) => isAssigneeVisible(username))
                 .sort((a, b) => a[1].displayName.localeCompare(b[1].displayName));
 
-            // Check if we have any visible assignees
             if (sortedAssignees.length === 0) {
                 content.innerHTML = `
                     <div class="standup-view">
@@ -2365,93 +2552,120 @@
             let html = '<div class="standup-view">';
 
             sortedAssignees.forEach(([assigneeUsername, data]) => {
-                // Sort tasks by last update time (most recent first)
-                const sortedTasks = data.tasks.sort((a, b) => {
-                    const dateA = new Date(a.updated || 0);
-                    const dateB = new Date(b.updated || 0);
-                    return dateB - dateA; // Descending order (newest first)
+                // Sub-group tasks by STRAT
+                const tasksByStrat = new Map();
+                data.tasks.forEach(task => {
+                    const stratKey = task.strat ? task.strat.key : '__unlinked__';
+                    const stratSummary = task.strat ? task.strat.summary : 'Unlinked Tasks';
+                    if (!tasksByStrat.has(stratKey)) {
+                        tasksByStrat.set(stratKey, { stratSummary, tasks: [] });
+                    }
+                    tasksByStrat.get(stratKey).tasks.push(task);
                 });
+
+                const sortedStratGroups = Array.from(tasksByStrat.entries())
+                    .sort((a, b) => {
+                        if (a[0] === '__unlinked__') return 1;
+                        if (b[0] === '__unlinked__') return -1;
+                        return a[0].localeCompare(b[0]);
+                    });
 
                 html += `
                     <div class="assignee-group">
                         <div class="assignee-header" onclick="toggleAssigneeSection('${assigneeUsername}')">
                             <div class="assignee-header-text">
-                                ${data.displayName} (${data.tasks.length} ${data.tasks.length === 1 ? 'task' : 'tasks'})
+                                ${data.displayName} (${data.tasks.length} ${data.tasks.length === 1 ? 'task' : 'tasks'} in last ${standupAgeDays || maxAgeDays} ${(standupAgeDays || maxAgeDays) == 1 ? 'day' : 'days'})
                             </div>
                             <span class="assignee-collapse-icon" id="icon-${assigneeUsername}">▼</span>
                         </div>
                         <div class="assignee-task-list" id="tasks-${assigneeUsername}">
                 `;
 
-                sortedTasks.forEach(task => {
+                sortedStratGroups.forEach(([stratKey, stratData]) => {
+                    const isUnlinked = stratKey === '__unlinked__';
+                    const stratLabel = isUnlinked
+                        ? '<span style="color: #6B778C; font-style: italic;">Unlinked Tasks</span>'
+                        : `<a href="${JIRA_CONFIG.baseUrl}/browse/${stratKey}" target="_blank" style="color: #6554C0; text-decoration: none;">${stratKey}</a> — ${escapeHtml(stratData.stratSummary)}`;
+
                     html += `
-                        <div class="standup-task">
-                            <div class="standup-task-header" onclick="toggleStandupDetails('standup-details-${task.key}', this)">
-                                <span class="expand-icon">▶</span>
-                                <div style="flex: 1; min-width: 0;">
-                                    <div class="standup-task-key">
-                                        <a href="${JIRA_CONFIG.baseUrl}/browse/${task.key}" target="_blank" style="color: #0052CC; text-decoration: none;" onclick="event.stopPropagation()">${task.key}</a>
-                                        <button class="btn-reload" onclick="event.stopPropagation(); reloadTaskInStandup('${task.key}')" title="Reload from JIRA">↻</button>
-                                    </div>
-                                    <div class="standup-task-summary">${escapeHtml(task.summary)}</div>
-                                    <div class="standup-task-meta">
-                                        <span class="issue-type" style="background: #DFE1E6; color: #42526E; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; text-transform: uppercase;">${task.issuetype || 'Task'}</span>
-                                        <span class="issue-status ${getStatusClass(task.status)}" onclick="event.stopPropagation(); showStatusDropdown('${task.key}', this)">${task.status}</span>
-                                        <span class="issue-priority ${getPriorityClass(task.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${task.key}', this)">${task.priority}</span>
-                                        <span class="issue-story-points ${formatStoryPoints(task.story_points).cssClass}" onclick="event.stopPropagation(); showStoryPointsInput('${task.key}', this)" style="font-size: 11px; padding: 2px 8px; border-radius: 3px;">${formatStoryPoints(task.story_points).display} pts</span>
-                                        <span class="issue-updated" style="background: #F4F5F7; color: #42526E; padding: 2px 8px; border-radius: 3px; font-size: 11px;" title="Updated ${formatDate(task.updated)}">Updated ${formatRelativeTime(task.updated)}</span>
-                                    </div>
-                                    <div class="standup-hierarchy">
+                        <div class="standup-rfe-group">
+                            <div class="standup-rfe-header">${stratLabel} (${stratData.tasks.length})</div>
                     `;
 
-                    if (task.epic) {
-                        html += `
-                                <div class="standup-hierarchy-item">
-                                    <span class="standup-hierarchy-label">Epic:</span>
-                                    <span class="standup-hierarchy-value">
-                                        <a href="${JIRA_CONFIG.baseUrl}/browse/${task.epic.key}" target="_blank" style="color: #172B4D; text-decoration: none;">${task.epic.key}</a> - ${escapeHtml(task.epic.summary)}
-                                    </span>
-                                </div>
-                        `;
-                    }
+                    const standupSortBy = document.getElementById('standupSortBy')?.value || 'updated';
+                    const statusOrder = {'In Progress': 0, 'New': 1, 'To Do': 2, 'Refinement': 3, 'Approved': 4, 'Review': 5, 'Closed': 6, 'Resolved': 7};
+                    const sortedTasks = stratData.tasks.sort((a, b) => {
+                        if (standupSortBy === 'status') {
+                            const aOrder = statusOrder[a.status] ?? 50;
+                            const bOrder = statusOrder[b.status] ?? 50;
+                            if (aOrder !== bOrder) return aOrder - bOrder;
+                        }
+                        const dateA = new Date(a.updated || 0);
+                        const dateB = new Date(b.updated || 0);
+                        return dateB - dateA;
+                    });
 
-                    if (task.strat) {
+                    sortedTasks.forEach(task => {
                         html += `
-                                <div class="standup-hierarchy-item">
-                                    <span class="standup-hierarchy-label">STRAT:</span>
-                                    <span class="standup-hierarchy-value">
-                                        <a href="${JIRA_CONFIG.baseUrl}/browse/${task.strat.key}" target="_blank" style="color: #172B4D; text-decoration: none;">${task.strat.key}</a> - ${escapeHtml(task.strat.summary)}
-                                    </span>
-                                </div>
+                            <div class="standup-task">
+                                <div class="standup-task-header" onclick="toggleStandupDetails('standup-details-${task.key}', this)">
+                                    <span class="expand-icon">▶</span>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div class="standup-task-key">
+                                            <a href="${JIRA_CONFIG.baseUrl}/browse/${task.key}" target="_blank" style="color: #0052CC; text-decoration: none;" onclick="event.stopPropagation()">${task.key}</a>
+                                            <button class="btn-reload" onclick="event.stopPropagation(); reloadTaskInStandup('${task.key}')" title="Reload from JIRA">↻</button>
+                                        </div>
+                                        <div class="standup-task-summary">${escapeHtml(task.summary)}</div>
+                                        <div class="standup-task-meta">
+                                            <span class="issue-type" style="background: #DFE1E6; color: #42526E; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; text-transform: uppercase;">${task.issuetype || 'Task'}</span>
+                                            <span class="issue-status ${getStatusClass(task.status)}" onclick="event.stopPropagation(); showStatusDropdown('${task.key}', this)">${task.status}</span>
+                                            <span class="issue-priority ${getPriorityClass(task.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${task.key}', this)">${task.priority}</span>
+                                            <span class="issue-story-points ${formatStoryPoints(task.story_points).cssClass}" onclick="event.stopPropagation(); showStoryPointsInput('${task.key}', this)" style="font-size: 11px; padding: 2px 8px; border-radius: 3px;">${formatStoryPoints(task.story_points).display} pts</span>
+                                            <span class="issue-updated" style="background: #F4F5F7; color: #42526E; padding: 2px 8px; border-radius: 3px; font-size: 11px;" title="Updated ${formatDate(task.updated)}">Updated ${formatRelativeTime(task.updated)}</span>
+                                        </div>
+                                        <div class="standup-hierarchy">
                         `;
-                    }
 
-                    if (task.rfe) {
+                        if (task.epic) {
+                            html += `
+                                    <div class="standup-hierarchy-item">
+                                        <span class="standup-hierarchy-label">Epic:</span>
+                                        <span class="standup-hierarchy-value">
+                                            <a href="${JIRA_CONFIG.baseUrl}/browse/${task.epic.key}" target="_blank" style="color: #172B4D; text-decoration: none;">${task.epic.key}</a> - ${escapeHtml(task.epic.summary)}
+                                        </span>
+                                    </div>
+                            `;
+                        }
+
+                        if (task.strat) {
+                            html += `
+                                    <div class="standup-hierarchy-item">
+                                        <span class="standup-hierarchy-label">STRAT:</span>
+                                        <span class="standup-hierarchy-value">
+                                            <a href="${JIRA_CONFIG.baseUrl}/browse/${task.strat.key}" target="_blank" style="color: #172B4D; text-decoration: none;">${task.strat.key}</a> - ${escapeHtml(task.strat.summary)}
+                                        </span>
+                                    </div>
+                            `;
+                        }
+
+                        if (!task.epic && !task.strat) {
+                            html += `
+                                    <div class="standup-hierarchy-item">
+                                        <span class="standup-hierarchy-value" style="color: #6B778C; font-style: italic;">No hierarchy information</span>
+                                    </div>
+                            `;
+                        }
+
                         html += `
-                                <div class="standup-hierarchy-item">
-                                    <span class="standup-hierarchy-label">RFE:</span>
-                                    <span class="standup-hierarchy-value">
-                                        <a href="${JIRA_CONFIG.baseUrl}/browse/${task.rfe.key}" target="_blank" style="color: #172B4D; text-decoration: none;">${task.rfe.key}</a> - ${escapeHtml(task.rfe.summary)}
-                                    </span>
-                                </div>
-                        `;
-                    }
-
-                    if (!task.epic && !task.strat && !task.rfe) {
-                        html += `
-                                <div class="standup-hierarchy-item">
-                                    <span class="standup-hierarchy-value" style="color: #6B778C; font-style: italic;">No hierarchy information</span>
-                                </div>
-                        `;
-                    }
-
-                    html += `
+                                        </div>
                                     </div>
                                 </div>
+                                ${generateStandupDetailsHTML(task)}
                             </div>
-                            ${generateStandupDetailsHTML(task)}
-                        </div>
-                    `;
+                        `;
+                    });
+
+                    html += `</div>`;
                 });
 
                 html += `
@@ -2497,8 +2711,13 @@
             }
         }
 
+        function getHierarchyTopLevel() {
+            const el = document.getElementById('hierarchyTopLevel');
+            return el ? el.value : 'rfe';
+        }
+
         function renderHierarchyView() {
-            // Clear content and rebuild tree from hierarchyData
+            const topLevel = getHierarchyTopLevel();
             const content = document.getElementById('content');
             content.innerHTML = `
                 <div class="hierarchy-table-header">
@@ -2515,39 +2734,103 @@
                         <span style="width: 32px; flex-shrink: 0;"></span>
                     </div>
                 </div>
-                <div class="tree" id="tree"></div>
+                <div class="tree tree-level-${topLevel}" id="tree"></div>
             `;
             const tree = document.getElementById('tree');
 
-            // Render Outcome-first view
-            hierarchyData.outcomes?.forEach(outcome => {
-                addOutcomeToTree(tree, outcome);
-
-                // RFE path: Outcome -> RFE -> Strat -> Epic -> Task
-                outcome.rfes?.forEach(rfe => {
-                    addRfeToTree(rfe);
-                    rfe.strats?.forEach(strat => {
-                        addStratToTree(strat);
-                        strat.epics?.forEach(epic => {
-                            addEpicToTree(epic);
-                            epic.tasks?.forEach(task => {
-                                addTaskToTree(task);
-                            });
-                        });
-                    });
+            const renderEpicsAndTasks = (parent) => {
+                parent.epics?.forEach(epic => {
+                    addEpicToTree(epic);
+                    epic.tasks?.forEach(task => addTaskToTree(task));
                 });
+            };
 
-                // Initiative path: Outcome -> Initiative -> Epic -> Task
-                outcome.initiatives?.forEach(initiative => {
-                    addInitiativeToTree(initiative);
-                    initiative.epics?.forEach(epic => {
-                        addEpicToTree(epic);
-                        epic.tasks?.forEach(task => {
-                            addTaskToTree(task);
-                        });
-                    });
+            const renderStratsDown = (rfe) => {
+                rfe.strats?.forEach(strat => {
+                    addStratToTree(strat);
+                    renderEpicsAndTasks(strat);
                 });
-            });
+            };
+
+            if (topLevel === 'outcome') {
+                const outcomes = [...(hierarchyData.outcomes || [])].filter(o => o.key !== '__orphan__');
+                if (currentSortField) outcomes.sort((a, b) => compareItems(a, b, currentSortField, currentSortOrder));
+                outcomes.forEach(outcome => {
+                    addOutcomeToTree(tree, outcome);
+                    outcome.rfes?.forEach(rfe => {
+                        addRfeToTreeNested(rfe, outcome);
+                        renderStratsDown(rfe);
+                        const rfeNode = document.getElementById(`node-${rfe.outcome_key}-${rfe.key}`);
+                        if (rfeNode && rfeNode.classList.contains('empty')) {
+                            const rfeChildren = document.getElementById(`rfe-${rfe.outcome_key}-${rfe.key}`);
+                            if (rfeChildren && !rfeChildren.querySelector('.hierarchy-header-empty')) {
+                                rfeChildren.insertAdjacentHTML('beforeend',
+                                    `<div class="hierarchy-header hierarchy-header-empty hierarchy-header-strat" style="color: #97A0AF; font-style: italic; font-weight: 400;">No STRATs attached to this ticket</div>`);
+                            }
+                        }
+                    });
+                    outcome.initiatives?.forEach(initiative => {
+                        addInitiativeToTreeNested(initiative, outcome);
+                        renderEpicsAndTasks(initiative);
+                    });
+                    outcome.strats?.forEach(strat => {
+                        addStratToTreeUnderOutcome(strat, outcome);
+                        renderEpicsAndTasks(strat);
+                    });
+                    const outcomeNode = document.getElementById(`node-outcome-${outcome.key}`);
+                    if (outcomeNode && outcomeNode.classList.contains('empty')) {
+                        const outcomeChildren = document.getElementById(`outcome-${outcome.key}`);
+                        if (outcomeChildren && !outcomeChildren.querySelector('.hierarchy-header-empty')) {
+                            outcomeChildren.insertAdjacentHTML('beforeend',
+                                `<div class="hierarchy-header hierarchy-header-empty hierarchy-header-rfe" style="color: #97A0AF; font-style: italic; font-weight: 400;">No children attached to this ticket</div>`);
+                        }
+                    }
+                });
+            } else if (topLevel === 'rfe') {
+                const allRfes = [];
+                const allInitiatives = [];
+                hierarchyData.outcomes?.forEach(outcome => {
+                    outcome.rfes?.forEach(rfe => allRfes.push({rfe, outcome}));
+                    outcome.initiatives?.forEach(initiative => allInitiatives.push({initiative, outcome}));
+                });
+                if (currentSortField) {
+                    allRfes.sort((a, b) => compareItems(a.rfe, b.rfe, currentSortField, currentSortOrder));
+                    allInitiatives.sort((a, b) => compareItems(a.initiative, b.initiative, currentSortField, currentSortOrder));
+                }
+                allRfes.forEach(({rfe, outcome}) => {
+                    addRfeToTree(tree, rfe, outcome);
+                    renderStratsDown(rfe);
+                    const rfeNode = document.getElementById(`node-${rfe.outcome_key}-${rfe.key}`);
+                    if (rfeNode && rfeNode.classList.contains('empty')) {
+                        const rfeChildren = document.getElementById(`rfe-${rfe.outcome_key}-${rfe.key}`);
+                        if (rfeChildren && !rfeChildren.querySelector('.hierarchy-header-empty')) {
+                            rfeChildren.insertAdjacentHTML('beforeend',
+                                `<div class="hierarchy-header hierarchy-header-empty hierarchy-header-strat" style="color: #97A0AF; font-style: italic; font-weight: 400;">No STRATs attached to this ticket</div>`);
+                        }
+                    }
+                });
+                allInitiatives.forEach(({initiative, outcome}) => {
+                    addInitiativeToTree(tree, initiative, outcome);
+                    renderEpicsAndTasks(initiative);
+                });
+            } else if (topLevel === 'strat') {
+                const allStrats = [];
+                hierarchyData.outcomes?.forEach(outcome => {
+                    outcome.rfes?.forEach(rfe => {
+                        rfe.strats?.forEach(strat => allStrats.push({strat, rfe, outcome}));
+                    });
+                    outcome.strats?.forEach(strat => allStrats.push({strat, rfe: null, outcome}));
+                });
+                if (currentSortField) allStrats.sort((a, b) => compareItems(a.strat, b.strat, currentSortField, currentSortOrder));
+                allStrats.forEach(({strat, rfe, outcome}) => {
+                    addStratToTreeTopLevel(tree, strat, rfe, outcome);
+                    renderEpicsAndTasks(strat);
+                });
+            }
+
+            selectedVersions.clear();
+            populateVersionFilter();
+            applyAllFilters();
         }
 
         function switchSettingsTab(tabName) {
@@ -2677,6 +2960,7 @@
 
             // Re-populate assignee filter to reflect changes
             populateAssigneeFilter();
+            populateVersionFilter();
         }
 
         function getSelectedAssignees() {
@@ -3197,7 +3481,7 @@
                                 <span style="width: 32px; flex-shrink: 0;"></span>
                             </div>
                         </div>
-                        <div class="tree" id="tree"></div>
+                        <div class="tree tree-level-${getHierarchyTopLevel()}" id="tree"></div>
                     `;
                 } else {
                     // Clear existing tree for refresh
@@ -3246,25 +3530,45 @@
 
             eventSource.addEventListener('progress', function(e) {
                 const progress = JSON.parse(e.data);
-                // Mark when we start loading tasks and display the progress message
                 if (progress.message.includes('Loading Tasks')) {
                     isLoadingTasks = true;
-                    loadingIndicator.textContent = `⏳ ${progress.message}`;
                 } else {
                     isLoadingTasks = false;
-                    loadingIndicator.textContent = `⏳ ${progress.message}`;
                 }
+                if (progress.message.includes('Loading Epics') && getHierarchyTopLevel() === 'outcome') {
+                    document.querySelectorAll('.tree-node.empty.outcome').forEach(node => {
+                        const treeItem = node.closest('.tree-item');
+                        const children = treeItem ? treeItem.querySelector(':scope > .children') : null;
+                        if (children && !children.querySelector('.hierarchy-header-empty')) {
+                            children.insertAdjacentHTML('beforeend',
+                                `<div class="hierarchy-header hierarchy-header-empty hierarchy-header-rfe" style="color: #97A0AF; font-style: italic; font-weight: 400;">No children attached to this ticket</div>`);
+                        }
+                    });
+                }
+                if (progress.message.includes('Loading Epics') && getHierarchyTopLevel() !== 'strat') {
+                    document.querySelectorAll('.tree-node.empty.rfe, .tree-node.empty.initiative').forEach(node => {
+                        const treeItem = node.closest('.tree-item');
+                        const children = treeItem ? treeItem.querySelector(':scope > .children') : null;
+                        if (children && !children.querySelector('.hierarchy-header-empty')) {
+                            children.insertAdjacentHTML('beforeend',
+                                `<div class="hierarchy-header hierarchy-header-empty hierarchy-header-strat" style="color: #97A0AF; font-style: italic; font-weight: 400;">No STRATs attached to this ticket</div>`);
+                        }
+                    });
+                }
+                loadingIndicator.textContent = `⏳ ${progress.message}`;
             });
 
             eventSource.addEventListener('outcome', function(e) {
                 const outcome = JSON.parse(e.data);
                 hierarchyData.outcomes.push(outcome);
                 hierarchyData.metadata.total_outcomes++;
-
                 if (tree) {
-                    addOutcomeToTree(tree, outcome);
+                    if (getHierarchyTopLevel() === 'outcome') {
+                        addOutcomeToTree(tree, outcome);
+                    }
                     updateStats(hierarchyData);
                 }
+                populateVersionFilter();
             });
 
             eventSource.addEventListener('rfe', function(e) {
@@ -3273,17 +3577,23 @@
 
                 let outcome = hierarchyData.outcomes.find(o => o.key === rfe.outcome_key);
                 if (!outcome && rfe.outcome_key === '__orphan__') {
-                    outcome = ensureOrphanOutcome(tree);
+                    outcome = ensureOrphanOutcome();
                 }
                 if (outcome) {
                     if (!outcome.rfes) outcome.rfes = [];
                     outcome.rfes.push(rfe);
 
                     if (tree) {
-                        addRfeToTree(rfe);
+                        const topLevel = getHierarchyTopLevel();
+                        if (topLevel === 'outcome' && outcome.key !== '__orphan__') {
+                            addRfeToTreeNested(rfe, outcome);
+                        } else if (topLevel === 'rfe') {
+                            addRfeToTree(tree, rfe, outcome);
+                        }
                         updateStats(hierarchyData);
                     }
                 }
+                populateVersionFilter();
             });
 
             eventSource.addEventListener('initiative', function(e) {
@@ -3292,55 +3602,81 @@
 
                 let outcome = hierarchyData.outcomes.find(o => o.key === initiative.outcome_key);
                 if (!outcome && initiative.outcome_key === '__orphan__') {
-                    outcome = ensureOrphanOutcome(tree);
+                    outcome = ensureOrphanOutcome();
                 }
                 if (outcome) {
                     if (!outcome.initiatives) outcome.initiatives = [];
                     outcome.initiatives.push(initiative);
 
                     if (tree) {
-                        addInitiativeToTree(initiative);
+                        if (getHierarchyTopLevel() === 'outcome' && outcome.key !== '__orphan__') {
+                            addInitiativeToTreeNested(initiative, outcome);
+                        } else {
+                            addInitiativeToTree(tree, initiative, outcome);
+                        }
                         updateStats(hierarchyData);
                     }
                 }
+                populateVersionFilter();
             });
 
             eventSource.addEventListener('strat', function(e) {
                 const strat = JSON.parse(e.data);
                 hierarchyData.metadata.total_strats++;
 
-                // Find parent RFE within the specific Outcome (many-to-many)
+                const renderStrat = (rfe, outcome) => {
+                    if (tree) {
+                        const topLevel = getHierarchyTopLevel();
+                        if (topLevel === 'strat') {
+                            addStratToTreeTopLevel(tree, strat, rfe, outcome);
+                        } else {
+                            addStratToTree(strat);
+                        }
+                        updateStats(hierarchyData);
+                    }
+                };
+
                 let found = false;
-                const targetOutcome = hierarchyData.outcomes.find(o => o.key === strat.outcome_key);
+                let targetOutcome = hierarchyData.outcomes.find(o => o.key === strat.outcome_key);
+                if (!targetOutcome && strat.outcome_key === '__orphan__') {
+                    targetOutcome = ensureOrphanOutcome();
+                }
                 if (targetOutcome) {
                     const rfe = (targetOutcome.rfes || []).find(r => r.key === strat.rfe_key);
                     if (rfe) {
                         if (!rfe.strats) rfe.strats = [];
                         rfe.strats.push(strat);
                         found = true;
-
-                        if (tree) {
-                            addStratToTree(strat);
-                            updateStats(hierarchyData);
-                        }
+                        renderStrat(rfe, targetOutcome);
                     }
                 }
                 if (!found) {
-                    // Fallback: search all outcomes
                     for (const outcome of hierarchyData.outcomes) {
                         const rfe = (outcome.rfes || []).find(r => r.key === strat.rfe_key);
                         if (rfe) {
                             if (!rfe.strats) rfe.strats = [];
                             strat.outcome_key = outcome.key;
                             rfe.strats.push(strat);
-                            if (tree) {
-                                addStratToTree(strat);
-                                updateStats(hierarchyData);
-                            }
+                            renderStrat(rfe, outcome);
+                            found = true;
                             break;
                         }
                     }
                 }
+                if (!found && targetOutcome) {
+                    if (!targetOutcome.strats) targetOutcome.strats = [];
+                    targetOutcome.strats.push(strat);
+                    if (tree) {
+                        const topLevel = getHierarchyTopLevel();
+                        if (topLevel === 'outcome' && targetOutcome.key !== '__orphan__') {
+                            addStratToTreeUnderOutcome(strat, targetOutcome);
+                        } else if (topLevel === 'strat') {
+                            addStratToTreeTopLevel(tree, strat, null, targetOutcome);
+                        }
+                        updateStats(hierarchyData);
+                    }
+                }
+                populateVersionFilter();
             });
 
             eventSource.addEventListener('epic', function(e) {
@@ -3369,6 +3705,20 @@
                                     updateStats(hierarchyData);
                                 }
                                 break;
+                            }
+                        }
+                        if (!found) {
+                            const strat = (outcome.strats || []).find(s => s.key === epic.strat_key);
+                            if (strat) {
+                                if (!strat.epics) strat.epics = [];
+                                strat.epics.push(epic);
+                                if (!epic.outcome_key) epic.outcome_key = outcome.key;
+                                found = true;
+
+                                if (tree) {
+                                    addEpicToTree(epic);
+                                    updateStats(hierarchyData);
+                                }
                             }
                         }
                         if (found) break;
@@ -3428,6 +3778,23 @@
                                     }
                                 }
                             }
+                            if (!found) {
+                                const strat = (outcome.strats || []).find(s => s.key === task.strat_key);
+                                if (strat && strat.epics) {
+                                    const epic = strat.epics.find(ep => ep.key === task.epic_key);
+                                    if (epic) {
+                                        if (!epic.tasks) epic.tasks = [];
+                                        epic.tasks.push(task);
+                                        if (!task.outcome_key) task.outcome_key = outcome.key;
+                                        found = true;
+
+                                        if (tree) {
+                                            addTaskToTree(task);
+                                            updateStats(hierarchyData);
+                                        }
+                                    }
+                                }
+                            }
                             if (found) break;
                         }
 
@@ -3461,6 +3828,7 @@
 
                 updateStats(hierarchyData);
                 populateAssigneeFilter();
+            populateVersionFilter();
                 fetchSprintsInBackground();
 
                 // Refresh the current view if in standup mode
@@ -3547,7 +3915,7 @@
             }
         }
 
-        function ensureOrphanOutcome(tree) {
+        function ensureOrphanOutcome() {
             let orphan = hierarchyData.outcomes.find(o => o.key === '__orphan__');
             if (!orphan) {
                 orphan = {
@@ -3567,45 +3935,27 @@
                     initiatives: []
                 };
                 hierarchyData.outcomes.push(orphan);
-                if (tree) {
-                    addOutcomeToTree(tree, orphan);
-                }
             }
             return orphan;
         }
 
         function addOutcomeToTree(tree, outcome) {
             trackAssignee(outcome.assignee, outcome.assignee_username);
+
             const outcomeId = `outcome-${outcome.key}`;
-            const isOrphan = outcome.key === '__orphan__';
-            const versionInfo = extractVersionLabel(outcome.labels);
-            const versionClass = versionInfo.display === 'No version label' ? 'issue-version no-version' : 'issue-version';
-            const outcomeHtml = isOrphan ? `
-                <div class="tree-item" id="item-${outcome.key}" data-assignee="" data-type="outcome" data-version="">
-                    <div class="tree-node outcome" id="node-${outcome.key}" onclick="toggleNode('${outcomeId}')">
-                        <span class="expand-icon">▶</span>
-                        <div class="tree-content">
-                            <span class="issue-key">—</span>
-                            <span class="issue-summary-link" style="font-style: italic;">Unlinked Items (no parent Outcome)</span>
-                            <span class="issue-version no-version"></span>
-                            <span class="issue-status"></span>
-                            <span class="issue-priority"></span>
-                            <span class="issue-story-points no-points"></span>
-                            <span class="issue-assignee"></span>
-                            <span class="issue-updated"></span>
-                            <span style="width: 32px; flex-shrink: 0;"></span>
-                        </div>
-                    </div>
-                    <div class="children" id="${outcomeId}"></div>
-                </div>
-            ` : `
-                <div class="tree-item" id="item-${outcome.key}" data-assignee="${outcome.assignee_username || ''}" data-type="outcome" data-version="${versionInfo.sortValue}">
-                    <div class="tree-node outcome empty" id="node-${outcome.key}" onclick="toggleNode('${outcomeId}')">
-                        <span class="expand-icon">▶</span>
+            const detailsId = `details-outcome-${outcome.key}`;
+            const displayVersion = outcome.fix_versions && outcome.fix_versions.length > 0
+                ? outcome.fix_versions.join(', ') : '-';
+            const versionClass = displayVersion === '-' ? 'issue-version no-version' : 'issue-version';
+            const outcomeHtml = `
+                <div class="tree-item" id="item-outcome-${outcome.key}" data-assignee="${outcome.assignee_username || ''}" data-type="outcome" data-version="0">
+                    <div class="tree-node outcome empty" id="node-outcome-${outcome.key}">
+                        <span class="expand-icon" onclick="toggleHierarchy('${outcomeId}', this)">▶</span>
+                        <span class="details-icon" onclick="toggleDetails('${detailsId}', this.closest('.tree-node'))">ℹ</span>
                         <div class="tree-content">
                             <span class="issue-key">${outcome.key}</span>
                             <a href="${JIRA_CONFIG.baseUrl}/browse/${outcome.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${escapeHtml(outcome.summary)}</a>
-                            <span class="${versionClass}">${versionInfo.display}</span>
+                            <span class="${versionClass}">${displayVersion}</span>
                             <span class="issue-status ${getStatusClass(outcome.status)}" onclick="event.stopPropagation(); showStatusDropdown('${outcome.key}', this)">${outcome.status}</span>
                             <span class="issue-priority ${getPriorityClass(outcome.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${outcome.key}', this)">${outcome.priority}</span>
                             <span class="issue-story-points ${formatStoryPoints(outcome.story_points).cssClass}" onclick="event.stopPropagation(); showStoryPointsInput('${outcome.key}', this)">${formatStoryPoints(outcome.story_points).display}</span>
@@ -3614,36 +3964,40 @@
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${outcome.key}', 'outcome')">↻</button>
                         </div>
                     </div>
-                    ${generateDetailsHTML(outcome)}
+                    ${generateDetailsHTML(outcome, detailsId)}
                     <div class="children" id="${outcomeId}"></div>
                 </div>
             `;
             tree.insertAdjacentHTML('beforeend', outcomeHtml);
         }
 
-        function addRfeToTree(rfe) {
+        function addRfeToTreeNested(rfe, outcome) {
             trackAssignee(rfe.assignee, rfe.assignee_username);
-            const outcomeContainer = document.getElementById(`outcome-${rfe.outcome_key}`);
+
+            const outcomeContainer = document.getElementById(`outcome-${outcome.key}`);
             if (!outcomeContainer) return;
 
-            const outcomeNodeDiv = document.getElementById(`node-${rfe.outcome_key}`);
+            const outcomeNodeDiv = document.getElementById(`node-outcome-${outcome.key}`);
             if (outcomeNodeDiv && outcomeNodeDiv.classList.contains('empty')) {
                 outcomeNodeDiv.classList.remove('empty');
             }
 
-            ensureContainerHeader(`outcome-${rfe.outcome_key}`, 'RFEs:', 'rfe');
+            ensureContainerHeader(`outcome-${outcome.key}`, 'RFES:', 'rfe');
 
             const rfeId = `rfe-${rfe.outcome_key}-${rfe.key}`;
-            const versionInfo = extractVersionLabel(rfe.labels);
-            const versionClass = versionInfo.display === 'No version label' ? 'issue-version no-version' : 'issue-version';
+            const detailsId = `details-${rfe.outcome_key}-${rfe.key}`;
+            const displayVersion = rfe.target_versions && rfe.target_versions.length > 0
+                ? rfe.target_versions.join(', ') : '-';
+            const versionClass = displayVersion === '-' ? 'issue-version no-version' : 'issue-version';
             const rfeHtml = `
-                <div class="tree-item" id="item-${rfe.outcome_key}-${rfe.key}" data-assignee="${rfe.assignee_username || ''}" data-type="rfe" data-version="${versionInfo.sortValue}">
-                    <div class="tree-node rfe empty" id="node-${rfe.outcome_key}-${rfe.key}" onclick="toggleNode('${rfeId}')">
-                        <span class="expand-icon">▶</span>
+                <div class="tree-item" id="item-${rfe.outcome_key}-${rfe.key}" data-assignee="${rfe.assignee_username || ''}" data-type="rfe" data-version="0">
+                    <div class="tree-node rfe empty" id="node-${rfe.outcome_key}-${rfe.key}">
+                        <span class="expand-icon" onclick="toggleHierarchy('${rfeId}', this)">▶</span>
+                        <span class="details-icon" onclick="toggleDetails('${detailsId}', this.closest('.tree-node'))">ℹ</span>
                         <div class="tree-content">
                             <span class="issue-key">${rfe.key}</span>
                             <a href="${JIRA_CONFIG.baseUrl}/browse/${rfe.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${escapeHtml(rfe.summary)}</a>
-                            <span class="${versionClass}">${versionInfo.display}</span>
+                            <span class="${versionClass}">${displayVersion}</span>
                             <span class="issue-status ${getStatusClass(rfe.status)}" onclick="event.stopPropagation(); showStatusDropdown('${rfe.key}', this)">${rfe.status}</span>
                             <span class="issue-priority ${getPriorityClass(rfe.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${rfe.key}', this)">${rfe.priority}</span>
                             <span class="issue-story-points ${formatStoryPoints(rfe.story_points).cssClass}" onclick="event.stopPropagation(); showStoryPointsInput('${rfe.key}', this)">${formatStoryPoints(rfe.story_points).display}</span>
@@ -3652,36 +4006,94 @@
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${rfe.key}', 'rfe')">↻</button>
                         </div>
                     </div>
-                    ${generateDetailsHTML(rfe)}
+                    ${generateDetailsHTML(rfe, detailsId)}
                     <div class="children" id="${rfeId}"></div>
                 </div>
             `;
             outcomeContainer.insertAdjacentHTML('beforeend', rfeHtml);
         }
 
-        function addInitiativeToTree(initiative) {
+        function addStratToTreeTopLevel(tree, strat, rfe, outcome) {
+            trackAssignee(strat.assignee, strat.assignee_username);
+
+            const stratId = `strat-${strat.outcome_key}-${strat.key}`;
+            const detailsId = `details-${strat.outcome_key}-${strat.key}`;
+            const displayVersion = strat.fix_versions && strat.fix_versions.length > 0
+                ? strat.fix_versions.join(', ') : '-';
+            const versionClass = displayVersion === '-' ? 'issue-version no-version' : 'issue-version';
+            const stratHtml = `
+                <div class="tree-item" id="item-${strat.outcome_key}-${strat.key}" data-assignee="${strat.assignee_username || ''}" data-type="strat" data-version="0">
+                    <div class="tree-node strat empty" id="node-${strat.outcome_key}-${strat.key}">
+                        <span class="expand-icon" onclick="toggleHierarchy('${stratId}', this)">▶</span>
+                        <span class="details-icon" onclick="toggleDetails('${detailsId}', this.closest('.tree-node'))">ℹ</span>
+                        <div class="tree-content">
+                            <span class="issue-key">${strat.key}</span>
+                            <a href="${JIRA_CONFIG.baseUrl}/browse/${strat.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${escapeHtml(strat.summary)}</a>
+                            <span class="${versionClass}">${displayVersion}</span>
+                            <span class="issue-status ${getStatusClass(strat.status)}" onclick="event.stopPropagation(); showStatusDropdown('${strat.key}', this)">${strat.status}</span>
+                            <span class="issue-priority ${getPriorityClass(strat.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${strat.key}', this)">${strat.priority}</span>
+                            <span class="issue-story-points ${formatStoryPoints(strat.story_points).cssClass}" onclick="event.stopPropagation(); showStoryPointsInput('${strat.key}', this)">${formatStoryPoints(strat.story_points).display}</span>
+                            <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${strat.key}', this)">${strat.assignee || 'Unassigned'}</span>
+                            <span class="issue-updated">${formatDate(strat.updated)}</span>
+                            <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${strat.key}', 'strat')">↻</button>
+                        </div>
+                    </div>
+                    ${generateDetailsHTML(strat, detailsId, outcome, rfe)}
+                    <div class="children" id="${stratId}"></div>
+                </div>
+            `;
+            tree.insertAdjacentHTML('beforeend', stratHtml);
+
+            addCreateButton(stratId, 'epic', strat.key);
+        }
+
+        function addRfeToTree(tree, rfe, outcome) {
+            trackAssignee(rfe.assignee, rfe.assignee_username);
+
+            const rfeId = `rfe-${rfe.outcome_key}-${rfe.key}`;
+            const displayVersion = rfe.target_versions && rfe.target_versions.length > 0
+                ? rfe.target_versions.join(', ') : '-';
+            const versionClass = displayVersion === '-' ? 'issue-version no-version' : 'issue-version';
+            const rfeHtml = `
+                <div class="tree-item" id="item-${rfe.outcome_key}-${rfe.key}" data-assignee="${rfe.assignee_username || ''}" data-type="rfe" data-version="0">
+                    <div class="tree-node rfe empty" id="node-${rfe.outcome_key}-${rfe.key}">
+                        <span class="expand-icon" onclick="toggleHierarchy('${rfeId}', this)">▶</span>
+                        <span class="details-icon" onclick="toggleDetails('details-${rfe.outcome_key}-${rfe.key}', this.closest('.tree-node'))">ℹ</span>
+                        <div class="tree-content">
+                            <span class="issue-key">${rfe.key}</span>
+                            <a href="${JIRA_CONFIG.baseUrl}/browse/${rfe.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${escapeHtml(rfe.summary)}</a>
+                            <span class="${versionClass}">${displayVersion}</span>
+                            <span class="issue-status ${getStatusClass(rfe.status)}" onclick="event.stopPropagation(); showStatusDropdown('${rfe.key}', this)">${rfe.status}</span>
+                            <span class="issue-priority ${getPriorityClass(rfe.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${rfe.key}', this)">${rfe.priority}</span>
+                            <span class="issue-story-points ${formatStoryPoints(rfe.story_points).cssClass}" onclick="event.stopPropagation(); showStoryPointsInput('${rfe.key}', this)">${formatStoryPoints(rfe.story_points).display}</span>
+                            <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${rfe.key}', this)">${rfe.assignee || 'Unassigned'}</span>
+                            <span class="issue-updated">${formatDate(rfe.updated)}</span>
+                            <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${rfe.key}', 'rfe')">↻</button>
+                        </div>
+                    </div>
+                    ${generateDetailsHTML(rfe, `details-${rfe.outcome_key}-${rfe.key}`, outcome)}
+                    <div class="children" id="${rfeId}"></div>
+                </div>
+            `;
+            tree.insertAdjacentHTML('beforeend', rfeHtml);
+        }
+
+        function addInitiativeToTree(tree, initiative, outcome) {
             trackAssignee(initiative.assignee, initiative.assignee_username);
-            const outcomeContainer = document.getElementById(`outcome-${initiative.outcome_key}`);
-            if (!outcomeContainer) return;
-
-            const outcomeNodeDiv = document.getElementById(`node-${initiative.outcome_key}`);
-            if (outcomeNodeDiv && outcomeNodeDiv.classList.contains('empty')) {
-                outcomeNodeDiv.classList.remove('empty');
-            }
-
-            ensureContainerHeader(`outcome-${initiative.outcome_key}`, 'INITIATIVES:', 'initiative');
 
             const initiativeId = `initiative-${initiative.key}`;
-            const versionInfo = extractVersionLabel(initiative.labels);
-            const versionClass = versionInfo.display === 'No version label' ? 'issue-version no-version' : 'issue-version';
+            const displayVersion = initiative.fix_versions && initiative.fix_versions.length > 0
+                ? initiative.fix_versions.join(', ') : '-';
+            const versionClass = displayVersion === '-' ? 'issue-version no-version' : 'issue-version';
             const initiativeHtml = `
-                <div class="tree-item" id="item-${initiative.key}" data-assignee="${initiative.assignee_username || ''}" data-type="initiative" data-version="${versionInfo.sortValue}">
-                    <div class="tree-node initiative empty" id="node-${initiative.key}" onclick="toggleNode('${initiativeId}')">
-                        <span class="expand-icon">▶</span>
+                <div class="tree-item" id="item-${initiative.key}" data-assignee="${initiative.assignee_username || ''}" data-type="initiative" data-version="0">
+                    <div class="tree-node initiative empty" id="node-${initiative.key}">
+                        <span class="expand-icon" onclick="toggleHierarchy('${initiativeId}', this)">▶</span>
+                        <span class="details-icon" onclick="toggleDetails('details-${initiative.key}', this.closest('.tree-node'))">ℹ</span>
                         <div class="tree-content">
                             <span class="issue-key">${initiative.key}</span>
                             <a href="${JIRA_CONFIG.baseUrl}/browse/${initiative.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${escapeHtml(initiative.summary)}</a>
-                            <span class="${versionClass}">${versionInfo.display}</span>
+                            <span class="${versionClass}">${displayVersion}</span>
                             <span class="issue-status ${getStatusClass(initiative.status)}" onclick="event.stopPropagation(); showStatusDropdown('${initiative.key}', this)">${initiative.status}</span>
                             <span class="issue-priority ${getPriorityClass(initiative.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${initiative.key}', this)">${initiative.priority}</span>
                             <span class="issue-story-points ${formatStoryPoints(initiative.story_points).cssClass}" onclick="event.stopPropagation(); showStoryPointsInput('${initiative.key}', this)">${formatStoryPoints(initiative.story_points).display}</span>
@@ -3690,13 +4102,100 @@
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${initiative.key}', 'initiative')">↻</button>
                         </div>
                     </div>
-                    ${generateDetailsHTML(initiative)}
+                    ${generateDetailsHTML(initiative, `details-${initiative.key}`, outcome)}
+                    <div class="children" id="${initiativeId}"></div>
+                </div>
+            `;
+            tree.insertAdjacentHTML('beforeend', initiativeHtml);
+
+            addCreateButton(initiativeId, 'epic', initiative.key);
+        }
+
+        function addInitiativeToTreeNested(initiative, outcome) {
+            trackAssignee(initiative.assignee, initiative.assignee_username);
+
+            const outcomeContainer = document.getElementById(`outcome-${outcome.key}`);
+            if (!outcomeContainer) return;
+
+            const outcomeNodeDiv = document.getElementById(`node-outcome-${outcome.key}`);
+            if (outcomeNodeDiv && outcomeNodeDiv.classList.contains('empty')) {
+                outcomeNodeDiv.classList.remove('empty');
+            }
+
+            ensureContainerHeader(`outcome-${outcome.key}`, 'INITIATIVES:', 'initiative');
+
+            const initiativeId = `initiative-${initiative.key}`;
+            const displayVersion = initiative.fix_versions && initiative.fix_versions.length > 0
+                ? initiative.fix_versions.join(', ') : '-';
+            const versionClass = displayVersion === '-' ? 'issue-version no-version' : 'issue-version';
+            const initiativeHtml = `
+                <div class="tree-item" id="item-${initiative.key}" data-assignee="${initiative.assignee_username || ''}" data-type="initiative" data-version="0">
+                    <div class="tree-node initiative empty" id="node-${initiative.key}">
+                        <span class="expand-icon" onclick="toggleHierarchy('${initiativeId}', this)">▶</span>
+                        <span class="details-icon" onclick="toggleDetails('details-${initiative.key}', this.closest('.tree-node'))">ℹ</span>
+                        <div class="tree-content">
+                            <span class="issue-key">${initiative.key}</span>
+                            <a href="${JIRA_CONFIG.baseUrl}/browse/${initiative.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${escapeHtml(initiative.summary)}</a>
+                            <span class="${versionClass}">${displayVersion}</span>
+                            <span class="issue-status ${getStatusClass(initiative.status)}" onclick="event.stopPropagation(); showStatusDropdown('${initiative.key}', this)">${initiative.status}</span>
+                            <span class="issue-priority ${getPriorityClass(initiative.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${initiative.key}', this)">${initiative.priority}</span>
+                            <span class="issue-story-points ${formatStoryPoints(initiative.story_points).cssClass}" onclick="event.stopPropagation(); showStoryPointsInput('${initiative.key}', this)">${formatStoryPoints(initiative.story_points).display}</span>
+                            <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${initiative.key}', this)">${initiative.assignee || 'Unassigned'}</span>
+                            <span class="issue-updated">${formatDate(initiative.updated)}</span>
+                            <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${initiative.key}', 'initiative')">↻</button>
+                        </div>
+                    </div>
+                    ${generateDetailsHTML(initiative, `details-${initiative.key}`, outcome)}
                     <div class="children" id="${initiativeId}"></div>
                 </div>
             `;
             outcomeContainer.insertAdjacentHTML('beforeend', initiativeHtml);
 
             addCreateButton(initiativeId, 'epic', initiative.key);
+        }
+
+        function addStratToTreeUnderOutcome(strat, outcome) {
+            trackAssignee(strat.assignee, strat.assignee_username);
+
+            const outcomeContainer = document.getElementById(`outcome-${outcome.key}`);
+            if (!outcomeContainer) return;
+
+            const outcomeNodeDiv = document.getElementById(`node-outcome-${outcome.key}`);
+            if (outcomeNodeDiv && outcomeNodeDiv.classList.contains('empty')) {
+                outcomeNodeDiv.classList.remove('empty');
+            }
+
+            ensureContainerHeader(`outcome-${outcome.key}`, 'STRATS:', 'strat');
+
+            const stratId = `strat-${outcome.key}-${strat.key}`;
+            const detailsId = `details-${outcome.key}-${strat.key}`;
+            const displayVersion = strat.fix_versions && strat.fix_versions.length > 0
+                ? strat.fix_versions.join(', ') : '-';
+            const versionClass = displayVersion === '-' ? 'issue-version no-version' : 'issue-version';
+            const stratHtml = `
+                <div class="tree-item" id="item-${outcome.key}-${strat.key}" data-assignee="${strat.assignee_username || ''}" data-type="strat" data-version="0">
+                    <div class="tree-node strat empty" id="node-${outcome.key}-${strat.key}">
+                        <span class="expand-icon" onclick="toggleHierarchy('${stratId}', this)">▶</span>
+                        <span class="details-icon" onclick="toggleDetails('${detailsId}', this.closest('.tree-node'))">ℹ</span>
+                        <div class="tree-content">
+                            <span class="issue-key">${strat.key}</span>
+                            <a href="${JIRA_CONFIG.baseUrl}/browse/${strat.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${escapeHtml(strat.summary)}</a>
+                            <span class="${versionClass}">${displayVersion}</span>
+                            <span class="issue-status ${getStatusClass(strat.status)}" onclick="event.stopPropagation(); showStatusDropdown('${strat.key}', this)">${strat.status}</span>
+                            <span class="issue-priority ${getPriorityClass(strat.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${strat.key}', this)">${strat.priority}</span>
+                            <span class="issue-story-points ${formatStoryPoints(strat.story_points).cssClass}" onclick="event.stopPropagation(); showStoryPointsInput('${strat.key}', this)">${formatStoryPoints(strat.story_points).display}</span>
+                            <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${strat.key}', this)">${strat.assignee || 'Unassigned'}</span>
+                            <span class="issue-updated">${formatDate(strat.updated)}</span>
+                            <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${strat.key}', 'strat')">↻</button>
+                        </div>
+                    </div>
+                    ${generateDetailsHTML(strat, detailsId, outcome)}
+                    <div class="children" id="${stratId}"></div>
+                </div>
+            `;
+            outcomeContainer.insertAdjacentHTML('beforeend', stratHtml);
+
+            addCreateButton(stratId, 'epic', strat.key);
         }
 
         function addStratToTree(strat) {
@@ -3713,16 +4212,19 @@
             ensureContainerHeader(rfeContainerId, 'STRATS:', 'strat');
 
             const stratId = `strat-${strat.outcome_key}-${strat.key}`;
-            const versionInfo = extractVersionLabel(strat.labels);
-            const versionClass = versionInfo.display === 'No version label' ? 'issue-version no-version' : 'issue-version';
+            const detailsId = `details-${strat.outcome_key}-${strat.key}`;
+            const displayVersion = strat.fix_versions && strat.fix_versions.length > 0
+                ? strat.fix_versions.join(', ') : '-';
+            const versionClass = displayVersion === '-' ? 'issue-version no-version' : 'issue-version';
             const stratHtml = `
-                <div class="tree-item" id="item-${strat.outcome_key}-${strat.key}" data-assignee="${strat.assignee_username || ''}" data-type="strat" data-version="${versionInfo.sortValue}">
-                    <div class="tree-node strat empty" id="node-${strat.outcome_key}-${strat.key}" onclick="toggleNode('${stratId}')">
-                        <span class="expand-icon">▶</span>
+                <div class="tree-item" id="item-${strat.outcome_key}-${strat.key}" data-assignee="${strat.assignee_username || ''}" data-type="strat" data-version="0">
+                    <div class="tree-node strat empty" id="node-${strat.outcome_key}-${strat.key}">
+                        <span class="expand-icon" onclick="toggleHierarchy('${stratId}', this)">▶</span>
+                        <span class="details-icon" onclick="toggleDetails('${detailsId}', this.closest('.tree-node'))">ℹ</span>
                         <div class="tree-content">
                             <span class="issue-key">${strat.key}</span>
                             <a href="${JIRA_CONFIG.baseUrl}/browse/${strat.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${escapeHtml(strat.summary)}</a>
-                            <span class="${versionClass}">${versionInfo.display}</span>
+                            <span class="${versionClass}">${displayVersion}</span>
                             <span class="issue-status ${getStatusClass(strat.status)}" onclick="event.stopPropagation(); showStatusDropdown('${strat.key}', this)">${strat.status}</span>
                             <span class="issue-priority ${getPriorityClass(strat.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${strat.key}', this)">${strat.priority}</span>
                             <span class="issue-story-points ${formatStoryPoints(strat.story_points).cssClass}" onclick="event.stopPropagation(); showStoryPointsInput('${strat.key}', this)">${formatStoryPoints(strat.story_points).display}</span>
@@ -3731,7 +4233,7 @@
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${strat.key}', 'strat')">↻</button>
                         </div>
                     </div>
-                    ${generateDetailsHTML(strat)}
+                    ${generateDetailsHTML(strat, detailsId)}
                     <div class="children" id="${stratId}"></div>
                 </div>
             `;
@@ -3811,14 +4313,18 @@
             ensureContainerHeader(parentContainerId, 'EPICS:', 'epic');
 
             const epicId = `epic-${outcomeKey}-${parentKey}-${epic.key}`;
+            const epicDetailsId = `details-${outcomeKey}-${parentKey}-${epic.key}`;
+            const epicVersionDisplay = epic.fix_versions && epic.fix_versions.length > 0 ? epic.fix_versions.join(', ') : '-';
+            const epicVersionClass = epicVersionDisplay === '-' ? 'issue-version no-version' : 'issue-version';
             const epicHtml = `
                 <div class="tree-item" id="item-${outcomeKey}-${parentKey}-${epic.key}" data-assignee="${epic.assignee_username || ''}" data-type="epic">
-                    <div class="tree-node epic" onclick="toggleNode('${epicId}')">
-                        <span class="expand-icon">▶</span>
+                    <div class="tree-node epic">
+                        <span class="expand-icon" onclick="toggleHierarchy('${epicId}', this)">▶</span>
+                        <span class="details-icon" onclick="toggleDetails('${epicDetailsId}', this.closest('.tree-node'))">ℹ</span>
                         <div class="tree-content">
                             <span class="issue-key">${epic.key}</span>
                             <a href="${JIRA_CONFIG.baseUrl}/browse/${epic.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${escapeHtml(epic.summary)}</a>
-                            <span class="issue-version"></span>
+                            <span class="${epicVersionClass}">${epicVersionDisplay}</span>
                             <span class="issue-status ${getStatusClass(epic.status)}" onclick="event.stopPropagation(); showStatusDropdown('${epic.key}', this)">${epic.status}</span>
                             <span class="issue-priority ${getPriorityClass(epic.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${epic.key}', this)">${epic.priority}</span>
                             <span class="issue-story-points ${formatStoryPoints(epic.story_points).cssClass}" onclick="event.stopPropagation(); showStoryPointsInput('${epic.key}', this)">${formatStoryPoints(epic.story_points).display}</span>
@@ -3827,7 +4333,7 @@
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${epic.key}', 'epic')">↻</button>
                         </div>
                     </div>
-                    ${generateDetailsHTML(epic)}
+                    ${generateDetailsHTML(epic, epicDetailsId)}
                     <div class="children" id="${epicId}"></div>
                 </div>
             `;
@@ -3848,14 +4354,18 @@
             ensureContainerHeader(epicContainerId, 'TASKS:', 'task');
 
             const taskId = `task-${outcomeKey}-${parentKey}-${task.epic_key}-${task.key}`;
+            const taskDetailsId = `details-${outcomeKey}-${parentKey}-${task.epic_key}-${task.key}`;
+            const taskVersionDisplay = task.fix_versions && task.fix_versions.length > 0 ? task.fix_versions.join(', ') : '-';
+            const taskVersionClass = taskVersionDisplay === '-' ? 'issue-version no-version' : 'issue-version';
             const taskHtml = `
                 <div class="tree-item" id="item-${outcomeKey}-${parentKey}-${task.epic_key}-${task.key}" data-assignee="${task.assignee_username || ''}" data-type="task">
-                    <div class="tree-node task" onclick="toggleNode('${taskId}')">
-                        <span class="expand-icon">▶</span>
+                    <div class="tree-node task">
+                        <span class="expand-icon" onclick="toggleHierarchy('${taskId}', this)">▶</span>
+                        <span class="details-icon" onclick="toggleDetails('${taskDetailsId}', this.closest('.tree-node'))">ℹ</span>
                         <div class="tree-content">
                             <span class="issue-key">${task.key}</span>
                             <a href="${JIRA_CONFIG.baseUrl}/browse/${task.key}" target="_blank" class="issue-summary-link" onclick="event.stopPropagation()">${escapeHtml(task.summary)}</a>
-                            <span class="issue-version"></span>
+                            <span class="${taskVersionClass}">${taskVersionDisplay}</span>
                             <span class="issue-status ${getStatusClass(task.status)}" onclick="event.stopPropagation(); showStatusDropdown('${task.key}', this)">${task.status}</span>
                             <span class="issue-priority ${getPriorityClass(task.priority)}" onclick="event.stopPropagation(); showPriorityDropdown('${task.key}', this)">${task.priority}</span>
                             <span class="issue-story-points ${formatStoryPoints(task.story_points).cssClass}" onclick="event.stopPropagation(); showStoryPointsInput('${task.key}', this)">${formatStoryPoints(task.story_points).display}</span>
@@ -3864,7 +4374,7 @@
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${task.key}', 'task')">↻</button>
                         </div>
                     </div>
-                    ${generateDetailsHTML(task)}
+                    ${generateDetailsHTML(task, taskDetailsId)}
                     <div class="children" id="${taskId}"></div>
                 </div>
             `;
@@ -4310,7 +4820,7 @@
             return result;
         }
 
-        function generateDetailsHTML(issue) {
+        function generateDetailsHTML(issue, detailsId, parentOutcome, parentRfe) {
             const labelsHTML = issue.labels && issue.labels.length > 0
                 ? issue.labels.map(l => {
                     const escapedLabel = l.replace(/"/g, '&quot;');
@@ -4337,7 +4847,27 @@
                 : '<span class="no-data">No description</span>';
 
             return `
-                <div class="issue-details" id="details-${issue.key}" style="display: none;">
+                <div class="issue-details" id="${detailsId || 'details-' + issue.key}" style="display: none;">
+                    ${parentOutcome && parentOutcome.key !== '__orphan__' ? `
+                    <div class="detail-row">
+                        <strong>Outcome:</strong> <a href="${JIRA_CONFIG.baseUrl}/browse/${parentOutcome.key}" target="_blank" style="color: #0052CC; text-decoration: none;">${parentOutcome.key}</a> — ${escapeHtml(parentOutcome.summary)}
+                    </div>
+                    ` : ''}
+                    ${parentRfe && parentRfe.key ? `
+                    <div class="detail-row">
+                        <strong>RFE:</strong> <a href="${JIRA_CONFIG.baseUrl}/browse/${parentRfe.key}" target="_blank" style="color: #0052CC; text-decoration: none;">${parentRfe.key}</a> — ${escapeHtml(parentRfe.summary)}
+                    </div>
+                    ` : ''}
+                    ${issue.target_versions && issue.target_versions.length > 0 ? `
+                    <div class="detail-row">
+                        <strong>Target Version:</strong> <span>${issue.target_versions.join(', ')}</span>
+                    </div>
+                    ` : ''}
+                    ${issue.fix_versions && issue.fix_versions.length > 0 ? `
+                    <div class="detail-row">
+                        <strong>Fix Version:</strong> <span>${issue.fix_versions.join(', ')}</span>
+                    </div>
+                    ` : ''}
                     <div class="detail-row">
                         <strong>Reporter:</strong> <span>${issue.reporter || 'Unknown'}</span>
                     </div>
@@ -4482,24 +5012,48 @@
             }
         }
 
-        function toggleNode(nodeId) {
+        function toggleHierarchy(nodeId, iconEl) {
             const node = document.getElementById(nodeId);
             if (!node) return;
 
+            if (node.classList.contains('expanded')) {
+                node.classList.remove('expanded');
+                if (iconEl) iconEl.textContent = '▶';
+            } else {
+                node.classList.add('expanded');
+                if (iconEl) iconEl.textContent = '▼';
+            }
+        }
+
+        function toggleDetails(detailsId, treeNodeEl) {
+            const details = document.getElementById(detailsId);
+            if (!details) return;
+
+            const detailsIcon = treeNodeEl ? treeNodeEl.querySelector('.details-icon') : null;
+            if (details.style.display === 'block') {
+                details.style.display = 'none';
+                if (treeNodeEl) {
+                    treeNodeEl.style.borderRadius = '';
+                    treeNodeEl.style.border = '';
+                }
+                if (detailsIcon) detailsIcon.classList.remove('expanded');
+            } else {
+                details.style.display = 'block';
+                if (detailsIcon) detailsIcon.classList.add('expanded');
+            }
+        }
+
+        function toggleNode(nodeId) {
+            const node = document.getElementById(nodeId);
+            if (!node) return;
             const treeItem = node.parentElement;
             const icon = treeItem.querySelector(':scope > .tree-node .expand-icon');
-
-            // Only select the direct child issue-details, not descendants
-            const details = treeItem.querySelector(':scope > .issue-details');
-
             if (node.classList.contains('expanded')) {
                 node.classList.remove('expanded');
                 if (icon) icon.textContent = '▶';
-                if (details) details.style.display = 'none';
             } else {
                 node.classList.add('expanded');
                 if (icon) icon.textContent = '▼';
-                if (details) details.style.display = 'block';
             }
         }
 
@@ -4522,6 +5076,9 @@
                 if (icon.textContent === '▼') {
                     icon.textContent = '▶';
                 }
+            });
+            document.querySelectorAll('.issue-details').forEach(details => {
+                details.style.display = 'none';
             });
         }
 
@@ -4556,8 +5113,15 @@
                     bVal = b.updated ? new Date(b.updated).getTime() : 0;
                     break;
                 case 'version':
-                    aVal = extractVersionLabel(a.labels).sortValue;
-                    bVal = extractVersionLabel(b.labels).sortValue;
+                    const aVersions = (a.target_versions && a.target_versions.length > 0) ? a.target_versions : a.fix_versions;
+                    const bVersions = (b.target_versions && b.target_versions.length > 0) ? b.target_versions : b.fix_versions;
+                    const aHasVersion = aVersions && aVersions.length > 0;
+                    const bHasVersion = bVersions && bVersions.length > 0;
+                    if (!aHasVersion && !bHasVersion) return 0;
+                    if (!aHasVersion) return 1;
+                    if (!bHasVersion) return -1;
+                    aVal = aVersions[0];
+                    bVal = bVersions[0];
                     break;
                 default:
                     return 0;
@@ -4632,7 +5196,6 @@
         let currentSortOrder = 'asc';
 
         function handleColumnSort(field) {
-            // Toggle sort order if clicking the same field, otherwise default to ascending
             if (currentSortField === field) {
                 currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
             } else {
@@ -4640,76 +5203,9 @@
                 currentSortOrder = 'asc';
             }
 
-            // Sort the hierarchy data
             sortHierarchyData(hierarchyData, currentSortField, currentSortOrder);
+            renderHierarchyView();
 
-            // Re-render the entire hierarchy view
-            const content = document.getElementById('content');
-            if (!content) return;
-
-            content.innerHTML = `
-                <div class="hierarchy-table-header">
-                    <span class="expand-icon-spacer"></span>
-                    <div class="header-row">
-                        <span class="issue-key header-sortable" onclick="handleColumnSort('key')">Key<span class="sort-indicator" id="sort-key"></span></span>
-                        <span class="issue-summary-link header-sortable" onclick="handleColumnSort('summary')">Summary<span class="sort-indicator" id="sort-summary"></span></span>
-                        <span class="issue-version header-sortable" onclick="handleColumnSort('version')">Version<span class="sort-indicator" id="sort-version"></span></span>
-                        <span class="issue-status header-sortable" onclick="handleColumnSort('status')">Status<span class="sort-indicator" id="sort-status"></span></span>
-                        <span class="issue-priority header-sortable" onclick="handleColumnSort('priority')">Priority<span class="sort-indicator" id="sort-priority"></span></span>
-                        <span class="issue-story-points">Story Points</span>
-                        <span class="issue-assignee header-sortable" onclick="handleColumnSort('assignee')">Assignee<span class="sort-indicator" id="sort-assignee"></span></span>
-                        <span class="issue-updated header-sortable" onclick="handleColumnSort('updated')">Updated<span class="sort-indicator" id="sort-updated"></span></span>
-                        <span style="width: 32px; flex-shrink: 0;"></span>
-                    </div>
-                </div>
-                <div class="tree" id="tree"></div>
-            `;
-            const tree = document.getElementById('tree');
-
-            if (hierarchyData.outcomes && Array.isArray(hierarchyData.outcomes)) {
-                hierarchyData.outcomes.forEach(outcome => {
-                    addOutcomeToTree(tree, outcome);
-
-                    if (outcome.rfes) {
-                        outcome.rfes.forEach(rfe => {
-                            addRfeToTree(rfe);
-                            if (rfe.strats) {
-                                rfe.strats.forEach(strat => {
-                                    addStratToTree(strat);
-                                    if (strat.epics) {
-                                        strat.epics.forEach(epic => {
-                                            addEpicToTree(epic);
-                                            if (epic.tasks) {
-                                                epic.tasks.forEach(task => {
-                                                    addTaskToTree(task);
-                                                });
-                                            }
-                                        });
-                                    }
-                                });
-                            }
-                        });
-                    }
-
-                    if (outcome.initiatives) {
-                        outcome.initiatives.forEach(initiative => {
-                            addInitiativeToTree(initiative);
-                            if (initiative.epics) {
-                                initiative.epics.forEach(epic => {
-                                    addEpicToTree(epic);
-                                    if (epic.tasks) {
-                                        epic.tasks.forEach(task => {
-                                            addTaskToTree(task);
-                                        });
-                                    }
-                                });
-                            }
-                        });
-                    }
-                });
-            }
-
-            // Update sort indicators after re-rendering
             document.querySelectorAll('.sort-indicator').forEach(indicator => {
                 indicator.textContent = '';
                 indicator.classList.remove('active');
@@ -4723,44 +5219,7 @@
         }
 
         function filterIssues() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const filterLevel = document.getElementById('filterLevel').value;
-            const selectedAssignee = document.getElementById('assigneeFilter').value;
-            const tree = document.getElementById('tree');
-            const allNodes = tree.querySelectorAll('.tree-item');
-
-            // If no search term, just apply assignee filter
-            if (!searchTerm) {
-                filterByAssignee();
-                return;
-            }
-
-            // Apply search filter
-            if (!filterLevel || !selectedAssignee) {
-                // Only search filter active
-                allNodes.forEach(item => {
-                    const text = item.textContent.toLowerCase();
-                    if (text.includes(searchTerm)) {
-                        item.style.display = 'block';
-                    } else {
-                        item.style.display = 'none';
-                    }
-                });
-            } else {
-                // Both filters active - show items that match search AND (are at filter level with assignee OR are ancestors/descendants)
-                // First apply assignee filter
-                filterByAssignee();
-
-                // Then hide items that don't match search (but were shown by assignee filter)
-                allNodes.forEach(item => {
-                    if (item.style.display !== 'none') {
-                        const text = item.textContent.toLowerCase();
-                        if (!text.includes(searchTerm)) {
-                            item.style.display = 'none';
-                        }
-                    }
-                });
-            }
+            applyAllFilters();
         }
 
         function populateAssigneeFilter() {
@@ -4783,63 +5242,195 @@
             });
         }
 
-        function filterByAssignee() {
+        function applyAllFilters() {
+            const tree = document.getElementById('tree');
+            if (!tree) return;
+
+            const allItems = tree.querySelectorAll('.tree-item');
+            allItems.forEach(item => item.style.display = 'block');
+
+            const hasVersionFilter = selectedVersions.size > 0;
             const selectedAssignee = document.getElementById('assigneeFilter').value;
             const filterLevel = document.getElementById('filterLevel').value;
-            const tree = document.getElementById('tree');
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
 
-            // If no filter level selected or no assignee selected, show everything
-            if (!filterLevel || !selectedAssignee) {
-                const allItems = tree.querySelectorAll('.tree-item');
-                allItems.forEach(item => item.style.display = 'block');
-                return;
+            if (hasVersionFilter) {
+                const topLevel = getHierarchyTopLevel();
+                const versionTypes = topLevel === 'outcome' ? ['outcome', 'rfe', 'initiative', 'strat']
+                    : topLevel === 'rfe' ? ['rfe', 'initiative']
+                    : ['strat'];
+
+                allItems.forEach(item => item.style.display = 'none');
+
+                const matchingItems = [];
+                allItems.forEach(item => {
+                    const itemType = item.getAttribute('data-type');
+                    if (!versionTypes.includes(itemType)) return;
+                    const versionEl = item.querySelector(':scope > .tree-node .issue-version');
+                    if (versionEl) {
+                        const versionText = versionEl.textContent.trim();
+                        const hasNoVersion = versionText === '-';
+                        if ((hasNoVersion && selectedVersions.has('__no_version__')) ||
+                            versionText.split(', ').some(v => selectedVersions.has(v))) {
+                            matchingItems.push(item);
+                        }
+                    }
+                });
+
+                matchingItems.forEach(matchingItem => {
+                    matchingItem.style.display = 'block';
+                    matchingItem.querySelectorAll('.tree-item').forEach(desc => desc.style.display = 'block');
+                    let el = matchingItem.parentElement;
+                    while (el && el !== tree) {
+                        if (el.classList.contains('tree-item')) el.style.display = 'block';
+                        el = el.parentElement;
+                    }
+                });
             }
 
-            // Hide everything initially
-            const allItems = tree.querySelectorAll('.tree-item');
-            allItems.forEach(item => item.style.display = 'none');
+            if (filterLevel && selectedAssignee) {
+                const visibleSet = hasVersionFilter ? new Set(Array.from(allItems).filter(item => item.style.display !== 'none')) : null;
+                allItems.forEach(item => item.style.display = 'none');
 
-            // Define hierarchy levels in order (bottom to top)
-            const hierarchyLevels = ['task', 'epic', 'strat', 'initiative', 'rfe', 'outcome'];
-            const selectedLevelIndex = hierarchyLevels.indexOf(filterLevel);
+                const hierarchyLevels = ['task', 'epic', 'strat', 'initiative', 'rfe', 'outcome'];
+                const selectedLevelIndex = hierarchyLevels.indexOf(filterLevel);
+                const levelsToFilter = hierarchyLevels.slice(selectedLevelIndex);
 
-            // Get all levels from selected level up to top
-            const levelsToFilter = hierarchyLevels.slice(selectedLevelIndex);
+                const matchingItems = [];
+                levelsToFilter.forEach(level => {
+                    tree.querySelectorAll(`.tree-item[data-type="${level}"][data-assignee="${selectedAssignee}"]`).forEach(item => {
+                        if (!visibleSet || visibleSet.has(item)) {
+                            matchingItems.push(item);
+                        }
+                    });
+                });
 
-            // Find all items at the selected level and above that match the assignee
-            const matchingItems = [];
-            levelsToFilter.forEach(level => {
-                const items = tree.querySelectorAll(`.tree-item[data-type="${level}"][data-assignee="${selectedAssignee}"]`);
-                items.forEach(item => matchingItems.push(item));
-            });
-
-            // For each matching item, show it and all its ancestors and descendants
-            matchingItems.forEach(matchingItem => {
-                // Show the matching item itself
-                matchingItem.style.display = 'block';
-
-                // Show all its descendants (children at all levels)
-                const descendants = matchingItem.querySelectorAll('.tree-item');
-                descendants.forEach(desc => desc.style.display = 'block');
-
-                // Walk up the tree to show all ancestors
-                let currentElement = matchingItem.parentElement;
-                while (currentElement && currentElement !== tree) {
-                    if (currentElement.classList.contains('tree-item')) {
-                        currentElement.style.display = 'block';
+                matchingItems.forEach(matchingItem => {
+                    matchingItem.style.display = 'block';
+                    matchingItem.querySelectorAll('.tree-item').forEach(desc => {
+                        if (!visibleSet || visibleSet.has(desc)) desc.style.display = 'block';
+                    });
+                    let el = matchingItem.parentElement;
+                    while (el && el !== tree) {
+                        if (el.classList.contains('tree-item')) el.style.display = 'block';
+                        el = el.parentElement;
                     }
-                    currentElement = currentElement.parentElement;
+                });
+            }
+
+            if (searchTerm) {
+                Array.from(allItems).forEach(item => {
+                    if (item.style.display !== 'none') {
+                        const text = item.textContent.toLowerCase();
+                        if (!text.includes(searchTerm)) {
+                            item.style.display = 'none';
+                        }
+                    }
+                });
+            }
+        }
+
+        function filterByAssignee() {
+            applyAllFilters();
+        }
+
+        let selectedVersions = new Set();
+
+        function populateVersionFilter() {
+            const dropdown = document.getElementById('versionDropdown');
+            if (!dropdown) return;
+
+            const versions = new Set();
+            const topLevel = getHierarchyTopLevel();
+
+            (hierarchyData.outcomes || []).forEach(outcome => {
+                if (topLevel === 'outcome') {
+                    (outcome.fix_versions || []).forEach(v => versions.add(v));
                 }
+                (outcome.rfes || []).forEach(rfe => {
+                    if (topLevel === 'outcome' || topLevel === 'rfe') {
+                        (rfe.target_versions || []).forEach(v => versions.add(v));
+                    }
+                    (rfe.strats || []).forEach(strat => {
+                        if (topLevel === 'outcome' || topLevel === 'rfe' || topLevel === 'strat') {
+                            (strat.fix_versions || []).forEach(v => versions.add(v));
+                        }
+                    });
+                });
+                (outcome.initiatives || []).forEach(init => {
+                    if (topLevel === 'outcome' || topLevel === 'rfe') {
+                        (init.fix_versions || []).forEach(v => versions.add(v));
+                    }
+                });
+                (outcome.strats || []).forEach(strat => {
+                    if (topLevel === 'outcome' || topLevel === 'strat') {
+                        (strat.fix_versions || []).forEach(v => versions.add(v));
+                    }
+                });
             });
 
-            // Always show add-item buttons regardless of filter
-            const addItemButtons = tree.querySelectorAll('.tree-item .add-item-tree-node');
-            addItemButtons.forEach(button => {
-                const treeItem = button.closest('.tree-item');
-                if (treeItem) {
-                    treeItem.style.display = 'block';
-                }
+            // Remove selected versions that no longer exist in data
+            for (const v of selectedVersions) {
+                if (v !== '__no_version__' && !versions.has(v)) selectedVersions.delete(v);
+            }
+
+            dropdown.innerHTML = '';
+            const NO_VERSION = '__no_version__';
+            const allOptions = [NO_VERSION, ...Array.from(versions).sort()];
+            allOptions.forEach(version => {
+                const label = document.createElement('label');
+                label.className = 'version-multiselect-option';
+                if (version === NO_VERSION) label.style.borderBottom = '1px solid #DFE1E6';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = version;
+                checkbox.checked = selectedVersions.has(version);
+                checkbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        selectedVersions.add(version);
+                    } else {
+                        selectedVersions.delete(version);
+                    }
+                    updateVersionDisplay();
+                    applyAllFilters();
+                });
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(version === NO_VERSION ? 'No version' : version));
+                dropdown.appendChild(label);
             });
+
+            updateVersionDisplay();
+        }
+
+        function updateVersionDisplay() {
+            const textEl = document.querySelector('.version-multiselect-text');
+            if (!textEl) return;
+            if (selectedVersions.size === 0) {
+                textEl.textContent = 'All Versions';
+            } else if (selectedVersions.size === 1) {
+                const val = Array.from(selectedVersions)[0];
+                textEl.textContent = val === '__no_version__' ? 'No version' : val;
+            } else {
+                textEl.textContent = `${selectedVersions.size} versions`;
+            }
+        }
+
+        function toggleVersionDropdown(e) {
+            e.stopPropagation();
+            const dropdown = document.getElementById('versionDropdown');
+            dropdown.classList.toggle('open');
+        }
+
+        document.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('versionDropdown');
+            const multiselect = document.getElementById('versionMultiselect');
+            if (dropdown && multiselect && !multiselect.contains(e.target)) {
+                dropdown.classList.remove('open');
+            }
+        });
+
+        function filterByVersion() {
+            applyAllFilters();
         }
 
         function getStatusClass(status) {
@@ -5573,7 +6164,8 @@
                     if (epicContainers.length > 0) {
                         const containerId = epicContainers[0].id;
                         // Match: epic-{outcomeKey}-{parentKey}-{epicKey}
-                        const match = containerId.match(/^epic-([A-Z]+-\d+)-([A-Z]+-\d+)-([A-Z]+-\d+)$/);
+                        // outcomeKey can be a JIRA key or __orphan__, parentKey can be empty
+                        const match = containerId.match(/^epic-(.*)-([A-Z]+-\d+)-([A-Z]+-\d+)$/);
                         if (match) {
                             const outcomeKey = match[1];
                             const parentKey = match[2];
@@ -5594,7 +6186,7 @@
                             for (const outcome of (hierarchyData.outcomes || [])) {
                                 let found = false;
                                 for (const rfe of (outcome.rfes || [])) {
-                                    const strat = (rfe.strats || []).find(s => s.key === strat_key);
+                                    const strat = (rfe.strats || []).find(s => s.key === parentKey);
                                     if (strat && strat.epics) {
                                         const epic = strat.epics.find(e => e.key === currentEpicKey);
                                         if (epic) {
@@ -6584,10 +7176,11 @@
             }
 
             if (found) {
-                const rerenderFns = { outcome: rerenderRfe, rfe: rerenderRfe, initiative: rerenderStrat, strat: rerenderStrat, epic: rerenderEpic, task: rerenderTask };
+                const rerenderFns = { rfe: rerenderRfe, initiative: rerenderStrat, strat: rerenderStrat, epic: rerenderEpic, task: rerenderTask };
                 rerenderFns[itemType]?.(newData);
             }
             populateAssigneeFilter();
+            populateVersionFilter();
         }
 
         function rerenderRfe(rfe) {
@@ -6625,7 +7218,8 @@
                 // Update the details section
                 const detailsElement = itemElement.querySelector('.issue-details');
                 if (detailsElement) {
-                    detailsElement.outerHTML = generateDetailsHTML(rfe);
+                    const detailsId = detailsElement.id;
+                    detailsElement.outerHTML = generateDetailsHTML(rfe, detailsId);
                 }
 
                 // Clear and rebuild children - find the children container by looking for rfe-*-{key}
@@ -6634,9 +7228,6 @@
                     childrenContainer.classList.remove('expanded');
                     const icon = itemElement.querySelector('.expand-icon');
                     if (icon) icon.textContent = '▶';
-
-                    const details = itemElement.querySelector('.issue-details');
-                    if (details) details.style.display = 'none';
 
                     childrenContainer.innerHTML = '';
                     if (rfe.strats) {
@@ -6696,7 +7287,8 @@
 
                 const detailsElement = itemElement.querySelector('.issue-details');
                 if (detailsElement) {
-                    detailsElement.outerHTML = generateDetailsHTML(strat);
+                    const detailsId = detailsElement.id;
+                    detailsElement.outerHTML = generateDetailsHTML(strat, detailsId);
                 }
 
                 // Clear and rebuild children - find children container by looking for strat-*-{key}
@@ -6705,9 +7297,6 @@
                     childrenContainer.classList.remove('expanded');
                     const icon = itemElement.querySelector('.expand-icon');
                     if (icon) icon.textContent = '▶';
-
-                    const details = itemElement.querySelector('.issue-details');
-                    if (details) details.style.display = 'none';
 
                     childrenContainer.innerHTML = '';
                     if (strat.epics) {
@@ -6776,7 +7365,8 @@
                 // Update the details section
                 const detailsElement = itemElement.querySelector('.issue-details');
                 if (detailsElement) {
-                    detailsElement.outerHTML = generateDetailsHTML(epic);
+                    const detailsId = detailsElement.id;
+                    detailsElement.outerHTML = generateDetailsHTML(epic, detailsId);
                 }
 
                 // Clear and rebuild children
@@ -6854,7 +7444,8 @@
 
                 const detailsElement = itemElement.querySelector('.issue-details');
                 if (detailsElement) {
-                    detailsElement.outerHTML = generateDetailsHTML(task);
+                    const detailsId = detailsElement.id;
+                    detailsElement.outerHTML = generateDetailsHTML(task, detailsId);
                 }
 
                 const childrenDiv = itemElement.querySelector(':scope > .children');
