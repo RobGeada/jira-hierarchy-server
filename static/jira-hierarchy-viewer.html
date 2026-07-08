@@ -201,13 +201,13 @@
 
         /* Outcome top-level: shift everything right one level */
         .tree-level-outcome .tree-node.rfe { margin-left: 24px; font-size: 16px; }
-        .tree-level-outcome .tree-node.initiative { margin-left: 24px; font-size: 16px; }
+        .tree-level-outcome .tree-node.initiative { margin-left: 48px; }
         .tree-level-outcome .tree-node.strat { margin-left: 48px; }
         .tree-level-outcome .tree-node.epic { margin-left: 72px; }
         .tree-level-outcome .tree-node.task { margin-left: 96px; }
         .tree-level-outcome .tree-node.subtask { margin-left: 120px; }
         .tree-level-outcome .hierarchy-header-rfe { margin-left: 24px; }
-        .tree-level-outcome .hierarchy-header-initiative { margin-left: 24px; }
+        .tree-level-outcome .hierarchy-header-initiative { margin-left: 48px; }
         .tree-level-outcome .hierarchy-header-strat { margin-left: 48px; }
         .tree-level-outcome .hierarchy-header-epic { margin-left: 72px; }
         .tree-level-outcome .hierarchy-header-task { margin-left: 96px; }
@@ -2290,7 +2290,7 @@
         let eventSource = null;
         let knownAssignees = new Map(); // Track assignees: username -> display name
         let sprintCache = []; // Cached sprint data fetched in background
-        let currentView = 'hierarchy'; // 'hierarchy' or 'standup'
+        let currentView = localStorage.getItem('jiraViewMode') || 'hierarchy';
 
         // Track if we're currently loading
         let isLoading = false;
@@ -2408,6 +2408,7 @@
 
         function toggleView() {
             currentView = currentView === 'hierarchy' ? 'standup' : 'hierarchy';
+            localStorage.setItem('jiraViewMode', currentView);
 
             const viewBtn = document.getElementById('viewToggleBtn');
             const expandAllBtn = document.querySelector('button[onclick="expandAll()"]');
@@ -2449,37 +2450,47 @@
             const config = loadConfig();
             const maxAgeDays = config.maxAgeDays || 365;
 
-            // Helper function to find epic, strat, and rfe for a task
+            // Helper function to find epic, strat/initiative, and rfe for a task
             const findTaskContext = (task) => {
                 let epic = null;
                 let strat = null;
                 let rfe = null;
 
+                if (!task.epic_key) return { epic, strat, rfe };
+
                 for (const outcome of (hierarchyData.outcomes || [])) {
+                    // Search RFE -> STRAT -> Epic path
                     for (const r of (outcome.rfes || [])) {
-                        if (r.key === task.rfe_key) {
-                            rfe = r;
-                            strat = r.strats?.find(s => s.key === task.strat_key);
-                            if (strat) {
-                                epic = strat.epics?.find(e => e.key === task.epic_key);
+                        for (const s of (r.strats || [])) {
+                            const e = s.epics?.find(e => e.key === task.epic_key);
+                            if (e) {
+                                rfe = r;
+                                strat = s;
+                                epic = e;
+                                break;
                             }
+                        }
+                        if (epic) break;
+                    }
+                    if (epic) break;
+
+                    // Search outcome.strats (RFE-less STRATs) -> Epic path
+                    for (const s of (outcome.strats || [])) {
+                        const e = s.epics?.find(e => e.key === task.epic_key);
+                        if (e) {
+                            strat = s;
+                            epic = e;
                             break;
                         }
                     }
                     if (epic) break;
 
-                    if (task.strat_key) {
-                        const s = (outcome.strats || []).find(s => s.key === task.strat_key);
-                        if (s) {
-                            strat = s;
-                            epic = s.epics?.find(e => e.key === task.epic_key);
-                            if (epic) break;
-                        }
-                    }
-
+                    // Search Initiative -> Epic path
                     for (const init of (outcome.initiatives || [])) {
-                        if (init.key === task.initiative_key) {
-                            epic = init.epics?.find(e => e.key === task.epic_key);
+                        const e = init.epics?.find(e => e.key === task.epic_key);
+                        if (e) {
+                            strat = init;
+                            epic = e;
                             break;
                         }
                     }
@@ -2638,9 +2649,10 @@
                         }
 
                         if (task.strat) {
+                            const stratLabel = task.initiative_key ? 'Initiative' : 'STRAT';
                             html += `
                                     <div class="standup-hierarchy-item">
-                                        <span class="standup-hierarchy-label">STRAT:</span>
+                                        <span class="standup-hierarchy-label">${stratLabel}:</span>
                                         <span class="standup-hierarchy-value">
                                             <a href="${JIRA_CONFIG.baseUrl}/browse/${task.strat.key}" target="_blank" style="color: #172B4D; text-decoration: none;">${task.strat.key}</a> - ${escapeHtml(task.strat.summary)}
                                         </span>
@@ -2718,6 +2730,7 @@
 
         function renderHierarchyView() {
             const topLevel = getHierarchyTopLevel();
+            localStorage.setItem('jiraTopLevel', topLevel);
             const content = document.getElementById('content');
             content.innerHTML = `
                 <div class="hierarchy-table-header">
@@ -2788,14 +2801,11 @@
                 });
             } else if (topLevel === 'rfe') {
                 const allRfes = [];
-                const allInitiatives = [];
                 hierarchyData.outcomes?.forEach(outcome => {
                     outcome.rfes?.forEach(rfe => allRfes.push({rfe, outcome}));
-                    outcome.initiatives?.forEach(initiative => allInitiatives.push({initiative, outcome}));
                 });
                 if (currentSortField) {
                     allRfes.sort((a, b) => compareItems(a.rfe, b.rfe, currentSortField, currentSortOrder));
-                    allInitiatives.sort((a, b) => compareItems(a.initiative, b.initiative, currentSortField, currentSortOrder));
                 }
                 allRfes.forEach(({rfe, outcome}) => {
                     addRfeToTree(tree, rfe, outcome);
@@ -2809,22 +2819,25 @@
                         }
                     }
                 });
-                allInitiatives.forEach(({initiative, outcome}) => {
-                    addInitiativeToTree(tree, initiative, outcome);
-                    renderEpicsAndTasks(initiative);
-                });
             } else if (topLevel === 'strat') {
-                const allStrats = [];
+                const allItems = [];
                 hierarchyData.outcomes?.forEach(outcome => {
                     outcome.rfes?.forEach(rfe => {
-                        rfe.strats?.forEach(strat => allStrats.push({strat, rfe, outcome}));
+                        rfe.strats?.forEach(strat => allItems.push({item: strat, type: 'strat', rfe, outcome}));
                     });
-                    outcome.strats?.forEach(strat => allStrats.push({strat, rfe: null, outcome}));
+                    outcome.strats?.forEach(strat => allItems.push({item: strat, type: 'strat', rfe: null, outcome}));
+                    outcome.initiatives?.forEach(initiative => allItems.push({item: initiative, type: 'initiative', rfe: null, outcome}));
                 });
-                if (currentSortField) allStrats.sort((a, b) => compareItems(a.strat, b.strat, currentSortField, currentSortOrder));
-                allStrats.forEach(({strat, rfe, outcome}) => {
-                    addStratToTreeTopLevel(tree, strat, rfe, outcome);
-                    renderEpicsAndTasks(strat);
+                if (currentSortField) {
+                    allItems.sort((a, b) => compareItems(a.item, b.item, currentSortField, currentSortOrder));
+                }
+                allItems.forEach(({item, type, rfe, outcome}) => {
+                    if (type === 'strat') {
+                        addStratToTreeTopLevel(tree, item, rfe, outcome);
+                    } else {
+                        addInitiativeToTree(tree, item, outcome);
+                    }
+                    renderEpicsAndTasks(item);
                 });
             }
 
@@ -3609,9 +3622,10 @@
                     outcome.initiatives.push(initiative);
 
                     if (tree) {
-                        if (getHierarchyTopLevel() === 'outcome' && outcome.key !== '__orphan__') {
+                        const topLevel = getHierarchyTopLevel();
+                        if (topLevel === 'outcome' && outcome.key !== '__orphan__') {
                             addInitiativeToTreeNested(initiative, outcome);
-                        } else {
+                        } else if (topLevel === 'strat') {
                             addInitiativeToTree(tree, initiative, outcome);
                         }
                         updateStats(hierarchyData);
@@ -5257,8 +5271,8 @@
             if (hasVersionFilter) {
                 const topLevel = getHierarchyTopLevel();
                 const versionTypes = topLevel === 'outcome' ? ['outcome', 'rfe', 'initiative', 'strat']
-                    : topLevel === 'rfe' ? ['rfe', 'initiative']
-                    : ['strat'];
+                    : topLevel === 'rfe' ? ['rfe']
+                    : ['strat', 'initiative'];
 
                 allItems.forEach(item => item.style.display = 'none');
 
@@ -5358,7 +5372,7 @@
                     });
                 });
                 (outcome.initiatives || []).forEach(init => {
-                    if (topLevel === 'outcome' || topLevel === 'rfe') {
+                    if (topLevel === 'outcome' || topLevel === 'strat') {
                         (init.fix_versions || []).forEach(v => versions.add(v));
                     }
                 });
@@ -7508,6 +7522,33 @@
 
         // Check version on page load
         window.addEventListener('DOMContentLoaded', () => {
+            const savedTopLevel = localStorage.getItem('jiraTopLevel');
+            if (savedTopLevel) {
+                const el = document.getElementById('hierarchyTopLevel');
+                if (el) el.value = savedTopLevel;
+            }
+
+            if (currentView === 'standup') {
+                const viewBtn = document.getElementById('viewToggleBtn');
+                const expandAllBtn = document.querySelector('button[onclick="expandAll()"]');
+                const collapseAllBtn = document.querySelector('button[onclick="collapseAll()"]');
+                const filterGroup = document.querySelector('.filter-group:not(#standupAgeFilter):not(#standupSortFilter):not(#topLevelFilter):not(#versionFilter)');
+                const searchInput = document.getElementById('searchInput');
+                const standupAgeFilter = document.getElementById('standupAgeFilter');
+                const standupSortFilter = document.getElementById('standupSortFilter');
+                const topLevelFilter = document.getElementById('topLevelFilter');
+                const versionFilter = document.getElementById('versionFilter');
+                if (viewBtn) viewBtn.textContent = 'View: Standup';
+                if (expandAllBtn) expandAllBtn.style.display = 'none';
+                if (collapseAllBtn) collapseAllBtn.style.display = 'none';
+                if (filterGroup) filterGroup.style.display = 'none';
+                if (searchInput) searchInput.style.display = 'none';
+                if (topLevelFilter) topLevelFilter.style.display = 'none';
+                if (versionFilter) versionFilter.style.display = 'none';
+                if (standupAgeFilter) standupAgeFilter.style.display = 'flex';
+                if (standupSortFilter) standupSortFilter.style.display = 'flex';
+            }
+
             loadData();
             checkVersionStatus();
             fetchSprintsInBackground();
