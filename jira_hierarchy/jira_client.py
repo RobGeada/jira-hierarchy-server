@@ -1,6 +1,7 @@
 """JIRA REST API client"""
 
 import base64
+import sys
 import requests
 from .config import JIRA_BASE_URL, get_jira_pat, get_jira_email
 
@@ -51,7 +52,7 @@ def run_jira_query(jql, fields="summary,status,priority,assignee,description", j
     }
 
     all_issues = []
-    max_results = 100  # Fetch 100 at a time (JIRA Cloud typical limit)
+    max_results = 1000
     page_num = 1
     max_pages = 100  # Safety limit: stop after 100 pages (10,000 issues)
     first_key = None
@@ -140,7 +141,7 @@ def iter_jira_query(jql, fields="summary,status,priority,assignee,description", 
         'Accept': 'application/json'
     }
 
-    max_results = 100
+    max_results = 1000
     page_num = 1
     max_pages = 100
     first_key = None
@@ -192,6 +193,103 @@ def iter_jira_query(jql, fields="summary,status,priority,assignee,description", 
         print(f"WARNING: Hit pagination safety limit ({max_pages} pages).", file=sys.stderr)
 
     print(f"Pagination complete: {total_fetched} total issues fetched", file=sys.stderr)
+
+
+def run_parallel_queries(queries, jira_email=None, jira_pat=None, wfile=None):
+    """
+    Run multiple JQL queries in parallel using threads.
+    Each query paginates sequentially via nextPageToken (v3 API requirement),
+    but all queries run concurrently.
+
+    Args:
+        queries: List of (jql, fields, label) tuples.
+                 Multiple queries can share the same label — their results
+                 are merged into one list under that label.
+        jira_email: User email address
+        jira_pat: API token
+        wfile: Optional write file for SSE progress events
+
+    Returns:
+        Dict keyed by label -> list of issues
+    """
+    import json
+    import threading
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    results = {}
+    lock = threading.Lock()
+    label_counts = {}
+
+    def fetch_one(jql, fields, label):
+        all_issues = []
+        url = f"{JIRA_BASE_URL}/rest/api/3/search/jql"
+        headers = {
+            'Authorization': _get_auth_header(jira_email, jira_pat),
+            'Accept': 'application/json'
+        }
+        max_results = 100
+        page_num = 1
+        max_pages = 100
+        first_key = None
+        next_page_token = None
+
+        while page_num <= max_pages:
+            params = {'jql': jql, 'fields': fields, 'maxResults': max_results}
+            if next_page_token:
+                params['nextPageToken'] = next_page_token
+
+            response = requests.get(url, headers=headers, params=params)
+            if response.status_code != 200:
+                raise ValueError(
+                    f"JIRA API error ({label}): {response.status_code}\n"
+                    f"URL: {url}\n"
+                    f"Response: {response.text[:500]}"
+                )
+
+            result = response.json()
+            issues = result.get('issues', [])
+            if not issues:
+                break
+
+            if page_num == 1:
+                first_key = issues[0]['key']
+            elif page_num == 2 and first_key and issues[0]['key'] == first_key:
+                print(f"WARNING: Pagination not working for {label}!", file=sys.stderr)
+                break
+
+            all_issues.extend(issues)
+
+            if wfile:
+                try:
+                    with lock:
+                        label_counts[label] = label_counts.get(label, 0) + len(issues)
+                        event = f"event: progress\ndata: {json.dumps({'message': f'Fetching {label}... ({label_counts[label]} fetched)'})}\n\n"
+                        wfile.write(event.encode())
+                        wfile.flush()
+                except Exception:
+                    pass
+
+            next_page_token = result.get('nextPageToken')
+            page_num += 1
+            if not next_page_token:
+                break
+
+        print(f"Fetched {len(all_issues)} issues for {label} query", file=sys.stderr)
+        return label, all_issues
+
+    with ThreadPoolExecutor(max_workers=len(queries)) as executor:
+        futures = {
+            executor.submit(fetch_one, jql, fields, label): label
+            for jql, fields, label in queries
+        }
+        for future in as_completed(futures):
+            label, issues = future.result()
+            with lock:
+                if label not in results:
+                    results[label] = []
+                results[label].extend(issues)
+
+    return results
 
 
 def create_jira_issue(project_key, summary, description, issue_type, custom_fields=None, jira_email=None, jira_pat=None):
