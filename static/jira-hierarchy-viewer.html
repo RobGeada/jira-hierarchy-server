@@ -2286,7 +2286,7 @@
             // For now, we'll use a proxy or generate static data
         };
 
-        let hierarchyData = {outcomes: [], allTasks: [], metadata: {total_outcomes: 0, total_rfes: 0, total_initiatives: 0, total_strats: 0, total_epics: 0, total_tasks: 0}};
+        let hierarchyData = {outcomes: [], allTasks: [], orphanEpics: [], metadata: {total_outcomes: 0, total_rfes: 0, total_initiatives: 0, total_strats: 0, total_epics: 0, total_tasks: 0}};
         let eventSource = null;
         let knownAssignees = new Map(); // Track assignees: username -> display name
         let sprintCache = []; // Cached sprint data fetched in background
@@ -2497,6 +2497,10 @@
                     if (epic) break;
                 }
 
+                if (!epic && task.epic_key) {
+                    epic = hierarchyData.orphanEpics.find(e => e.key === task.epic_key) || null;
+                }
+
                 return { epic, strat, rfe };
             };
 
@@ -2568,17 +2572,27 @@
                 data.tasks.forEach(task => {
                     const stratKey = task.strat ? task.strat.key : '__unlinked__';
                     const stratSummary = task.strat ? task.strat.summary : 'Unlinked Tasks';
+                    const stratFixVersions = task.strat ? (task.strat.fix_versions || []) : [];
                     if (!tasksByStrat.has(stratKey)) {
-                        tasksByStrat.set(stratKey, { stratSummary, tasks: [] });
+                        tasksByStrat.set(stratKey, { stratSummary, stratFixVersions, tasks: [] });
                     }
                     tasksByStrat.get(stratKey).tasks.push(task);
                 });
+
+                const getNewestTaskDate = (tasks) => {
+                    let newest = 0;
+                    for (const t of tasks) {
+                        const d = t.updated ? new Date(t.updated).getTime() : 0;
+                        if (d > newest) newest = d;
+                    }
+                    return newest;
+                };
 
                 const sortedStratGroups = Array.from(tasksByStrat.entries())
                     .sort((a, b) => {
                         if (a[0] === '__unlinked__') return 1;
                         if (b[0] === '__unlinked__') return -1;
-                        return a[0].localeCompare(b[0]);
+                        return getNewestTaskDate(b[1].tasks) - getNewestTaskDate(a[1].tasks);
                     });
 
                 html += `
@@ -2598,9 +2612,13 @@
                         ? '<span style="color: #6B778C; font-style: italic;">Unlinked Tasks</span>'
                         : `<a href="${JIRA_CONFIG.baseUrl}/browse/${stratKey}" target="_blank" style="color: #6554C0; text-decoration: none;">${stratKey}</a> — ${escapeHtml(stratData.stratSummary)}`;
 
+                    const versionBadges = !isUnlinked && stratData.stratFixVersions.length > 0
+                        ? ' ' + stratData.stratFixVersions.map(v => `<span style="background: #E3FCEF; color: #006644; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 500; margin-left: 4px;">${escapeHtml(v)}</span>`).join('')
+                        : '';
+
                     html += `
                         <div class="standup-rfe-group">
-                            <div class="standup-rfe-header">${stratLabel} (${stratData.tasks.length})</div>
+                            <div class="standup-rfe-header">${stratLabel} (${stratData.tasks.length})${versionBadges}</div>
                     `;
 
                     const standupSortBy = document.getElementById('standupSortBy')?.value || 'updated';
@@ -3473,7 +3491,7 @@
             const oldData = hierarchyData;
 
             // Reset data
-            hierarchyData = {outcomes: [], allTasks: [], metadata: {total_outcomes: 0, total_rfes: 0, total_initiatives: 0, total_strats: 0, total_epics: 0, total_tasks: 0}};
+            hierarchyData = {outcomes: [], allTasks: [], orphanEpics: [], metadata: {total_outcomes: 0, total_rfes: 0, total_initiatives: 0, total_strats: 0, total_epics: 0, total_tasks: 0}};
 
             // Initialize tree structure only if in hierarchy view
             let tree = null;
@@ -3755,6 +3773,11 @@
                         }
                     }
                 }
+
+                if (!found) {
+                    if (!epic.tasks) epic.tasks = [];
+                    hierarchyData.orphanEpics.push(epic);
+                }
             });
 
             eventSource.addEventListener('task', function(e) {
@@ -3831,6 +3854,15 @@
                                 }
                             }
                         }
+                    }
+                }
+
+                if (!found && task.epic_key) {
+                    const orphanEpic = hierarchyData.orphanEpics.find(e => e.key === task.epic_key);
+                    if (orphanEpic) {
+                        if (!orphanEpic.tasks) orphanEpic.tasks = [];
+                        orphanEpic.tasks.push(task);
+                        found = true;
                     }
                 }
             });

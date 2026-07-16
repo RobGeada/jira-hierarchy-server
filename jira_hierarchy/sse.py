@@ -489,7 +489,11 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
                     send_sse_event(wfile, 'epic', epic_data_copy)
                     total_epics += 1
         else:
-            print(f"  WARNING: Epic {epic_key} has no Parent Link to our STRATs/Initiatives", file=sys.stderr)
+            epic_data_copy = epic_data.copy()
+            epic_data_copy['tasks'] = []
+            epic_data_copy['orphan'] = True
+            send_sse_event(wfile, 'epic', epic_data_copy)
+            total_epics += 1
 
     # =========================================================================
     # Step 6: Process Tasks and link to Epics
@@ -557,6 +561,8 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
                 send_sse_event(wfile, 'task', task_data)
                 total_tasks += 1
         else:
+            if epic_link:
+                task_data['epic_key'] = epic_link
             send_sse_event(wfile, 'task', task_data)
             total_tasks += 1
 
