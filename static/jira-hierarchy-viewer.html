@@ -1617,6 +1617,52 @@
             background: #505F79;
         }
 
+        .btn-actions {
+            margin-left: 4px;
+            padding: 2px 6px;
+            background: transparent;
+            color: #6B778C;
+            border: 1px solid #DFE1E6;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            line-height: 1;
+            display: inline-block;
+        }
+
+        .btn-actions:hover {
+            background: #F4F5F7;
+            color: #172B4D;
+        }
+
+        .actions-dropdown {
+            position: fixed;
+            background: white;
+            border: 1px solid #DFE1E6;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            z-index: 10000;
+            min-width: 240px;
+            padding: 4px 0;
+        }
+
+        .actions-dropdown-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #172B4D;
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+        }
+
+        .actions-dropdown-item:hover {
+            background: #F4F5F7;
+        }
+
         .no-data {
             color: #6B778C;
             font-style: italic;
@@ -3894,6 +3940,32 @@
                     }
                 }
 
+                // Fallback: search all epics in hierarchy by epic_key alone
+                if (!found && task.epic_key) {
+                    for (const outcome of hierarchyData.outcomes) {
+                        if (found) break;
+                        const searchParents = [
+                            ...(outcome.rfes || []).flatMap(r => (r.strats || [])),
+                            ...(outcome.strats || []),
+                            ...(outcome.initiatives || [])
+                        ];
+                        for (const parent of searchParents) {
+                            const epic = (parent.epics || []).find(ep => ep.key === task.epic_key);
+                            if (epic) {
+                                if (!epic.tasks) epic.tasks = [];
+                                epic.tasks.push(task);
+                                if (!task.outcome_key) task.outcome_key = outcome.key;
+                                found = true;
+                                if (tree) {
+                                    addTaskToTree(task);
+                                    updateStats(hierarchyData);
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+
                 if (!found && task.epic_key) {
                     const orphanEpic = hierarchyData.orphanEpics.find(e => e.key === task.epic_key);
                     if (orphanEpic) {
@@ -4045,6 +4117,7 @@
                             <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${outcome.key}', this)">${outcome.assignee || 'Unassigned'}</span>
                             <span class="issue-updated">${formatDate(outcome.updated)}</span>
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${outcome.key}', 'outcome')">↻</button>
+                            <button class="btn-actions" onclick="event.stopPropagation(); showActionsMenu('${outcome.key}', 'outcome', this)">⋮</button>
                         </div>
                     </div>
                     ${generateDetailsHTML(outcome, detailsId)}
@@ -4087,6 +4160,7 @@
                             <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${rfe.key}', this)">${rfe.assignee || 'Unassigned'}</span>
                             <span class="issue-updated">${formatDate(rfe.updated)}</span>
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${rfe.key}', 'rfe')">↻</button>
+                            <button class="btn-actions" onclick="event.stopPropagation(); showActionsMenu('${rfe.key}', 'rfe', this)">⋮</button>
                         </div>
                     </div>
                     ${generateDetailsHTML(rfe, detailsId)}
@@ -4119,6 +4193,7 @@
                             <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${strat.key}', this)">${strat.assignee || 'Unassigned'}</span>
                             <span class="issue-updated">${formatDate(strat.updated)}</span>
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${strat.key}', 'strat')">↻</button>
+                            <button class="btn-actions" onclick="event.stopPropagation(); showActionsMenu('${strat.key}', 'strat', this)">⋮</button>
                         </div>
                     </div>
                     ${generateDetailsHTML(strat, detailsId, outcome, rfe)}
@@ -4152,6 +4227,7 @@
                             <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${rfe.key}', this)">${rfe.assignee || 'Unassigned'}</span>
                             <span class="issue-updated">${formatDate(rfe.updated)}</span>
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${rfe.key}', 'rfe')">↻</button>
+                            <button class="btn-actions" onclick="event.stopPropagation(); showActionsMenu('${rfe.key}', 'rfe', this)">⋮</button>
                         </div>
                     </div>
                     ${generateDetailsHTML(rfe, `details-${rfe.outcome_key}-${rfe.key}`, outcome)}
@@ -4183,6 +4259,7 @@
                             <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${initiative.key}', this)">${initiative.assignee || 'Unassigned'}</span>
                             <span class="issue-updated">${formatDate(initiative.updated)}</span>
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${initiative.key}', 'initiative')">↻</button>
+                            <button class="btn-actions" onclick="event.stopPropagation(); showActionsMenu('${initiative.key}', 'initiative', this)">⋮</button>
                         </div>
                     </div>
                     ${generateDetailsHTML(initiative, `details-${initiative.key}`, outcome)}
@@ -4226,6 +4303,7 @@
                             <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${initiative.key}', this)">${initiative.assignee || 'Unassigned'}</span>
                             <span class="issue-updated">${formatDate(initiative.updated)}</span>
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${initiative.key}', 'initiative')">↻</button>
+                            <button class="btn-actions" onclick="event.stopPropagation(); showActionsMenu('${initiative.key}', 'initiative', this)">⋮</button>
                         </div>
                     </div>
                     ${generateDetailsHTML(initiative, `details-${initiative.key}`, outcome)}
@@ -4270,6 +4348,7 @@
                             <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${strat.key}', this)">${strat.assignee || 'Unassigned'}</span>
                             <span class="issue-updated">${formatDate(strat.updated)}</span>
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${strat.key}', 'strat')">↻</button>
+                            <button class="btn-actions" onclick="event.stopPropagation(); showActionsMenu('${strat.key}', 'strat', this)">⋮</button>
                         </div>
                     </div>
                     ${generateDetailsHTML(strat, detailsId, outcome)}
@@ -4317,6 +4396,7 @@
                             <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${strat.key}', this)">${strat.assignee || 'Unassigned'}</span>
                             <span class="issue-updated">${formatDate(strat.updated)}</span>
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${strat.key}', 'strat')">↻</button>
+                            <button class="btn-actions" onclick="event.stopPropagation(); showActionsMenu('${strat.key}', 'strat', this)">⋮</button>
                         </div>
                     </div>
                     ${generateDetailsHTML(strat, detailsId)}
@@ -4420,6 +4500,7 @@
                             <span class="issue-assignee" onclick="event.stopPropagation(); showAssigneeDropdown('${epic.key}', this)">${epic.assignee || 'Unassigned'}</span>
                             <span class="issue-updated">${formatDate(epic.updated)}</span>
                             <button class="btn-reload" onclick="event.stopPropagation(); reloadItem('${epic.key}', 'epic')">↻</button>
+                            <button class="btn-actions" onclick="event.stopPropagation(); showActionsMenu('${epic.key}', 'epic', this)">⋮</button>
                         </div>
                     </div>
                     ${generateDetailsHTML(epic, epicDetailsId)}
@@ -4436,8 +4517,19 @@
             trackAssignee(task.assignee, task.assignee_username);
             const parentKey = task.strat_key || task.initiative_key;
             const outcomeKey = task.outcome_key || '';
-            const epicContainerId = targetContainerId || `epic-${outcomeKey}-${parentKey}-${task.epic_key}`;
-            const epicContainer = document.getElementById(epicContainerId);
+            let epicContainerId;
+            if (targetContainerId) {
+                epicContainerId = targetContainerId;
+            } else if (task.strat_key) {
+                epicContainerId = `epic-${outcomeKey}-${parentKey}-${task.epic_key}`;
+            } else {
+                epicContainerId = `epic-${parentKey}-${task.epic_key}`;
+            }
+            let epicContainer = document.getElementById(epicContainerId);
+            if (!epicContainer && !targetContainerId) {
+                epicContainerId = `epic-${outcomeKey}-${parentKey}-${task.epic_key}`;
+                epicContainer = document.getElementById(epicContainerId);
+            }
             if (!epicContainer) return;
 
             // Derive ID prefix from the epic container ID for consistent child IDs
@@ -7067,6 +7159,202 @@
         function updateIssueInData(issueKey, updateFn) {
             const issue = findIssueInHierarchy(issueKey);
             if (issue) updateFn(issue);
+        }
+
+        // Actions menu (three-dots dropdown)
+        function showActionsMenu(issueKey, itemType, buttonElement) {
+            closeActionsMenu();
+            const rect = buttonElement.getBoundingClientRect();
+            const dropdown = document.createElement('div');
+            dropdown.className = 'actions-dropdown';
+            dropdown.id = 'actions-dropdown';
+            dropdown.style.top = `${rect.bottom + 4}px`;
+            dropdown.style.left = `${rect.left}px`;
+
+            const issue = findIssueInHierarchy(issueKey);
+            const componentList = issue && issue.components && issue.components.length > 0
+                ? issue.components.join(', ')
+                : 'none';
+            const fixVersionList = issue && issue.fix_versions && issue.fix_versions.length > 0
+                ? issue.fix_versions.join(', ')
+                : 'none';
+
+            dropdown.innerHTML = `
+                <button class="actions-dropdown-item" onclick="updateChildComponents('${issueKey}', '${itemType}', 'replace')">
+                    Set component to ${componentList} for all child tickets
+                </button>
+                <button class="actions-dropdown-item" onclick="updateChildComponents('${issueKey}', '${itemType}', 'append')">
+                    Append components ${componentList} for all child tickets
+                </button>
+                <button class="actions-dropdown-item" onclick="updateChildFixVersions('${issueKey}', '${itemType}')">
+                    Set fixVersion to ${fixVersionList} for all child tickets
+                </button>
+            `;
+
+            document.body.appendChild(dropdown);
+
+            // Adjust if off-screen right
+            const dropdownRect = dropdown.getBoundingClientRect();
+            if (dropdownRect.right > window.innerWidth) {
+                dropdown.style.left = `${window.innerWidth - dropdownRect.width - 8}px`;
+            }
+
+            setTimeout(() => {
+                document.addEventListener('click', closeActionsMenu, { once: true });
+            }, 0);
+        }
+
+        function closeActionsMenu() {
+            const dropdown = document.getElementById('actions-dropdown');
+            if (dropdown) dropdown.remove();
+        }
+
+        function getDescendantKeys(issue, itemType) {
+            const keys = [];
+            const collectEpicsAndTasks = (parent) => {
+                for (const epic of (parent.epics || [])) {
+                    keys.push(epic.key);
+                    for (const task of (epic.tasks || [])) {
+                        keys.push(task.key);
+                    }
+                }
+            };
+            const collectStratsDown = (strats) => {
+                for (const strat of (strats || [])) {
+                    keys.push(strat.key);
+                    collectEpicsAndTasks(strat);
+                }
+            };
+
+            if (itemType === 'outcome') {
+                for (const rfe of (issue.rfes || [])) {
+                    keys.push(rfe.key);
+                    collectStratsDown(rfe.strats);
+                }
+                for (const init of (issue.initiatives || [])) {
+                    keys.push(init.key);
+                    collectEpicsAndTasks(init);
+                }
+                collectStratsDown(issue.strats);
+            } else if (itemType === 'rfe') {
+                collectStratsDown(issue.strats);
+            } else if (itemType === 'strat' || itemType === 'initiative') {
+                collectEpicsAndTasks(issue);
+            } else if (itemType === 'epic') {
+                for (const task of (issue.tasks || [])) {
+                    keys.push(task.key);
+                }
+            }
+            return keys;
+        }
+
+        async function updateChildComponents(issueKey, itemType, mode) {
+            closeActionsMenu();
+
+            const issue = findIssueInHierarchy(issueKey);
+            if (!issue) {
+                showError(`Could not find ${issueKey} in hierarchy data`);
+                return;
+            }
+
+            const components = issue.components || [];
+            if (components.length === 0) {
+                showError(`${issueKey} has no components set`);
+                return;
+            }
+
+            const descendantKeys = getDescendantKeys(issue, itemType);
+            if (descendantKeys.length === 0) {
+                showError(`${issueKey} has no child tickets`);
+                return;
+            }
+
+            const componentList = components.join(', ');
+            const action = mode === 'append' ? 'Append' : 'Set';
+            const description = mode === 'append'
+                ? `Append [${componentList}] to components on ${descendantKeys.length} child ticket${descendantKeys.length === 1 ? '' : 's'}?`
+                : `Set components on ${descendantKeys.length} child ticket${descendantKeys.length === 1 ? '' : 's'} to: ${componentList}?`;
+            if (!confirm(description)) {
+                return;
+            }
+
+            try {
+                const config = loadConfig();
+                const response = await fetch('/api/batch-update-components', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: config.email,
+                        pat: config.pat,
+                        issue_keys: descendantKeys,
+                        components: components,
+                        mode: mode
+                    })
+                });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    showSuccess(`${action === 'Append' ? 'Appended' : 'Set'} components on ${result.updated} ticket${result.updated === 1 ? '' : 's'}`);
+                } else if (response.ok && result.failed > 0) {
+                    showSuccess(`Updated ${result.updated}/${result.total} tickets. ${result.failed} failed.`);
+                } else {
+                    showError(`Error updating components: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Error updating components: ${error.message}`);
+            }
+        }
+
+        async function updateChildFixVersions(issueKey, itemType) {
+            closeActionsMenu();
+
+            const issue = findIssueInHierarchy(issueKey);
+            if (!issue) {
+                showError(`Could not find ${issueKey} in hierarchy data`);
+                return;
+            }
+
+            const fixVersions = issue.fix_versions || [];
+            if (fixVersions.length === 0) {
+                showError(`${issueKey} has no fix versions set`);
+                return;
+            }
+
+            const descendantKeys = getDescendantKeys(issue, itemType);
+            if (descendantKeys.length === 0) {
+                showError(`${issueKey} has no child tickets`);
+                return;
+            }
+
+            const versionList = fixVersions.join(', ');
+            if (!confirm(`Set fixVersion on ${descendantKeys.length} child ticket${descendantKeys.length === 1 ? '' : 's'} to: ${versionList}?`)) {
+                return;
+            }
+
+            try {
+                const config = loadConfig();
+                const response = await fetch('/api/batch-update-fix-versions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: config.email,
+                        pat: config.pat,
+                        issue_keys: descendantKeys,
+                        fix_versions: fixVersions
+                    })
+                });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    showSuccess(`Set fixVersion on ${result.updated} ticket${result.updated === 1 ? '' : 's'}`);
+                } else if (response.ok && result.failed > 0) {
+                    showSuccess(`Updated ${result.updated}/${result.total} tickets. ${result.failed} failed.`);
+                } else {
+                    showError(`Error updating fix versions: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Error updating fix versions: ${error.message}`);
+            }
         }
 
         // Reload item and its children

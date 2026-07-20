@@ -85,6 +85,8 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             self.handle_update_story_points()
         elif parsed_path.path == '/api/batch-update-components':
             self.handle_batch_update_components()
+        elif parsed_path.path == '/api/batch-update-fix-versions':
+            self.handle_batch_update_fix_versions()
         else:
             self.send_error(404, 'Not Found')
 
@@ -511,6 +513,45 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             traceback.print_exc()
             self.send_json({'error': str(e)}, status=500)
 
+    def handle_batch_update_fix_versions(self):
+        """Update fix versions on multiple JIRA issues"""
+        try:
+            data = self.read_json_body()
+
+            email = data.get('email')
+            pat = data.get('pat')
+            issue_keys = data.get('issue_keys', [])
+            fix_versions = data.get('fix_versions', [])
+
+            if not issue_keys:
+                self.send_json({'error': 'Missing required fields'}, status=400)
+                return
+
+            from .jira_client import update_jira_issue
+
+            fix_version_payload = [{'name': v} for v in fix_versions]
+            results = []
+            for issue_key in issue_keys:
+                try:
+                    update_jira_issue(issue_key, {'fixVersions': fix_version_payload}, email, pat)
+                    results.append({'issue_key': issue_key, 'success': True})
+                except Exception as e:
+                    results.append({'issue_key': issue_key, 'success': False, 'error': str(e)})
+
+            failed = [r for r in results if not r['success']]
+            self.send_json({
+                'success': len(failed) == 0,
+                'total': len(issue_keys),
+                'updated': len(issue_keys) - len(failed),
+                'failed': len(failed),
+                'results': results
+            })
+
+        except Exception as e:
+            print(f"Error batch updating fix versions: {e}", file=sys.stderr)
+            traceback.print_exc()
+            self.send_json({'error': str(e)}, status=500)
+
     def reload_item(self):
         """Reload a single item and its children"""
         try:
@@ -540,7 +581,7 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             # Fetch the item and its children based on type
             if item_type == 'outcome':
                 jql = f'key = {issue_key}'
-                field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,customfield_10028'
+                field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,customfield_10028,fixVersions,customfield_10855'
                 outcome_issues = run_jira_query(jql, field_list, email, pat)
                 if not outcome_issues:
                     self.send_json({'error': 'Outcome not found'}, status=404)
@@ -550,7 +591,7 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
 
             elif item_type == 'initiative':
                 jql = f'key = {issue_key}'
-                field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,customfield_10028'
+                field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,customfield_10028,fixVersions,customfield_10855'
                 init_issues = run_jira_query(jql, field_list, email, pat)
                 if not init_issues:
                     self.send_json({'error': 'Initiative not found'}, status=404)
@@ -602,7 +643,7 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             elif item_type == 'strat':
                 # Fetch this specific STRAT
                 jql = f'key = {issue_key}'
-                field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,customfield_10028'
+                field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,customfield_10028,fixVersions,customfield_10855'
                 strat_issues = run_jira_query(jql, field_list, email, pat)
                 if not strat_issues:
                     self.send_json({'error': 'STRAT not found'}, status=404)
@@ -625,7 +666,7 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             elif item_type == 'epic':
                 # Fetch this specific Epic
                 jql = f'key = {issue_key}'
-                field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,customfield_10028'
+                field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,created,updated,components,customfield_10028,fixVersions,customfield_10855'
                 epic_issues = run_jira_query(jql, field_list, email, pat)
                 if not epic_issues:
                     self.send_json({'error': 'Epic not found'}, status=404)
@@ -641,7 +682,7 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             elif item_type == 'task':
                 # Fetch this specific Task
                 jql = f'key = {issue_key}'
-                field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components,customfield_10875,customfield_10028'
+                field_list = 'summary,status,priority,assignee,reporter,description,labels,comment,issuetype,created,updated,components,customfield_10875,customfield_10028,fixVersions,customfield_10855'
                 task_issues = run_jira_query(jql, field_list, email, pat)
                 if not task_issues:
                     self.send_json({'error': 'Task not found'}, status=404)
