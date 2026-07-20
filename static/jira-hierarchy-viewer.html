@@ -4142,8 +4142,8 @@
 
             const rfeId = `rfe-${rfe.outcome_key}-${rfe.key}`;
             const detailsId = `details-${rfe.outcome_key}-${rfe.key}`;
-            const displayVersion = rfe.target_versions && rfe.target_versions.length > 0
-                ? rfe.target_versions.join(', ') : '-';
+            const displayVersion = rfe.fix_versions && rfe.fix_versions.length > 0
+                ? rfe.fix_versions.join(', ') : '-';
             const versionClass = displayVersion === '-' ? 'issue-version no-version' : 'issue-version';
             const rfeHtml = `
                 <div class="tree-item" id="item-${rfe.outcome_key}-${rfe.key}" data-assignee="${rfe.assignee_username || ''}" data-type="rfe" data-version="0">
@@ -4209,8 +4209,8 @@
             trackAssignee(rfe.assignee, rfe.assignee_username);
 
             const rfeId = `rfe-${rfe.outcome_key}-${rfe.key}`;
-            const displayVersion = rfe.target_versions && rfe.target_versions.length > 0
-                ? rfe.target_versions.join(', ') : '-';
+            const displayVersion = rfe.fix_versions && rfe.fix_versions.length > 0
+                ? rfe.fix_versions.join(', ') : '-';
             const versionClass = displayVersion === '-' ? 'issue-version no-version' : 'issue-version';
             const rfeHtml = `
                 <div class="tree-item" id="item-${rfe.outcome_key}-${rfe.key}" data-assignee="${rfe.assignee_username || ''}" data-type="rfe" data-version="0">
@@ -5296,8 +5296,8 @@
                     bVal = b.updated ? new Date(b.updated).getTime() : 0;
                     break;
                 case 'version':
-                    const aVersions = (a.target_versions && a.target_versions.length > 0) ? a.target_versions : a.fix_versions;
-                    const bVersions = (b.target_versions && b.target_versions.length > 0) ? b.target_versions : b.fix_versions;
+                    const aVersions = a.fix_versions;
+                    const bVersions = b.fix_versions;
                     const aHasVersion = aVersions && aVersions.length > 0;
                     const bHasVersion = bVersions && bVersions.length > 0;
                     if (!aHasVersion && !bHasVersion) return 0;
@@ -5556,7 +5556,7 @@
                 }
                 (outcome.rfes || []).forEach(rfe => {
                     if (topLevel === 'outcome' || topLevel === 'rfe') {
-                        (rfe.target_versions || []).forEach(v => versions.add(v));
+                        (rfe.fix_versions || []).forEach(v => versions.add(v));
                     }
                     (rfe.strats || []).forEach(strat => {
                         if (topLevel === 'outcome' || topLevel === 'rfe' || topLevel === 'strat') {
