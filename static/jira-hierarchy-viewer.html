@@ -2848,12 +2848,28 @@
                 });
             } else if (topLevel === 'strat') {
                 const allItems = [];
+                const seenKeys = new Set();
                 hierarchyData.outcomes?.forEach(outcome => {
                     outcome.rfes?.forEach(rfe => {
-                        rfe.strats?.forEach(strat => allItems.push({item: strat, type: 'strat', rfe, outcome}));
+                        rfe.strats?.forEach(strat => {
+                            if (!seenKeys.has(strat.key)) {
+                                seenKeys.add(strat.key);
+                                allItems.push({item: strat, type: 'strat', rfe, outcome});
+                            }
+                        });
                     });
-                    outcome.strats?.forEach(strat => allItems.push({item: strat, type: 'strat', rfe: null, outcome}));
-                    outcome.initiatives?.forEach(initiative => allItems.push({item: initiative, type: 'initiative', rfe: null, outcome}));
+                    outcome.strats?.forEach(strat => {
+                        if (!seenKeys.has(strat.key)) {
+                            seenKeys.add(strat.key);
+                            allItems.push({item: strat, type: 'strat', rfe: null, outcome});
+                        }
+                    });
+                    outcome.initiatives?.forEach(initiative => {
+                        if (!seenKeys.has(initiative.key)) {
+                            seenKeys.add(initiative.key);
+                            allItems.push({item: initiative, type: 'initiative', rfe: null, outcome});
+                        }
+                    });
                 });
                 if (currentSortField) {
                     allItems.sort((a, b) => compareItems(a.item, b.item, currentSortField, currentSortOrder));
@@ -3661,6 +3677,8 @@
                 populateVersionFilter();
             });
 
+            const renderedStratKeys = new Set();
+
             eventSource.addEventListener('strat', function(e) {
                 const strat = JSON.parse(e.data);
                 hierarchyData.metadata.total_strats++;
@@ -3669,6 +3687,8 @@
                     if (tree) {
                         const topLevel = getHierarchyTopLevel();
                         if (topLevel === 'strat') {
+                            if (renderedStratKeys.has(strat.key)) return;
+                            renderedStratKeys.add(strat.key);
                             addStratToTreeTopLevel(tree, strat, rfe, outcome);
                         } else {
                             addStratToTree(strat);
@@ -3712,7 +3732,10 @@
                         if (topLevel === 'outcome' && targetOutcome.key !== '__orphan__') {
                             addStratToTreeUnderOutcome(strat, targetOutcome);
                         } else if (topLevel === 'strat') {
-                            addStratToTreeTopLevel(tree, strat, null, targetOutcome);
+                            if (!renderedStratKeys.has(strat.key)) {
+                                renderedStratKeys.add(strat.key);
+                                addStratToTreeTopLevel(tree, strat, null, targetOutcome);
+                            }
                         }
                         updateStats(hierarchyData);
                     }
