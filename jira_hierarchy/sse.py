@@ -496,6 +496,38 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
             total_epics += 1
 
     # =========================================================================
+    # Step 5b: Fetch tasks for epics regardless of component
+    # =========================================================================
+    existing_task_keys = {t['key'] for t in task_issues_raw}
+    if epic_keys_set:
+        epic_keys_for_query = list(epic_keys_set)
+        batch_size = 50
+        supplemental_queries = []
+        for i in range(0, len(epic_keys_for_query), batch_size):
+            batch = epic_keys_for_query[i:i + batch_size]
+            epic_links = ', '.join(f'"{k}"' for k in batch)
+            supp_jql = (
+                f'project = RHOAIENG '
+                f'AND ("Epic Link" in ({epic_links}) OR parent in ({epic_links})) '
+                f'AND issuetype NOT IN (Epic, Feature, "Feature Request") '
+                f'AND status NOT IN (Closed, Resolved) '
+                f'AND updated >= {cutoff_date}'
+            )
+            supplemental_queries.append((supp_jql, rhoaieng_fields, 'SUPP_TASKS'))
+
+        if supplemental_queries:
+            supp_results = run_parallel_queries(supplemental_queries, jira_email, jira_pat, wfile)
+            supp_tasks = supp_results.get('SUPP_TASKS', [])
+            added = 0
+            for task in supp_tasks:
+                if task['key'] not in existing_task_keys:
+                    if show_closed_tasks or not _is_closed(task):
+                        task_issues_raw.append(task)
+                        existing_task_keys.add(task['key'])
+                        added += 1
+            print(f"  Supplementary task fetch: {len(supp_tasks)} found, {added} new (not already in component results)", file=sys.stderr)
+
+    # =========================================================================
     # Step 6: Process Tasks and link to Epics
     # =========================================================================
     tasks_by_epic = {}
@@ -508,6 +540,10 @@ def stream_hierarchy(wfile, jira_email, jira_pat, component="AI Safety",
         task_data['issuetype'] = task['fields'].get('issuetype', {}).get('name', 'Task')
 
         epic_link = task['fields'].get('customfield_10014')
+        parent_field = task['fields'].get('parent')
+        parent_key = parent_field.get('key') if parent_field and isinstance(parent_field, dict) else None
+        if not epic_link and parent_key and parent_key in epic_keys_set:
+            epic_link = parent_key
 
         if epic_link and epic_link in epic_keys_set:
             if epic_link not in tasks_by_epic:

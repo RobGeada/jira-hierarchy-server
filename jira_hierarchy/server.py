@@ -83,6 +83,8 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
             self.handle_update_pull_request()
         elif parsed_path.path == '/api/update-story-points':
             self.handle_update_story_points()
+        elif parsed_path.path == '/api/batch-update-components':
+            self.handle_batch_update_components()
         else:
             self.send_error(404, 'Not Found')
 
@@ -459,6 +461,53 @@ class JIRAHierarchyHandler(SimpleHTTPRequestHandler):
 
         except Exception as e:
             print(f"Error updating story points: {e}", file=sys.stderr)
+            traceback.print_exc()
+            self.send_json({'error': str(e)}, status=500)
+
+    def handle_batch_update_components(self):
+        """Update components on multiple JIRA issues"""
+        try:
+            data = self.read_json_body()
+
+            email = data.get('email')
+            pat = data.get('pat')
+            issue_keys = data.get('issue_keys', [])
+            components = data.get('components', [])
+            mode = data.get('mode', 'replace')
+
+            if not issue_keys:
+                self.send_json({'error': 'Missing required fields'}, status=400)
+                return
+
+            from .jira_client import update_jira_issue, get_jira_issue
+
+            results = []
+            for issue_key in issue_keys:
+                try:
+                    if mode == 'append':
+                        issue_data = get_jira_issue(issue_key, fields='components', jira_email=email, jira_pat=pat)
+                        existing = [c['name'] for c in issue_data.get('fields', {}).get('components', [])]
+                        merged = list(set(existing + components))
+                        component_payload = [{'name': c} for c in merged]
+                    else:
+                        component_payload = [{'name': c} for c in components]
+
+                    update_jira_issue(issue_key, {'components': component_payload}, email, pat)
+                    results.append({'issue_key': issue_key, 'success': True})
+                except Exception as e:
+                    results.append({'issue_key': issue_key, 'success': False, 'error': str(e)})
+
+            failed = [r for r in results if not r['success']]
+            self.send_json({
+                'success': len(failed) == 0,
+                'total': len(issue_keys),
+                'updated': len(issue_keys) - len(failed),
+                'failed': len(failed),
+                'results': results
+            })
+
+        except Exception as e:
+            print(f"Error batch updating components: {e}", file=sys.stderr)
             traceback.print_exc()
             self.send_json({'error': str(e)}, status=500)
 
