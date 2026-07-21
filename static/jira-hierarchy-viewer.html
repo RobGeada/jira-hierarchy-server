@@ -394,6 +394,7 @@
         .status-in-progress { background: #0052CC; color: white; }
         .status-approved { background: #00875A; color: white; }
         .status-closed { background: #6B778C; color: white; }
+        .status-resolved { background: #00875A; color: white; }
         .status-review { background: #FF991F; color: white; }
 
         .issue-priority {
@@ -5687,7 +5688,8 @@
             const statusLower = status.toLowerCase().replace(/\s+/g, '-');
             if (statusLower.includes('progress') || statusLower.includes('approved')) return 'status-in-progress';
             if (statusLower.includes('new')) return 'status-new';
-            if (statusLower.includes('closed') || statusLower.includes('resolved')) return 'status-closed';
+            if (statusLower.includes('resolved')) return 'status-resolved';
+            if (statusLower.includes('closed')) return 'status-closed';
             if (statusLower.includes('review')) return 'status-review';
             return 'status-new';
         }
