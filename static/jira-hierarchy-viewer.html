@@ -5303,9 +5303,11 @@
                     if (!aHasVersion && !bHasVersion) return 0;
                     if (!aHasVersion) return 1;
                     if (!bHasVersion) return -1;
-                    aVal = aVersions[0];
-                    bVal = bVersions[0];
-                    break;
+                    const aParsed = parseVersion(aVersions[0]);
+                    const bParsed = parseVersion(bVersions[0]);
+                    if (aParsed.major !== bParsed.major) return (aParsed.major - bParsed.major) * (order === 'asc' ? 1 : -1);
+                    if (aParsed.minor !== bParsed.minor) return (aParsed.minor - bParsed.minor) * (order === 'asc' ? 1 : -1);
+                    return (aParsed.milestone - bParsed.milestone) * (order === 'asc' ? 1 : -1);
                 default:
                     return 0;
             }
@@ -5638,6 +5640,31 @@
 
         function filterByVersion() {
             applyAllFilters();
+        }
+
+        function parseVersion(versionStr) {
+            if (!versionStr) return { major: 0, minor: 0, milestone: 3 };
+            const milestoneOrder = { 'EA1': 1, 'EA2': 2, 'GA': 3 };
+            let major = 0, minor = 0, milestone = 3;
+            const oldMatch = versionStr.match(/rhoai-(\d+)\.(\d+)/i);
+            if (oldMatch) {
+                major = parseInt(oldMatch[1]);
+                minor = parseInt(oldMatch[2]);
+                return { major, minor, milestone: 3 };
+            }
+            const newMatch = versionStr.match(/^(\d+)\.(\d+)\s+(EA1|EA2|GA)\b/i);
+            if (newMatch) {
+                major = parseInt(newMatch[1]);
+                minor = parseInt(newMatch[2]);
+                milestone = milestoneOrder[newMatch[3].toUpperCase()] || 3;
+                return { major, minor, milestone };
+            }
+            const numMatch = versionStr.match(/(\d+)\.(\d+)/);
+            if (numMatch) {
+                major = parseInt(numMatch[1]);
+                minor = parseInt(numMatch[2]);
+            }
+            return { major, minor, milestone };
         }
 
         function getStatusClass(status) {
