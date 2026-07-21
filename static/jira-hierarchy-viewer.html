@@ -6325,6 +6325,13 @@
                     // Update stats
                     hierarchyData.metadata.total_epics++;
                     updateStats(hierarchyData);
+                    // Reload parent to pick up updated child data
+                    if (currentStratKey) {
+                        const isInitiative = !!document.querySelector(`[id^="item-"][id$="-${currentStratKey}"][data-type="initiative"]`);
+                        const parentType = isInitiative ? 'initiative' : 'strat';
+                        console.log(`Reloading parent ${currentStratKey} as ${parentType}`);
+                        await reloadItem(currentStratKey, parentType);
+                    }
                 } else {
                     showError(`Error creating epic: ${result.error || 'Unknown error'}`);
                 }
@@ -6455,6 +6462,8 @@
                             // Update stats
                             hierarchyData.metadata.total_tasks++;
                             updateStats(hierarchyData);
+                            // Reload parent epic to pick up updated child data
+                            await reloadItem(currentEpicKey, 'epic');
                         } else {
                             console.error('Could not parse strat_key from container ID:', containerId);
                             showError('Task created but could not be displayed. Please refresh.');
@@ -7734,6 +7743,47 @@
             populateVersionFilter();
         }
 
+        function captureExpandState(itemElement) {
+            const state = { children: new Map(), detailsOpen: false, expanded: false };
+            const childrenContainer = itemElement.querySelector(':scope > .children');
+            if (childrenContainer) {
+                state.expanded = childrenContainer.classList.contains('expanded');
+            }
+            const details = itemElement.querySelector(':scope > .issue-details');
+            if (details) {
+                state.detailsOpen = details.style.display === 'block';
+            }
+            itemElement.querySelectorAll(':scope > .children > .tree-item').forEach(child => {
+                const childKey = child.querySelector('.issue-key')?.textContent;
+                if (childKey) {
+                    state.children.set(childKey, captureExpandState(child));
+                }
+            });
+            return state;
+        }
+
+        function restoreExpandState(itemElement, state) {
+            if (!state) return;
+            const childrenContainer = itemElement.querySelector(':scope > .children');
+            if (childrenContainer && state.expanded) {
+                childrenContainer.classList.add('expanded');
+                const icon = itemElement.querySelector(':scope > .tree-node .expand-icon');
+                if (icon) icon.textContent = '▼';
+            }
+            if (state.detailsOpen) {
+                const details = itemElement.querySelector(':scope > .issue-details');
+                if (details) details.style.display = 'block';
+            }
+            if (state.children.size > 0) {
+                itemElement.querySelectorAll(':scope > .children > .tree-item').forEach(child => {
+                    const childKey = child.querySelector('.issue-key')?.textContent;
+                    if (childKey && state.children.has(childKey)) {
+                        restoreExpandState(child, state.children.get(childKey));
+                    }
+                });
+            }
+        }
+
         function rerenderRfe(rfe) {
             trackAssignee(rfe.assignee, rfe.assignee_username);
             // Find all instances of this RFE (many-to-many: may appear under multiple Outcomes)
@@ -7743,6 +7793,10 @@
             itemElements.forEach(itemElement => {
                 // Update data-assignee attribute
                 itemElement.setAttribute('data-assignee', rfe.assignee_username || '');
+
+                // Capture details open state before replacement
+                const detailsElement = itemElement.querySelector('.issue-details');
+                const detailsWasOpen = detailsElement && detailsElement.style.display === 'block';
 
                 // Update the tree-node content in place
                 const treeNode = itemElement.querySelector('.tree-node');
@@ -7767,10 +7821,13 @@
                 }
 
                 // Update the details section
-                const detailsElement = itemElement.querySelector('.issue-details');
                 if (detailsElement) {
                     const detailsId = detailsElement.id;
                     detailsElement.outerHTML = generateDetailsHTML(rfe, detailsId);
+                    if (detailsWasOpen) {
+                        const newDetails = itemElement.querySelector('.issue-details');
+                        if (newDetails) newDetails.style.display = 'block';
+                    }
                 }
 
                 // Clear and rebuild children - find the children container by looking for rfe-*-{key}
@@ -7782,9 +7839,7 @@
                     const rfeKeySuffix = '-' + rfe.key;
                     const outcomeKey = rfeIdSuffix.endsWith(rfeKeySuffix) ? rfeIdSuffix.slice(0, -rfeKeySuffix.length) : '';
 
-                    childrenContainer.classList.remove('expanded');
-                    const icon = itemElement.querySelector('.expand-icon');
-                    if (icon) icon.textContent = '▶';
+                    const savedState = captureExpandState(itemElement);
 
                     childrenContainer.innerHTML = '';
                     if (rfe.strats) {
@@ -7817,6 +7872,8 @@
                             treeNode.classList.add('empty');
                         }
                     }
+
+                    restoreExpandState(itemElement, savedState);
                 }
             });
         }
@@ -7829,6 +7886,9 @@
 
             itemElements.forEach(itemElement => {
                 itemElement.setAttribute('data-assignee', strat.assignee_username || '');
+
+                const detailsElement = itemElement.querySelector('.issue-details');
+                const detailsWasOpen = detailsElement && detailsElement.style.display === 'block';
 
                 const treeNode = itemElement.querySelector('.tree-node');
                 if (treeNode) {
@@ -7851,10 +7911,13 @@
                     if (updatedSpan) updatedSpan.textContent = formatDate(strat.updated);
                 }
 
-                const detailsElement = itemElement.querySelector('.issue-details');
                 if (detailsElement) {
                     const detailsId = detailsElement.id;
                     detailsElement.outerHTML = generateDetailsHTML(strat, detailsId);
+                    if (detailsWasOpen) {
+                        const newDetails = itemElement.querySelector('.issue-details');
+                        if (newDetails) newDetails.style.display = 'block';
+                    }
                 }
 
                 // Clear and rebuild children - find children container by looking for strat-*-{key}
@@ -7862,9 +7925,7 @@
                 if (childrenContainer) {
                     const stratContainerId = childrenContainer.id;
 
-                    childrenContainer.classList.remove('expanded');
-                    const icon = itemElement.querySelector('.expand-icon');
-                    if (icon) icon.textContent = '▶';
+                    const savedState = captureExpandState(itemElement);
 
                     childrenContainer.innerHTML = '';
                     if (strat.epics) {
@@ -7888,6 +7949,8 @@
                             treeNode.classList.add('empty');
                         }
                     }
+
+                    restoreExpandState(itemElement, savedState);
                 }
             });
         }
@@ -7936,22 +7999,20 @@
 
                 // Update the details section
                 const detailsElement = itemElement.querySelector('.issue-details');
+                const detailsWasOpen = detailsElement && detailsElement.style.display === 'block';
                 if (detailsElement) {
                     const detailsId = detailsElement.id;
                     detailsElement.outerHTML = generateDetailsHTML(epic, detailsId);
+                    if (detailsWasOpen) {
+                        const newDetails = itemElement.querySelector('.issue-details');
+                        if (newDetails) newDetails.style.display = 'block';
+                    }
                 }
 
                 // Clear and rebuild children
                 const childrenContainer = document.getElementById(uniqueEpicId);
                 if (childrenContainer) {
-                    // Collapse the container and reset icon
-                    childrenContainer.classList.remove('expanded');
-                    const icon = itemElement.querySelector('.expand-icon');
-                    if (icon) icon.textContent = '▶';
-
-                    // Hide details
-                    const details = itemElement.querySelector('.issue-details');
-                    if (details) details.style.display = 'none';
+                    const savedState = captureExpandState(itemElement);
 
                     childrenContainer.innerHTML = '';
                     if (epic.tasks) {
@@ -7971,6 +8032,8 @@
                             treeNode.classList.add('empty');
                         }
                     }
+
+                    restoreExpandState(itemElement, savedState);
                 }
             });
         }
@@ -8014,20 +8077,16 @@
                 }
 
                 const detailsElement = itemElement.querySelector('.issue-details');
+                const detailsWasOpen = detailsElement && detailsElement.style.display === 'block';
                 if (detailsElement) {
                     const detailsId = detailsElement.id;
                     detailsElement.outerHTML = generateDetailsHTML(task, detailsId);
                 }
 
-                const childrenDiv = itemElement.querySelector(':scope > .children');
-                if (childrenDiv) {
-                    childrenDiv.classList.remove('expanded');
+                if (detailsWasOpen) {
+                    const newDetails = itemElement.querySelector('.issue-details');
+                    if (newDetails) newDetails.style.display = 'block';
                 }
-                const icon = itemElement.querySelector('.expand-icon');
-                if (icon) icon.textContent = '▶';
-
-                const details = itemElement.querySelector('.issue-details');
-                if (details) details.style.display = 'none';
             });
         }
 
