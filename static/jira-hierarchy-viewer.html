@@ -1942,9 +1942,12 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <!-- Version update banner -->
-    <div id="versionBanner" style="display: none; position: fixed; top: 0; left: 0; right: 0; background: #FFAB00; color: #172B4D; padding: 12px; text-align: center; z-index: 10001; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-        ⚠️ Server is out of date. Please pull the latest changes from GitHub: <code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 3px; font-family: monospace;">git pull origin main</code>
-        <button onclick="dismissVersionBanner()" style="margin-left: 16px; padding: 4px 12px; background: #172B4D; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Dismiss</button>
+    <div id="versionBanner" style="display: none; position: fixed; top: 0; left: 0; right: 0; background: #FFAB00; color: #172B4D; padding: 12px 25%; text-align: left; z-index: 10001; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+        <div>
+            ⚠️ Server is out of date. Please pull the latest changes from GitHub: <code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 3px; font-family: monospace;">git pull origin main</code>
+            <button onclick="dismissVersionBanner()" style="margin-left: 16px; padding: 4px 12px; background: #172B4D; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Dismiss</button>
+        </div>
+        <div id="versionChangelog" style="display: none; margin-top: 8px; font-size: 12px; font-weight: 400;"></div>
     </div>
 
     <div class="container">
@@ -8048,8 +8051,14 @@
                     const banner = document.getElementById('versionBanner');
                     if (banner) {
                         banner.style.display = 'block';
-                        // Add padding to body to account for banner
-                        document.body.style.paddingTop = '48px';
+                        const changelogDiv = document.getElementById('versionChangelog');
+                        if (changelogDiv && status.changelog && status.changelog.length > 0) {
+                            changelogDiv.innerHTML = '<a href="#" onclick="event.preventDefault(); toggleChangelog()" style="color: #172B4D; text-decoration: underline; font-weight: 500;"><span id="changelogArrow" style="display: inline-block; transition: transform 0.2s;">▶</span> Changelog (' + status.changelog.length + ' update' + (status.changelog.length === 1 ? '' : 's') + ')</a>' +
+                                '<ul id="changelogList" style="display: none; margin: 4px 0 0 0; padding-left: 20px; list-style: disc;">' +
+                                status.changelog.map(msg => `<li>${msg}</li>`).join('') + '</ul>';
+                            changelogDiv.style.display = 'block';
+                        }
+                        document.body.style.paddingTop = banner.offsetHeight + 'px';
                     }
                 } else if (!status.is_outdated) {
                     // If version is up to date, hide banner and reset dismissal
@@ -8062,6 +8071,18 @@
                 }
             } catch (error) {
                 console.error('Error checking version status:', error);
+            }
+        }
+
+        function toggleChangelog() {
+            const list = document.getElementById('changelogList');
+            const arrow = document.getElementById('changelogArrow');
+            if (list) {
+                const expanding = list.style.display === 'none';
+                list.style.display = expanding ? 'block' : 'none';
+                if (arrow) arrow.style.transform = expanding ? 'rotate(90deg)' : 'rotate(0deg)';
+                const banner = document.getElementById('versionBanner');
+                if (banner) document.body.style.paddingTop = banner.offsetHeight + 'px';
             }
         }
 

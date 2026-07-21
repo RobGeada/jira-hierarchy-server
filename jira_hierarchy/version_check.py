@@ -50,10 +50,36 @@ def get_github_commit():
         return None
 
 
+def get_changelog():
+    """Get commit messages between local HEAD and origin/main"""
+    try:
+        subprocess.run(
+            ['git', 'fetch', 'origin', 'main', '--quiet'],
+            cwd=os.path.join(os.path.dirname(__file__), '..'),
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        result = subprocess.run(
+            ['git', 'log', 'HEAD..origin/main', '--oneline', '--no-decorate'],
+            cwd=os.path.join(os.path.dirname(__file__), '..'),
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return [line.split(' ', 1)[1] if ' ' in line else line
+                    for line in result.stdout.strip().split('\n')]
+        return []
+    except Exception:
+        return []
+
+
 def perform_version_check():
     """Perform a version check and update global state"""
     local_commit = get_local_commit()
     github_commit = get_github_commit()
+    changelog = []
 
     with _version_lock:
         _version_state['local_commit'] = local_commit
@@ -62,8 +88,11 @@ def perform_version_check():
 
         if github_commit and local_commit != github_commit:
             _version_state['is_outdated'] = True
+            changelog = get_changelog()
+            _version_state['changelog'] = changelog
         else:
             _version_state['is_outdated'] = False
+            _version_state['changelog'] = []
 
     return local_commit, github_commit
 
@@ -99,7 +128,8 @@ def get_version_status():
             'github_commit': _version_state['github_commit'],
             'is_outdated': _version_state['is_outdated'],
             'last_check': _version_state['last_check'],
-            'enabled': _version_state['enabled']
+            'enabled': _version_state['enabled'],
+            'changelog': _version_state.get('changelog', [])
         }
 
 
