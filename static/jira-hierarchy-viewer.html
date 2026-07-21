@@ -3989,6 +3989,19 @@
             populateVersionFilter();
                 fetchSprintsInBackground();
 
+                // Apply default sort and re-render
+                if (currentSortField) {
+                    sortHierarchyData(hierarchyData, currentSortField, currentSortOrder);
+                    if (currentView === 'hierarchy') {
+                        renderHierarchyView();
+                    }
+                    const indicator = document.getElementById(`sort-${currentSortField}`);
+                    if (indicator) {
+                        indicator.textContent = currentSortOrder === 'asc' ? '▲' : '▼';
+                        indicator.classList.add('active');
+                    }
+                }
+
                 // Refresh the current view if in standup mode
                 if (currentView === 'standup') {
                     renderStandupView();
@@ -5380,8 +5393,8 @@
             return data;
         }
 
-        let currentSortField = null;
-        let currentSortOrder = 'asc';
+        let currentSortField = 'updated';
+        let currentSortOrder = 'desc';
 
         function handleColumnSort(field) {
             if (currentSortField === field) {
